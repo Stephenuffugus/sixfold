@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SIXFOLD — stance duel prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#13120f; --indigo:#171d30; --indigo2:#222b46; --line:#39425f;
+    --washi:#efe7d6; --washi-dim:#cabfa6;
+    --seal:#cf4130; --jade:#5f9173; --steel:#7b8494; --gold:#cda64f;
+    --disp:"Shippori Mincho",Georgia,serif; --ui:"Zen Maru Gothic",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:var(--ui); color:var(--washi);
+    background:
+      radial-gradient(120% 80% at 50% -10%, #2a3458 0%, var(--indigo) 55%, #10131f 100%);
+    min-height:100%; overflow-x:hidden;
+    display:flex; flex-direction:column; align-items:center;
+    padding:14px 14px 28px; gap:10px;
+  }
+  /* faint paper grain */
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.05;
+    background-image:radial-gradient(circle at 20% 30%, #fff 0, transparent 1px),
+      radial-gradient(circle at 70% 60%, #fff 0, transparent 1px);
+    background-size:7px 7px,11px 11px;}
+
+  header{width:100%;max-width:460px;display:flex;align-items:baseline;justify-content:space-between}
+  h1{font-family:var(--disp);font-weight:800;letter-spacing:.18em;margin:0;font-size:24px;
+     color:var(--washi);text-shadow:0 1px 0 #0006}
+  h1 .dot{color:var(--seal)}
+  .tag{font-size:11px;letter-spacing:.14em;color:var(--washi-dim);text-transform:uppercase}
+
+  .arena{width:100%;max-width:460px;display:flex;justify-content:space-between;gap:10px}
+  .fighter{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .fighter .nm{font-family:var(--disp);font-size:15px;font-weight:600;max-width:100%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .stage{position:relative;width:104px;height:118px;display:flex;align-items:flex-end;justify-content:center}
+  .banner{position:absolute;top:-2px;width:30px;height:64px;border-radius:2px 2px 0 0;
+    box-shadow:0 2px 6px #0007;z-index:1;display:flex;align-items:center;justify-content:center;
+    font-size:15px;color:#fff8;transform-origin:top center}
+  .banner.left{left:8px;transform:rotate(-7deg)} .banner.right{right:8px;transform:rotate(7deg)}
+  .body{position:relative;z-index:2;filter:drop-shadow(0 4px 6px #0008)}
+  .face{position:absolute;z-index:3;top:26px;left:50%;transform:translateX(-50%);font-size:30px;
+    filter:drop-shadow(0 1px 1px #0006)}
+  .weapon{position:absolute;z-index:4;bottom:6px;font-size:26px;filter:drop-shadow(0 1px 2px #0008)}
+  .weapon.left{right:2px;transform:scaleX(-1)} .weapon.right{left:2px}
+
+  .hp{display:flex;gap:4px;height:13px}
+  .pip{width:15px;height:13px;border-radius:2px;background:#0003;border:1px solid #ffffff22;
+    transition:background .25s,transform .25s}
+  .pip.full{background:linear-gradient(#e8645a,var(--seal));border-color:#ffffff44;
+    box-shadow:0 0 5px #cf413066}
+  .pip.lost{transform:scale(.7) rotate(8deg);opacity:.35}
+
+  /* WHEEL — the signature element */
+  .wheelwrap{position:relative;width:300px;height:300px;margin:2px 0}
+  svg.links{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+  .node{position:absolute;width:74px;height:74px;margin:-37px 0 0 -37px;border-radius:50%;
+    background:linear-gradient(#28324f,#1c2236);
+    border:1.5px solid #49557a;
+    color:var(--washi);display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:1px;cursor:pointer;z-index:2;transition:transform .12s,border-color .2s,box-shadow .2s;
+    font-family:var(--ui)}
+  .node:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+  .node .g{font-size:23px;line-height:1}
+  .node .n{font-family:var(--disp);font-size:11px;letter-spacing:.04em;color:var(--washi-dim)}
+  .node:active{transform:scale(.93)}
+  @media(hover:hover){.node:hover{border-color:var(--gold);box-shadow:0 0 14px #cda64f44}}
+  .node.ppick{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 18px #cda64f88}
+  .node.apick{border-color:var(--seal);box-shadow:0 0 0 2px var(--seal),0 0 18px #cf413088}
+  .node.both{border-color:#fff;box-shadow:0 0 0 2px #fff,0 0 22px #fff8}
+  .node.dim{opacity:.4}
+  /* relationship preview rings */
+  .node .ring{position:absolute;inset:-4px;border-radius:50%;border:2px solid transparent;opacity:0;transition:opacity .15s}
+  .node.r-clean .ring{border-color:var(--seal);opacity:.9}
+  .node.r-glance .ring{border-color:var(--jade);opacity:.9}
+  .node.r-safe .ring{border-color:var(--steel);opacity:.7}
+
+  .hub{position:absolute;left:50%;top:50%;width:118px;height:118px;margin:-59px 0 0 -59px;border-radius:50%;
+    background:radial-gradient(circle at 50% 38%, #f3ead6 0%, #d8cbac 60%, #b9a982 100%);
+    color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;
+    z-index:3;box-shadow:inset 0 0 0 3px #ffffff55, 0 6px 18px #0007;text-align:center;padding:8px}
+  .hub .round{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#7a6a48}
+  .hub .verdict{font-family:var(--disp);font-weight:800;font-size:21px;line-height:1.05;margin-top:2px}
+  .hub .sub{font-size:10.5px;color:#6c5d3f;margin-top:3px;max-width:96px;line-height:1.25}
+  .hub.flash-clean{animation:flashc .5s} .hub.flash-glance{animation:flashg .5s}
+  @keyframes flashc{0%{box-shadow:inset 0 0 0 3px #cf4130,0 0 40px #cf4130cc}100%{}}
+  @keyframes flashg{0%{box-shadow:inset 0 0 0 3px #5f9173,0 0 30px #5f9173aa}100%{}}
+
+  .esc{font-size:11px;letter-spacing:.12em;color:var(--gold);height:14px;text-transform:uppercase;opacity:0;transition:opacity .3s}
+  .esc.on{opacity:1}
+
+  .controls{width:100%;max-width:460px;display:flex;gap:8px}
+  button.act{flex:1;font-family:var(--ui);font-weight:700;font-size:14px;letter-spacing:.02em;
+    padding:12px;border-radius:11px;border:1px solid #ffffff22;cursor:pointer;color:var(--washi);
+    background:linear-gradient(#2c3658,#202841)}
+  button.act:active{transform:translateY(1px)}
+  button.primary{background:linear-gradient(#d9694f,var(--seal));border-color:#ffffff33;color:#1a0f0c}
+  button.ghost{background:#ffffff10}
+
+  .legend{width:100%;max-width:460px;font-size:11px;color:var(--washi-dim);display:flex;
+    flex-wrap:wrap;gap:10px 14px;justify-content:center;line-height:1}
+  .legend b{color:var(--washi);font-weight:700}
+  .sw{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+
+  /* customizer drawer */
+  .drawer{width:100%;max-width:460px;background:#ffffff0d;border:1px solid #ffffff1a;border-radius:14px;
+    overflow:hidden;transition:max-height .3s ease;max-height:46px}
+  .drawer.open{max-height:340px}
+  .drawer .dh{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;
+    font-weight:700;font-size:13px;letter-spacing:.04em}
+  .drawer .dh .chev{transition:transform .3s} .drawer.open .dh .chev{transform:rotate(180deg)}
+  .dbody{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
+  .row{display:flex;flex-direction:column;gap:6px}
+  .row label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--washi-dim)}
+  .opts{display:flex;flex-wrap:wrap;gap:7px}
+  .opt{width:40px;height:40px;border-radius:9px;border:1.5px solid #ffffff22;background:#ffffff10;
+    display:flex;align-items:center;justify-content:center;font-size:21px;cursor:pointer}
+  .opt.sel{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold)}
+  .opt.pal{position:relative}
+  input.nm{font-family:var(--ui);font-size:14px;padding:9px 11px;border-radius:9px;border:1px solid #ffffff22;
+    background:#ffffff10;color:var(--washi);width:100%}
+  input.nm::placeholder{color:#ffffff55}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:#13182a;border:1px solid var(--gold);color:var(--gold);font-weight:700;font-size:13px;
+    padding:10px 18px;border-radius:30px;transition:.35s;z-index:20;pointer-events:none;letter-spacing:.04em}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .shake{animation:shake .35s}
+  @keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-5px,2px)}
+    40%{transform:translate(5px,-2px)}60%{transform:translate(-4px,-1px)}80%{transform:translate(3px,2px)}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  @media (max-width:360px){.wheelwrap{width:268px;height:268px}.node{width:66px;height:66px;margin:-33px 0 0 -33px}}
+</style>
+</head>
+<body>
+  <header>
+    <h1>SIX<span class="dot">·</span>FOLD</h1>
+    <span class="tag">stance duel — engine proto</span>
+  </header>
+
+  <div class="arena">
+    <div class="fighter" id="pf">
+      <div class="nm" id="pname">You</div>
+      <div class="stage" id="pstage"></div>
+      <div class="hp" id="php"></div>
+    </div>
+    <div class="fighter" id="af">
+      <div class="nm" id="aname">Ronin</div>
+      <div class="stage" id="astage"></div>
+      <div class="hp" id="ahp"></div>
+    </div>
+  </div>
+
+  <div class="esc" id="esc">⚡ Fury — every blow strikes deeper</div>
+
+  <div class="wheelwrap" id="wheel">
+    <svg class="links" id="links" viewBox="0 0 300 300"></svg>
+    <div class="hub" id="hub">
+      <div class="round" id="roundlbl">Round 1</div>
+      <div class="verdict" id="verdict">Choose</div>
+      <div class="sub" id="sub">tap a stance</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><span class="sw" style="background:var(--gold)"></span><b>you</b></span>
+    <span><span class="sw" style="background:var(--seal)"></span>clean · −2</span>
+    <span><span class="sw" style="background:var(--jade)"></span>glance · −1</span>
+    <span><span class="sw" style="background:var(--steel)"></span>across = whiff</span>
+    <span>same = clash</span>
+  </div>
+
+  <div class="controls">
+    <button class="act ghost" id="howbtn">How it works</button>
+    <button class="act primary" id="rematch" style="display:none">Rematch</button>
+  </div>
+
+  <div class="drawer" id="drawer">
+    <div class="dh" id="dh"><span>⚔ Customize your warrior</span><span class="chev">▾</span></div>
+    <div class="dbody">
+      <div class="row"><label>Name</label>
+        <input class="nm" id="cname" maxlength="14" placeholder="name your warrior"></div>
+      <div class="row"><label>Creature</label><div class="opts" id="faces"></div></div>
+      <div class="row"><label>Armor color</label><div class="opts" id="pals"></div></div>
+      <div class="row"><label>Weapon &amp; banner</label><div class="opts" id="weaps"></div></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============ VALIDATED ENGINE (from 50k-match simulation) ============ */
+const N=6, HP=4, CLEAN=2, GLANCE=1, ESC_ROUND=6;
+// stance i sits at ring position i (clockwise from top). Icons literally point to their slot.
+const STANCES=[
+  {n:"Heaven",g:"↑"},{n:"Tiger",g:"↗"},{n:"River",g:"↘"},
+  {n:"Earth",g:"↓"},{n:"Crane",g:"↙"},{n:"Shadow",g:"↖"}
+];
+// my pick a vs their pick b -> clockwise distance decides everything
+function resolve(a,b){
+  const d=((b-a)%N+N)%N;
+  if(d===0)return{kind:"clash",win:null};
+  if(d===1)return{kind:"clean",win:"P"};
+  if(d===2)return{kind:"glance",win:"P"};
+  if(d===3)return{kind:"whiff",win:null};
+  if(d===4)return{kind:"glance",win:"A"};
+  return{kind:"clean",win:"A"};            // d===5
+}
+const counter=p=>((p-1)%N+N)%N;           // stance that CLEAN-hits p
+
+/* ============ READER AI (mirrors the simulated 'reader' strategy) ============ */
+function aiPick(playerHist){
+  const recent=playerHist.slice(-12);
+  if(recent.length>=3){
+    const c={};recent.forEach(x=>c[x]=(c[x]||0)+1);
+    let best=-1,bc=0;for(const k in c)if(c[k]>bc){bc=c[k];best=+k;}
+    if(bc/recent.length > (1/N)+0.08) return counter(best); // exploit a lean
+  }
+  return Math.floor(Math.random()*N);
+}
+
+/* ============ COSMETICS (looks, not paper-doll) ============ */
+const FACES=["🦊","🐸","🐱","🐻","🐯","🐰","💀","👹","🐲","🦉"];
+const PALS=["#cf4130","#3f6fb0","#5f9173","#8a5bc0","#caa23a","#2b3550","#c96fa0","#46b0a6"];
+const WEAPS=[{w:"🗡️",b:"家"},{w:"⚔️",b:"武"},{w:"🔱",b:"龍"},{w:"🪓",b:"鬼"},{w:"🏹",b:"風"},{w:"🪭",b:"花"}];
+
+const rid=a=>a[Math.floor(Math.random()*a.length)];
+let player={hp:HP,name:"You",face:"🦊",pal:"#cf4130",wb:WEAPS[0]};
+let ai={hp:HP,name:"Ronin",face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS)};
+let round=1, busy=false, over=false, playerHist=[];
+
+/* armored-body svg, tinted by palette */
+function bodySVG(color){
+  return `<svg class="body" width="86" height="96" viewBox="0 0 86 96">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="#000" stop-opacity=".45"/>
+    </linearGradient></defs>
+    <path d="M14 92 Q10 58 22 44 L30 50 Q43 40 56 50 L64 44 Q76 58 72 92 Z" fill="url(#g)" stroke="#0007" stroke-width="2"/>
+    <path d="M22 44 Q43 30 64 44 L60 58 Q43 50 26 58 Z" fill="${color}" stroke="#0006" stroke-width="1.5"/>
+    <rect x="36" y="60" width="14" height="26" rx="3" fill="#0004"/>
+    <path d="M22 44 Q43 18 64 44 Q43 34 22 44Z" fill="#1a1d2b" stroke="#0007"/>
+    <path d="M30 40 q13 -16 26 0" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"/>
+  </svg>`;
+}
+function renderFighter(side){
+  const f=side==="P"?player:ai, stage=document.getElementById(side==="P"?"pstage":"astage");
+  const dir=side==="P"?"left":"right";
+  stage.innerHTML=
+    `<div class="banner ${dir}" style="background:${f.pal}">${f.wb.b}</div>`+
+    bodySVG(f.pal)+
+    `<div class="face">${f.face}</div>`+
+    `<div class="weapon ${dir}">${f.wb.w}</div>`;
+  document.getElementById(side==="P"?"pname":"aname").textContent=f.name;
+  renderHP(side);
+}
+function renderHP(side){
+  const f=side==="P"?player:ai, box=document.getElementById(side==="P"?"php":"ahp");
+  box.innerHTML="";
+  for(let i=0;i<HP;i++){const p=document.createElement("div");
+    p.className="pip "+(i<f.hp?"full":"lost");box.appendChild(p);}
+}
+
+/* ============ WHEEL ============ */
+const wheel=document.getElementById("wheel");
+const nodeEls=[];
+function buildWheel(){
+  const R=110, cx=150, cy=150;
+  STANCES.forEach((s,i)=>{
+    const ang=(-90+i*60)*Math.PI/180;
+    const x=50+ (Math.cos(ang)*R/300*100), y=50+(Math.sin(ang)*R/300*100);
+    const el=document.createElement("button");
+    el.className="node";el.style.left=x+"%";el.style.top=y+"%";
+    el.setAttribute("aria-label",s.n+" stance");
+    el.innerHTML=`<span class="ring"></span><span class="g">${s.g}</span><span class="n">${s.n}</span>`;
+    el.addEventListener("click",()=>commit(i));
+    el.addEventListener("pointerenter",()=>preview(i));
+    el.addEventListener("pointerleave",clearPreview);
+    el.addEventListener("focus",()=>preview(i));
+    el.addEventListener("blur",clearPreview);
+    wheel.appendChild(el);nodeEls.push(el);
+  });
+}
+function nodeCenter(i){const R=110,ang=(-90+i*60)*Math.PI/180;
+  return{x:150+Math.cos(ang)*R,y:150+Math.sin(ang)*R};}
+function preview(i){
+  if(busy||over)return;
+  nodeEls.forEach((el,j)=>{
+    el.classList.remove("r-clean","r-glance","r-safe");
+    const d=((j-i)%N+N)%N;
+    if(d===1)el.classList.add("r-clean");
+    else if(d===2)el.classList.add("r-glance");
+    else if(d===3)el.classList.add("r-safe");
+  });
+}
+function clearPreview(){nodeEls.forEach(el=>el.classList.remove("r-clean","r-glance","r-safe"));}
+
+/* ============ ROUND FLOW ============ */
+const hub=document.getElementById("hub"),verdict=document.getElementById("verdict"),
+  sub=document.getElementById("sub"),roundlbl=document.getElementById("roundlbl"),
+  links=document.getElementById("links"),escEl=document.getElementById("esc");
+const reduce=matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+function drawLink(p,a,color){
+  links.innerHTML="";
+  if(p===a){ // mirror: pulse single node
+    const c=nodeCenter(p);
+    links.innerHTML=`<circle cx="${c.x}" cy="${c.y}" r="42" fill="none" stroke="#fff" stroke-width="3" opacity=".8"/>`;
+    return;
+  }
+  const A=nodeCenter(p),B=nodeCenter(a);
+  links.innerHTML=`<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" stroke="${color}" stroke-width="4" stroke-linecap="round" opacity=".95"/>`;
+}
+
+function commit(p){
+  if(busy||over)return; busy=true; clearPreview();
+  const a=aiPick(playerHist); playerHist.push(p);
+  nodeEls.forEach(el=>el.classList.add("dim"));
+  nodeEls[p].classList.remove("dim"); nodeEls[p].classList.add("ppick");
+  verdict.textContent="…"; sub.textContent="reading you";
+  const delay=reduce?60:560;
+  setTimeout(()=>{
+    if(p===a){nodeEls[p].classList.remove("ppick");nodeEls[p].classList.add("both");}
+    else{nodeEls[a].classList.remove("dim");nodeEls[a].classList.add("apick");}
+    const r=resolve(p,a);
+    const bump=round>ESC_ROUND?1:0;
+    const cleanD=CLEAN+bump, glanceD=GLANCE+bump;
+    const colors={clean:getCss("--seal"),glance:getCss("--jade"),whiff:getCss("--steel"),clash:"#fff"};
+    drawLink(p,a,colors[r.kind]);
+    let dmg=0,loser=null;
+    if(r.kind==="clean"){dmg=cleanD;}else if(r.kind==="glance"){dmg=glanceD;}
+    if(r.win==="P"){loser="A";} else if(r.win==="A"){loser="P";}
+
+    const txt={clean:"CLEAN!",glance:"Glance",whiff:"Whiff",clash:"Clash"}[r.kind];
+    const subtxt={
+      clean: r.win==="P"?"you struck deep":"you got opened up",
+      glance:r.win==="P"?"a grazing cut":"grazed you",
+      whiff:"blades pass — nothing",
+      clash:"stances mirror — parry"
+    }[r.kind];
+    verdict.textContent=txt; sub.textContent=subtxt;
+    hub.classList.remove("flash-clean","flash-glance");
+    void hub.offsetWidth;
+    if(r.kind==="clean")hub.classList.add("flash-clean");
+    if(r.kind==="glance")hub.classList.add("flash-glance");
+
+    if(loser){
+      const who=loser==="P"?player:ai; who.hp=Math.max(0,who.hp-dmg);
+      renderHP(loser);
+      if(r.kind==="clean"&&!reduce){document.body.classList.add("shake");
+        setTimeout(()=>document.body.classList.remove("shake"),360);}
+    }
+    setTimeout(endRound,reduce?80:900);
+  },delay);
+}
+
+function endRound(){
+  if(player.hp<=0||ai.hp<=0){return finish();}
+  round++;
+  nodeEls.forEach(el=>el.className="node");
+  links.innerHTML="";
+  roundlbl.textContent="Round "+round;
+  verdict.textContent="Choose"; sub.textContent="tap a stance";
+  if(round>ESC_ROUND)escEl.classList.add("on");
+  busy=false;
+}
+
+function finish(){
+  over=true;busy=true;links.innerHTML="";
+  const win=player.hp>0;
+  roundlbl.textContent="Match over";
+  verdict.textContent=win?"VICTORY":"DEFEAT";
+  verdict.style.color=win?getCss("--gold"):getCss("--seal");
+  sub.textContent=win?"the duel is yours":"struck down — try again";
+  document.getElementById("rematch").style.display="block";
+  if(win){const r=8+Math.floor(Math.random()*8);
+    showToast(`+${r} ☀ sunbeams · mints to Lucid Winds`);}
+}
+
+function reset(){
+  player.hp=HP; ai={hp:HP,name:ai.name,face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS)};
+  // keep AI name as a fresh ronin
+  ai.name=rid(["Ronin","Kage","Hattori","Mukade","Yurei","Tetsu","Onibi"]);
+  round=1;busy=false;over=false;playerHist=[];
+  escEl.classList.remove("on");
+  verdict.style.color="";
+  nodeEls.forEach(el=>el.className="node");links.innerHTML="";
+  roundlbl.textContent="Round 1";verdict.textContent="Choose";sub.textContent="tap a stance";
+  document.getElementById("rematch").style.display="none";
+  renderFighter("P");renderFighter("A");
+}
+
+const getCss=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function showToast(t){const el=document.getElementById("toast");el.textContent=t;
+  el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2600);}
+
+/* ============ CUSTOMIZER ============ */
+function buildCustomizer(){
+  const faces=document.getElementById("faces"),pals=document.getElementById("pals"),
+    weaps=document.getElementById("weaps"),cname=document.getElementById("cname");
+  FACES.forEach(f=>{const o=document.createElement("div");o.className="opt"+(f===player.face?" sel":"");
+    o.textContent=f;o.onclick=()=>{player.face=f;syncSel(faces,o);renderFighter("P");};faces.appendChild(o);});
+  PALS.forEach(p=>{const o=document.createElement("div");o.className="opt pal"+(p===player.pal?" sel":"");
+    o.style.background=p;o.onclick=()=>{player.pal=p;syncSel(pals,o);renderFighter("P");};pals.appendChild(o);});
+  WEAPS.forEach(w=>{const o=document.createElement("div");o.className="opt"+(w===player.wb?" sel":"");
+    o.textContent=w.w;o.onclick=()=>{player.wb=w;syncSel(weaps,o);renderFighter("P");};weaps.appendChild(o);});
+  cname.value="";cname.oninput=()=>{player.name=cname.value.trim()||"You";renderFighter("P");};
+}
+function syncSel(box,sel){[...box.children].forEach(c=>c.classList.remove("sel"));sel.classList.add("sel");}
+
+/* ============ WIRE UP ============ */
+document.getElementById("dh").onclick=()=>document.getElementById("drawer").classList.toggle("open");
+document.getElementById("rematch").onclick=reset;
+document.getElementById("howbtn").onclick=()=>showToast("Beat the 2 stances clockwise of yours · opposite = safe");
+
+buildWheel();buildCustomizer();renderFighter("P");renderFighter("A");
+</script>
+</body>
+</html>
