@@ -48,4 +48,20 @@ streams ≈ 0, not that a hand-crafted "balanced" stream is.
   of the AI's pick, so any AI ≈ 49.86% vs random (matrix symmetry). Good sanity
   check for the meter/symmetry tests later.
 
+**Phase 2 complete.** `resolve.js`/`assists.js`/`readout.js` + `engine.js`, all
+tested (predictor 19, personalities 16, resolve 15, assists 16, readout 12,
+engine 24 = 102 assertions). Harness still green.
+
+**Spec inconsistency fixed (bind cycle):** §3.5's `d3` formula (`(aB−pB)%3`,
+`1`=player wins) and its parenthetical flavor ("Drive>Trap>Slip>Drive") describe
+OPPOSITE RPS cycles. The formula is authoritative — the harness and
+`personalities.beatsBind` already use it — so the real cycle is
+**Drive>Slip>Trap>Drive** (player wins when `aB=pB+1`). Updated the spec prose
+and engine comment to match. No stats change (RPS is symmetric either way).
+
+**Meter honesty proven at the engine level:** identical seed + identical scripted
+picks, run with all spends firing vs no spends — winner, final HP, total damage,
+and round count are byte-identical. Spends consume meter + emit info only; they
+never reach the damage path and never consume the RNG, so picks are unchanged.
+
 (continued below as work lands…)

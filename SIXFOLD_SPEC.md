@@ -190,7 +190,7 @@ on resolve()==clash:
 ```
 - **Best-of-one.** A tie sparks off as the old harmless clash — no looping, never drags.
 - Symmetric RPS-3 → pure skill. The bind has its own short history; the Predictor's second instance can read/feed it, and Foresight may optionally preview the opponent's bind pick (toggle).
-- Cycle is reskinnable; Drive/Slip/Trap is the default (Drive shoves through Trap, Trap catches Slip, Slip evades Drive).
+- Cycle is reskinnable; Drive/Slip/Trap is the default. Per the `d3` formula above (the authoritative one — matches the harness), the cycle is **Drive>Slip>Trap>Drive** (player wins when `aBind = pBind+1 mod 3`). An earlier draft's parenthetical named the reverse cycle; the formula wins. Stats are convention-independent (still 50/50, ⅓ tie).
 - Timing: adds ~0.8 quick choices per match on average. In timed modes give the bind a short snap timer (≈2s); in untimed solo it just waits.
 
 ### UI
