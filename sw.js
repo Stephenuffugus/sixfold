@@ -3,15 +3,14 @@
  * Strategy:
  *  - HTML/navigation: network-first (always get the freshest game when online),
  *    fall back to cache when offline.
- *  - everything else: cache-first, then network (and cache same-origin GETs).
- * Bump CACHE on every deploy so clients drop the old shell.
+ *  - everything else (incl. character sheets): cache-first, then network, and
+ *    cache same-origin GETs as they're used (LAZY-CACHE).
+ * We precache only the app shell + the default fighter, so first load stays fast
+ * no matter how big the roster grows; each skin is cached the first time it's
+ * shown and then available offline. Bump CACHE on every deploy.
  */
-const CACHE = "sixfold-v21";
-const ASSETS = ["./", "./index.html", "./sixfold.html", "./manifest.webmanifest", "./icon.svg",
-  "./skins/ronin.png", "./skins/kage.png", "./skins/tetsu.png", "./skins/onibi.png", "./skins/sora.png",
-  "./skins/honekage.png", "./skins/raiden.png", "./skins/yurei.png", "./skins/mukade.png", "./skins/tengu.png",
-  "./skins/kitsune.png", "./skins/kappa.png", "./skins/lantern.png", "./skins/jorogumo.png", "./skins/moth.png",
-  "./skins/painter.png", "./skins/heron.png"];
+const CACHE = "sixfold-v22";
+const ASSETS = ["./", "./index.html", "./sixfold.html", "./manifest.webmanifest", "./icon.svg", "./skins/ronin.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(

@@ -98,6 +98,8 @@
     { id: "moth", name: "Moth Priestess", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/moth.png" },
     { id: "painter", name: "Brush Duelist", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/painter.png" },
     { id: "heron", name: "Snow Heron", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/heron.png" },
+    { id: "beetle", name: "Beetle Warrior", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/beetle.png" },
+    { id: "tanuki", name: "Tanuki Warrior", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/tanuki.png" },
   ];
 
   function list() {
