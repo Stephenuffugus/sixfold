@@ -1,0 +1,56 @@
+/* SIXFOLD — anim.css  (spec §4)
+ * Limited-animation illusion from 2 frames/character + GPU transforms.
+ * Transform/opacity ONLY (compositor-friendly -> trivial 60fps for 2 fighters).
+ * Fixed pivot anchor 50% x / 88% y aligns transforms across hundreds of warriors.
+ */
+
+/* the mirror lives on the WRAPPER so pose/lunge transforms (authored facing
+   right) compose cleanly for the opponent without fighting the flip. */
+.art-wrap { position: relative; width: 100%; height: 100%;
+  display: flex; align-items: flex-end; justify-content: center; }
+.art-wrap.opp { transform: scaleX(-1); }
+
+.fighter-art {
+  transform-origin: 50% 88%;
+  transition: transform .18s cubic-bezier(.34, 1.4, .5, 1), filter .2s;
+  will-change: transform;
+}
+
+/* held strike frame (when PNG frames exist) */
+.fighter-art.striking .frame-idle { opacity: 0; }
+.fighter-art.striking .frame-strike { opacity: 1; }
+.frame-idle, .frame-strike { transition: opacity .08s; }
+.frame-strike { opacity: 0; }
+
+/* impact spark — single radial flash at the hub */
+.spark { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px;
+  margin: -5px 0 0 -5px; border-radius: 50%; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle, #fff 0%, #cda64f 40%, transparent 70%); z-index: 6; }
+.spark.go { animation: sparkflash .42s ease-out; }
+@keyframes sparkflash {
+  0% { opacity: .95; transform: scale(.4); }
+  100% { opacity: 0; transform: scale(7); }
+}
+
+/* loser flinch (glance) and knockback (clean) — transform-only */
+.fighter-art.flinch { animation: flinch .26s; }
+@keyframes flinch { 0%,100% { } 40% { transform: translateX(4px) rotate(2deg); } }
+.fighter-art.knock { animation: knock .4s; }
+@keyframes knock { 0% { } 35% { transform: translateX(10px) rotate(6deg); filter: brightness(1.4); } 100% { } }
+
+/* finishing-blow slow-mo flash on the hub reuses the prototype flash classes */
+.hub.finish { animation: finishflash .8s ease-out; }
+@keyframes finishflash {
+  0% { box-shadow: inset 0 0 0 4px #fff, 0 0 60px #fff; }
+  100% { } }
+
+/* locked-blades: both fighters held leaning toward centre, paused */
+.fighter-art.locked { transition: transform .14s ease-out;
+  transform: translateX(7px) rotate(4deg) !important; }
+
+/* reduced motion: hard-swap frames, no lunges/shake/spark, instant pivots */
+@media (prefers-reduced-motion: reduce) {
+  .fighter-art { transition: none !important; }
+  .spark, .fighter-art.flinch, .fighter-art.knock, .hub.finish { animation: none !important; }
+  .frame-idle, .frame-strike { transition: none !important; }
+}

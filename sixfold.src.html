@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SIXFOLD — stance duel</title>
+<meta name="theme-color" content="#171d30">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#13120f; --indigo:#171d30; --indigo2:#222b46; --line:#39425f;
+    --washi:#efe7d6; --washi-dim:#cabfa6;
+    --seal:#cf4130; --jade:#5f9173; --steel:#7b8494; --gold:#cda64f;
+    --disp:"Shippori Mincho",Georgia,serif; --ui:"Zen Maru Gothic",system-ui,sans-serif;
+  }
+  /* colorblind-safe palette (accessibility setting) */
+  body.cb{ --seal:#d55e00; --jade:#0072b2; --steel:#999999; --gold:#e69f00; }
+  body.contrast{ --washi:#ffffff; --washi-dim:#e8e2d2; --line:#6b76a0; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:var(--ui); color:var(--washi);
+    background:radial-gradient(120% 80% at 50% -10%, #2a3458 0%, var(--indigo) 55%, #10131f 100%);
+    min-height:100%; overflow-x:hidden;
+    display:flex; flex-direction:column; align-items:center; padding:12px 12px 28px; gap:9px;
+  }
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.05;
+    background-image:radial-gradient(circle at 20% 30%, #fff 0, transparent 1px),
+      radial-gradient(circle at 70% 60%, #fff 0, transparent 1px);background-size:7px 7px,11px 11px;}
+
+  header{width:100%;max-width:460px;display:flex;align-items:baseline;justify-content:space-between}
+  h1{font-family:var(--disp);font-weight:800;letter-spacing:.18em;margin:0;font-size:23px;color:var(--washi);text-shadow:0 1px 0 #0006}
+  h1 .dot{color:var(--seal)}
+  .tag{font-size:11px;letter-spacing:.12em;color:var(--washi-dim);text-transform:uppercase}
+
+  /* foe / mode bar */
+  .foebar{width:100%;max-width:460px;display:flex;align-items:center;justify-content:space-between;gap:8px;
+    background:#ffffff0d;border:1px solid #ffffff14;border-radius:11px;padding:8px 12px;font-size:12px}
+  .foebar .who{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .foebar .fn{font-family:var(--disp);font-weight:600;font-size:14px;color:var(--washi)}
+  .foebar .stars{color:var(--gold);letter-spacing:1px;font-size:11px}
+  .foebar .tell{color:var(--washi-dim);font-size:10.5px;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .foebar button{font-family:var(--ui);font-size:11px;font-weight:700;color:var(--washi);background:#ffffff14;
+    border:1px solid #ffffff22;border-radius:8px;padding:7px 10px;cursor:pointer;white-space:nowrap}
+  .modetag{font-size:9.5px;letter-spacing:.1em;color:var(--jade);text-transform:uppercase}
+  .modetag.comp{color:var(--seal)}
+
+  .arena{width:100%;max-width:460px;display:flex;justify-content:space-between;gap:10px}
+  .fighter{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px}
+  .fighter .nm{font-family:var(--disp);font-size:14px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .stage{position:relative;width:104px;height:118px}
+  .banner{position:absolute;top:-2px;width:30px;height:62px;border-radius:2px 2px 0 0;box-shadow:0 2px 6px #0007;z-index:1;
+    display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff8;transform-origin:top center}
+  .banner.left{left:6px;transform:rotate(-7deg)} .banner.right{right:6px;transform:rotate(7deg)}
+  .body{position:relative;z-index:2;filter:drop-shadow(0 4px 6px #0008)}
+  .face{position:absolute;z-index:3;top:26px;left:50%;transform:translateX(-50%);font-size:30px;filter:drop-shadow(0 1px 1px #0006)}
+  .weapon{position:absolute;z-index:4;bottom:6px;font-size:26px;filter:drop-shadow(0 1px 2px #0008)}
+  .weapon.left{right:2px;transform:scaleX(-1)} .weapon.right{left:2px}
+
+  .hp{display:flex;gap:4px;height:13px}
+  .pip{width:15px;height:13px;border-radius:2px;background:#0003;border:1px solid #ffffff22;transition:background .25s,transform .25s}
+  .pip.full{background:linear-gradient(#e8645a,var(--seal));border-color:#ffffff44;box-shadow:0 0 5px #cf413066}
+  .pip.lost{transform:scale(.7) rotate(8deg);opacity:.35}
+
+  /* stance ribbon + unpredictability bar */
+  .ribbon{display:flex;gap:3px;height:18px;align-items:center;justify-content:center}
+  .ribbon-cell{font-size:13px;width:17px;height:17px;border-radius:4px;display:flex;align-items:center;justify-content:center;
+    background:#ffffff10;border:1px solid #ffffff18;line-height:1}
+  .ribbon-cell.tint-seal{color:#fff;background:var(--seal);border-color:#fff4}
+  .ribbon-cell.tint-jade{color:#fff;background:var(--jade);border-color:#fff4}
+  .ribbon-cell.tint-steel{color:var(--washi);background:#ffffff14}
+  .ribbon-cell.tint-white{color:#222;background:#e9e2d0}
+  .bar{width:80px;height:8px;border-radius:5px;background:#ffffff14;position:relative;opacity:0;transition:opacity .3s;border:1px solid #ffffff14}
+  .bar.show{opacity:1}
+  .bar .bar-fill{height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,var(--jade),var(--gold));transition:width .4s}
+  .bar .bar-num{position:absolute;right:-26px;top:-5px;font-size:10px;color:var(--gold);font-weight:700}
+  .barwrap{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .barlbl{font-size:9px;letter-spacing:.08em;color:var(--washi-dim);text-transform:uppercase}
+
+  /* WHEEL */
+  .wheelwrap{position:relative;width:296px;height:296px;margin:0}
+  svg.links{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+  .node{position:absolute;width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;
+    background:linear-gradient(#28324f,#1c2236);border:1.5px solid #49557a;color:var(--washi);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;z-index:2;
+    transition:transform .12s,border-color .2s,box-shadow .2s;font-family:var(--ui)}
+  .node:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+  .node .g{font-size:22px;line-height:1}
+  .node .n{font-family:var(--disp);font-size:10.5px;letter-spacing:.04em;color:var(--washi-dim)}
+  .node:active{transform:scale(.93)}
+  @media(hover:hover){.node:hover{border-color:var(--gold);box-shadow:0 0 14px #cda64f44}}
+  .node.ppick{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 18px #cda64f88}
+  .node.apick{border-color:var(--seal);box-shadow:0 0 0 2px var(--seal),0 0 18px #cf413088}
+  .node.both{border-color:#fff;box-shadow:0 0 0 2px #fff,0 0 22px #fff8}
+  .node.dim{opacity:.4}
+  .node.foresight{border-color:var(--jade);box-shadow:0 0 0 2px var(--jade),0 0 16px #5f917399;animation:fpulse 1s infinite alternate}
+  @keyframes fpulse{to{box-shadow:0 0 0 3px var(--jade),0 0 24px #5f9173cc}}
+  .node .ring{position:absolute;inset:-4px;border-radius:50%;border:2px solid transparent;opacity:0;transition:opacity .15s}
+  .node.r-clean .ring{border-color:var(--seal);opacity:.9}
+  .node.r-glance .ring{border-color:var(--jade);opacity:.9}
+  .node.r-safe .ring{border-color:var(--steel);opacity:.7}
+  /* large tap targets (accessibility) */
+  body.bigtap .node{width:82px;height:82px;margin:-41px 0 0 -41px}
+
+  .hub{position:absolute;left:50%;top:50%;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;
+    background:radial-gradient(circle at 50% 38%, #f3ead6 0%, #d8cbac 60%, #b9a982 100%);color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;
+    box-shadow:inset 0 0 0 3px #ffffff55, 0 6px 18px #0007;text-align:center;padding:8px}
+  .hub .round{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#7a6a48}
+  .hub .verdict{font-family:var(--disp);font-weight:800;font-size:20px;line-height:1.05;margin-top:2px}
+  .hub .sub{font-size:10px;color:#6c5d3f;margin-top:3px;max-width:98px;line-height:1.25}
+  .hub.flash-clean{animation:flashc .5s} .hub.flash-glance{animation:flashg .5s}
+  @keyframes flashc{0%{box-shadow:inset 0 0 0 3px var(--seal),0 0 40px #cf4130cc}100%{}}
+  @keyframes flashg{0%{box-shadow:inset 0 0 0 3px var(--jade),0 0 30px #5f9173aa}100%{}}
+  /* bind prompt — hub flips to 3 buttons */
+  .hub.bind-mode{background:radial-gradient(circle at 50% 38%,#f6dede,#d8b6ac 70%,#b98a82)}
+  .bind-title{font-family:var(--disp);font-weight:800;font-size:12px;letter-spacing:.2em;color:#7a3a30}
+  .bind-row{display:flex;gap:4px;margin-top:5px}
+  .bindbtn{display:flex;flex-direction:column;align-items:center;gap:1px;width:31px;padding:5px 2px;border-radius:8px;
+    border:1px solid #00000022;background:#fff7;cursor:pointer;font-family:var(--ui);color:var(--ink)}
+  .bindbtn:active{transform:scale(.92)}
+  .bindbtn .bg{font-size:16px;line-height:1} .bindbtn .bn{font-size:8.5px;letter-spacing:.03em}
+
+  .esc{font-size:11px;letter-spacing:.12em;color:var(--gold);height:14px;text-transform:uppercase;opacity:0;transition:opacity .3s}
+  .esc.on{opacity:1}
+
+  /* resolve meter */
+  .meter{width:100%;max-width:460px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+  .resolve{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--washi-dim)}
+  .rpip{width:13px;height:13px;border-radius:3px;background:#ffffff14;border:1px solid #ffffff22;transition:background .25s,box-shadow .25s}
+  .rpip.full{background:linear-gradient(#8ec0ff,#3f6fb0);border-color:#fff4;box-shadow:0 0 6px #3f6fb088}
+  .spendbtn{font-family:var(--ui);font-weight:700;font-size:11.5px;color:var(--washi);background:#ffffff12;
+    border:1px solid #ffffff22;border-radius:8px;padding:7px 9px;cursor:pointer;display:flex;gap:5px;align-items:center}
+  .spendbtn .c{color:#8ec0ff;font-size:10px}
+  .spendbtn:disabled{opacity:.35;cursor:default}
+  .aimeter{font-size:10px;color:var(--steel);min-width:54px;text-align:right}
+
+  .controls{width:100%;max-width:460px;display:flex;gap:8px}
+  button.act{flex:1;font-family:var(--ui);font-weight:700;font-size:13.5px;letter-spacing:.02em;padding:12px;border-radius:11px;
+    border:1px solid #ffffff22;cursor:pointer;color:var(--washi);background:linear-gradient(#2c3658,#202841)}
+  button.act:active{transform:translateY(1px)}
+  button.primary{background:linear-gradient(#d9694f,var(--seal));border-color:#ffffff33;color:#1a0f0c}
+  button.ghost{background:#ffffff10}
+
+  .legend{width:100%;max-width:460px;font-size:10.5px;color:var(--washi-dim);display:flex;flex-wrap:wrap;gap:8px 13px;justify-content:center;line-height:1}
+  .legend b{color:var(--washi);font-weight:700}
+  .sw{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+
+  /* post-match readout */
+  .postmatch{width:100%;max-width:460px;background:#ffffff0d;border:1px solid var(--gold);border-radius:12px;padding:12px 14px;
+    font-size:12px;line-height:1.5;display:none}
+  .postmatch.show{display:block}
+  .postmatch b{color:var(--gold)} .postmatch .dim{color:var(--washi-dim)}
+
+  /* drawers */
+  .drawer{width:100%;max-width:460px;background:#ffffff0d;border:1px solid #ffffff1a;border-radius:14px;overflow:hidden;
+    transition:max-height .3s ease;max-height:46px}
+  .drawer.open{max-height:520px}
+  .drawer .dh{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;font-weight:700;font-size:13px;letter-spacing:.04em}
+  .drawer .dh .chev{transition:transform .3s} .drawer.open .dh .chev{transform:rotate(180deg)}
+  .dbody{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
+  .row{display:flex;flex-direction:column;gap:6px}
+  .row label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--washi-dim)}
+  .opts{display:flex;flex-wrap:wrap;gap:7px}
+  .opt{min-width:40px;height:40px;padding:0 8px;border-radius:9px;border:1.5px solid #ffffff22;background:#ffffff10;
+    display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:var(--washi);font-family:var(--ui)}
+  .opt.sml{font-size:12px;font-weight:700}
+  .opt.sel{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold)}
+  .opt.pal{position:relative}
+  input.nm{font-family:var(--ui);font-size:14px;padding:9px 11px;border-radius:9px;border:1px solid #ffffff22;background:#ffffff10;color:var(--washi);width:100%}
+  input.nm::placeholder{color:#ffffff55}
+  input[type=range]{width:100%}
+  .toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;padding:4px 0}
+  .toggle input{width:38px;height:22px;-webkit-appearance:none;appearance:none;background:#ffffff20;border-radius:12px;position:relative;cursor:pointer;transition:background .2s}
+  .toggle input:checked{background:var(--jade)}
+  .toggle input::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:2px;left:2px;transition:left .2s}
+  .toggle input:checked::after{left:18px}
+  .hint{font-size:10.5px;color:var(--washi-dim);line-height:1.4}
+  .compbanner{font-size:11px;color:var(--seal);font-weight:700;text-align:center;padding:4px;display:none}
+  .compbanner.show{display:block}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;background:#13182a;border:1px solid var(--gold);
+    color:var(--gold);font-weight:700;font-size:13px;padding:10px 18px;border-radius:30px;transition:.35s;z-index:20;pointer-events:none;letter-spacing:.04em}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .shake{animation:shake .35s}
+  @keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-5px,2px)}40%{transform:translate(5px,-2px)}60%{transform:translate(-4px,-1px)}80%{transform:translate(3px,2px)}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  body.reduce *{animation:none!important;transition:none!important}
+  @media (max-width:360px){.wheelwrap{width:266px;height:266px}.node{width:64px;height:64px;margin:-32px 0 0 -32px}}
+
+  /*__ANIM_CSS__*/
+</style>
+</head>
+<body>
+  <header>
+    <h1>SIX<span class="dot">·</span>FOLD</h1>
+    <span class="tag">stance duel</span>
+  </header>
+
+  <div class="foebar">
+    <div class="who">
+      <span class="fn" id="foename">—</span>
+      <span class="stars" id="foestars"></span>
+      <span class="tell" id="foetell"></span>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <span class="modetag" id="modetag">Casual</span>
+      <button id="foebtn">Choose foe</button>
+    </div>
+  </div>
+
+  <div class="arena">
+    <div class="fighter" id="pf">
+      <div class="nm" id="pname">You</div>
+      <div class="stage" id="pstage"></div>
+      <div class="hp" id="php"></div>
+      <div class="ribbon" id="pribbon"></div>
+      <div class="barwrap"><span class="barlbl">unpred</span>
+        <div class="bar" id="pbar"><div class="bar-fill"></div><span class="bar-num">—</span></div></div>
+    </div>
+    <div class="fighter" id="af">
+      <div class="nm" id="aname">Ronin</div>
+      <div class="stage" id="astage"></div>
+      <div class="hp" id="ahp"></div>
+      <div class="ribbon" id="aribbon"></div>
+      <div class="barwrap"><span class="barlbl">unpred</span>
+        <div class="bar" id="abar"><div class="bar-fill"></div><span class="bar-num">—</span></div></div>
+    </div>
+  </div>
+
+  <div class="esc" id="esc">⚡ Fury — every blow strikes deeper</div>
+
+  <div class="wheelwrap" id="wheel">
+    <svg class="links" id="links" viewBox="0 0 300 300"></svg>
+    <div class="spark" id="spark"></div>
+    <div class="hub" id="hub">
+      <div class="round" id="roundlbl">Round 1</div>
+      <div class="verdict" id="verdict">Choose</div>
+      <div class="sub" id="sub">tap a stance</div>
+    </div>
+  </div>
+
+  <div class="meter">
+    <div class="resolve" id="presolve" title="Resolve — buys information, never force">資 <span class="rpips"></span></div>
+    <button class="spendbtn" id="insightbtn">Insight <span class="c">1</span></button>
+    <button class="spendbtn" id="foresightbtn">Foresight <span class="c">2</span></button>
+    <span class="aimeter" id="aimeter"></span>
+  </div>
+
+  <div class="legend">
+    <span><span class="sw" style="background:var(--gold)"></span><b>you</b></span>
+    <span><span class="sw" style="background:var(--seal)"></span>clean −2</span>
+    <span><span class="sw" style="background:var(--jade)"></span>glance −1</span>
+    <span><span class="sw" style="background:var(--steel)"></span>across = whiff</span>
+    <span>same = clash → bind</span>
+  </div>
+
+  <div class="postmatch" id="postmatch"></div>
+
+  <div class="controls">
+    <button class="act ghost" id="howbtn">How it works</button>
+    <button class="act primary" id="rematch" style="display:none">Rematch</button>
+  </div>
+
+  <div class="compbanner" id="compbanner">Assists off — competitive</div>
+
+  <!-- Foe select -->
+  <div class="drawer" id="foedrawer">
+    <div class="dh" id="foedh"><span>⚔ Choose your foe</span><span class="chev">▾</span></div>
+    <div class="dbody">
+      <div class="row"><label>Opponent</label><div class="opts" id="foes"></div></div>
+      <div class="row"><label>Difficulty (<span id="difflbl">★★★☆☆</span>)</label>
+        <input type="range" id="diff" min="0" max="1" step="0.05" value="0.5"></div>
+      <div class="row"><label>Mode</label><div class="opts" id="modes"></div></div>
+    </div>
+  </div>
+
+  <!-- Settings: accessibility (free) + assist charms (casual only) -->
+  <div class="drawer" id="setdrawer">
+    <div class="dh" id="setdh"><span>⚙ Settings &amp; assists</span><span class="chev">▾</span></div>
+    <div class="dbody">
+      <div class="row"><label>Accessibility — always free</label>
+        <div class="toggle"><span>Colorblind-safe palette</span><input type="checkbox" data-a11y="colorblind"></div>
+        <div class="toggle"><span>Reduced motion</span><input type="checkbox" data-a11y="reducedMotion"></div>
+        <div class="toggle"><span>High contrast</span><input type="checkbox" data-a11y="highContrast"></div>
+        <div class="toggle"><span>Large tap targets</span><input type="checkbox" data-a11y="largeTapTargets"></div>
+        <div class="toggle"><span>Slower reveal</span><input type="checkbox" data-a11y="slowReveal"></div>
+      </div>
+      <div class="row"><label>Assist charm — casual/practice only</label>
+        <div class="opts" id="charms"></div>
+        <div class="hint" id="charmhint">Charms go inert the moment a match is ranked, seeded, or PvP.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customizer -->
+  <div class="drawer" id="custdrawer">
+    <div class="dh" id="custdh"><span>🎨 Customize your warrior</span><span class="chev">▾</span></div>
+    <div class="dbody">
+      <div class="row"><label>Name</label><input class="nm" id="cname" maxlength="14" placeholder="name your warrior"></div>
+      <div class="row"><label>Creature</label><div class="opts" id="faces"></div></div>
+      <div class="row"><label>Armor color</label><div class="opts" id="pals"></div></div>
+      <div class="row"><label>Weapon &amp; banner</label><div class="opts" id="weaps"></div></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/*__MODULES__*/
+
+/* ============================ APP / GLUE ============================ */
+(function(){
+  const Engine = globalThis.Engine, Personalities = globalThis.Personalities,
+    Resolve = globalThis.Resolve, Readout = globalThis.Readout,
+    Stage = globalThis.Stage, Assists = globalThis.Assists, Predictor = globalThis.Predictor;
+
+  const STANCES=[{n:"Heaven",g:"↑"},{n:"Tiger",g:"↗"},{n:"River",g:"↘"},{n:"Earth",g:"↓"},{n:"Crane",g:"↙"},{n:"Shadow",g:"↖"}];
+  const N=Engine.N, HP=Engine.HP, ESC=Engine.ESC_ROUND;
+  const FACES=["🦊","🐸","🐱","🐻","🐯","🐰","💀","👹","🐲","🦉"];
+  const PALS=["#cf4130","#3f6fb0","#5f9173","#8a5bc0","#caa23a","#2b3550","#c96fa0","#46b0a6"];
+  const WEAPS=[{w:"🗡️",b:"家"},{w:"⚔️",b:"武"},{w:"🔱",b:"龍"},{w:"🪓",b:"鬼"},{w:"🏹",b:"風"},{w:"🪭",b:"花"}];
+  const FOE_NAMES=["Ronin","Kage","Hattori","Mukade","Yurei","Tetsu","Onibi","Sora","Raiden"];
+  const rid=a=>a[Math.floor(Math.random()*a.length)];
+  const getCss=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const $=id=>document.getElementById(id);
+
+  // persistent cosmetic + selection state
+  let player={name:"You",face:"🦊",pal:"#cf4130",wb:WEAPS[0]};
+  let ai={name:"Ronin",face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS)};
+  let foeId=rid(Personalities.ids()), difficulty=0.5, modeId="casual";
+  let game=null, busy=false, over=false, foresightNode=null;
+  let lastUnpred=[];
+
+  /* ---- fighter rendering (placeholder shapes; art-wrap enables stage transforms) ---- */
+  function bodySVG(color){
+    return `<svg class="body" width="86" height="96" viewBox="0 0 86 96">
+      <defs><linearGradient id="g${color.replace('#','')}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></linearGradient></defs>
+      <path d="M14 92 Q10 58 22 44 L30 50 Q43 40 56 50 L64 44 Q76 58 72 92 Z" fill="url(#g${color.replace('#','')})" stroke="#0007" stroke-width="2"/>
+      <path d="M22 44 Q43 30 64 44 L60 58 Q43 50 26 58 Z" fill="${color}" stroke="#0006" stroke-width="1.5"/>
+      <rect x="36" y="60" width="14" height="26" rx="3" fill="#0004"/>
+      <path d="M22 44 Q43 18 64 44 Q43 34 22 44Z" fill="#1a1d2b" stroke="#0007"/>
+      <path d="M30 40 q13 -16 26 0" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"/></svg>`;
+  }
+  function renderFighter(side){
+    const f=side==="P"?player:ai, stage=$(side==="P"?"pstage":"astage"), dir=side==="P"?"left":"right";
+    stage.innerHTML=
+      `<div class="banner ${dir}" style="background:${f.pal}">${f.wb.b}</div>`+
+      `<div class="art-wrap ${side==="A"?"opp":""}"><div class="fighter-art">`+
+        bodySVG(f.pal)+`<div class="face">${f.face}</div><div class="weapon ${dir}">${f.wb.w}</div>`+
+      `</div></div>`;
+    $(side==="P"?"pname":"aname").textContent=f.name;
+    renderHP(side);
+  }
+  function renderHP(side){
+    const hp=game?game.state()[side==="P"?"hpP":"hpA"]:HP, box=$(side==="P"?"php":"ahp");
+    box.innerHTML="";
+    for(let i=0;i<HP;i++){const p=document.createElement("div");p.className="pip "+(i<hp?"full":"lost");box.appendChild(p);}
+  }
+  function artEl(side){ return $(side==="P"?"pstage":"astage").querySelector(".fighter-art"); }
+
+  /* ---- wheel ---- */
+  const wheel=$("wheel"), nodeEls=[];
+  function buildWheel(){
+    const R=110;
+    STANCES.forEach((s,i)=>{
+      const ang=(-90+i*60)*Math.PI/180;
+      const x=50+(Math.cos(ang)*R/300*100), y=50+(Math.sin(ang)*R/300*100);
+      const el=document.createElement("button");
+      el.className="node";el.style.left=x+"%";el.style.top=y+"%";
+      el.setAttribute("aria-label",s.n+" stance");
+      el.innerHTML=`<span class="ring"></span><span class="g">${s.g}</span><span class="n">${s.n}</span>`;
+      el.addEventListener("click",()=>commit(i));
+      el.addEventListener("pointerenter",()=>preview(i));
+      el.addEventListener("pointerleave",clearPreview);
+      el.addEventListener("focus",()=>preview(i));
+      el.addEventListener("blur",clearPreview);
+      wheel.appendChild(el);nodeEls.push(el);
+    });
+  }
+  function nodeCenter(i){const R=110,ang=(-90+i*60)*Math.PI/180;return{x:150+Math.cos(ang)*R,y:150+Math.sin(ang)*R};}
+  let compassOn=false;
+  function preview(i){
+    if((busy||over)&&!compassOn)return;
+    if(busy||over)return;
+    nodeEls.forEach((el,j)=>{
+      el.classList.remove("r-clean","r-glance","r-safe");
+      const d=((j-i)%N+N)%N;
+      if(d===1)el.classList.add("r-clean");else if(d===2)el.classList.add("r-glance");else if(d===3)el.classList.add("r-safe");
+    });
+  }
+  function clearPreview(){ if(compassOn)return; nodeEls.forEach(el=>el.classList.remove("r-clean","r-glance","r-safe")); }
+  function drawLink(p,a,color){
+    const links=$("links");
+    if(p===a){const c=nodeCenter(p);links.innerHTML=`<circle cx="${c.x}" cy="${c.y}" r="42" fill="none" stroke="#fff" stroke-width="3" opacity=".8"/>`;return;}
+    const A=nodeCenter(p),B=nodeCenter(a);
+    links.innerHTML=`<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" stroke="${color}" stroke-width="4" stroke-linecap="round" opacity=".95"/>`;
+  }
+
+  /* ---- round flow (engine-driven) ---- */
+  const VERDICT={clean:"CLEAN!",glance:"Glance",whiff:"Whiff",clash:"Clash"};
+  function subText(o){
+    if(o.bind) return o.winner? (o.winner==="P"?"bind won — a cut":"bind lost — grazed") : "blades spark — locked";
+    return {clean:o.winner==="P"?"you struck deep":"you got opened up",
+      glance:o.winner==="P"?"a grazing cut":"grazed you",
+      whiff:"blades pass — nothing",clash:"stances mirror"}[o.kind];
+  }
+
+  function commit(p){
+    if(busy||over||!game)return; busy=true; clearPreview(); clearForesight();
+    nodeEls.forEach(el=>el.classList.add("dim"));
+    nodeEls[p].classList.remove("dim"); nodeEls[p].classList.add("ppick");
+    $("verdict").textContent="…"; $("sub").textContent="reading you";
+    game.chooseStance(p);   // engine emits events; handlers below drive the rest
+  }
+
+  function showAiPick(a, p){
+    if(p===a){nodeEls[p].classList.remove("ppick");nodeEls[p].classList.add("both");}
+    else{nodeEls[a].classList.remove("dim");nodeEls[a].classList.add("apick");}
+  }
+
+  function wireEvents(g){
+    g.bus.on("stance-selected",({side,stance})=>{ Stage.toStance(side,stance); });
+    g.bus.on("clash-bind",()=>{
+      $("verdict").textContent="LOCK"; $("sub").textContent="break the bind";
+      drawLink(game.state().playerHist.slice(-1)[0], game.state().playerHist.slice(-1)[0], "#fff");
+      Stage.lockBlades();
+      Stage.bindPrompt().then(b=>{ g.submitBind(b); });
+    });
+    g.bus.on("meter-changed",updateMeter);
+    g.bus.on("info-revealed",({side,action,payload})=>{ if(side==="P") applyReveal(action,payload); });
+    g.bus.on("round-revealed",({pPick,aPick,outcome})=>{
+      showAiPick(aPick,pPick);
+      const colors={clean:getCss("--seal"),glance:getCss("--jade"),whiff:getCss("--steel"),clash:"#fff"};
+      drawLink(pPick,aPick,outcome.bind?"#fff":colors[outcome.kind]);
+      $("verdict").textContent= outcome.bind && outcome.winner ? "BIND!" : VERDICT[outcome.kind];
+      $("sub").textContent=subText(outcome);
+      const hub=$("hub"); hub.classList.remove("flash-clean","flash-glance"); void hub.offsetWidth;
+      if(outcome.winner&&outcome.kind==="clean")hub.classList.add("flash-clean");
+      else if(outcome.winner&&outcome.kind==="glance")hub.classList.add("flash-glance");
+      Stage.playReveal(pPick,aPick,outcome).then(()=>{
+        renderHP("P");renderHP("A");
+        Readout.render(game.state().playerHist,game.state().aiHist,game.state().outcomes,ribbonOpts());
+        if(outcome.kind==="clean"&&outcome.winner&&!reduced()){document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),360);}
+        if(!over) endRoundUI();
+      });
+    });
+    g.bus.on("match-over",({winner,summary})=>{
+      over=true;busy=true;
+      const win=winner==="P";
+      $("roundlbl").textContent="Match over";
+      $("verdict").textContent=win?"VICTORY":"DEFEAT";
+      $("verdict").style.color=win?getCss("--gold"):getCss("--seal");
+      $("sub").textContent=win?"the duel is yours":"struck down";
+      $("rematch").style.display="block";
+      const r=Readout.postMatch(game.state().playerHist,{rollingAvg: rollingAvg()});
+      lastUnpred.push(r.unpredictabilityPct); if(lastUnpred.length>20)lastUnpred.shift();
+      $("postmatch").classList.add("show");
+      if(win){const beams=8+Math.round(summary.difficulty*8)+Math.round(summary.unpredictabilityPct/12);
+        showToast(`+${beams} ☀ sunbeams · skill & style`);}
+      setSpendEnabled(false);
+    });
+  }
+  function rollingAvg(){ if(!lastUnpred.length)return null; return Math.round(lastUnpred.reduce((a,b)=>a+b,0)/lastUnpred.length); }
+
+  function endRoundUI(){
+    const s=game.state();
+    nodeEls.forEach(el=>el.className="node");
+    $("links").innerHTML="";
+    $("roundlbl").textContent="Round "+s.round;
+    $("verdict").textContent="Choose"; $("sub").textContent="tap a stance";
+    if(s.round>ESC)$("esc").classList.add("on");
+    if(compassOn)preview(0),clearPreviewKeepCompass();
+    busy=false;
+    setSpendEnabled(true);
+  }
+  function clearPreviewKeepCompass(){}
+
+  /* ---- resolve meter UI ---- */
+  function updateMeter(state){
+    const pr=state||(game?game.meter.state():{player:0,ai:0});
+    const box=$("presolve").querySelector(".rpips"); box.innerHTML="";
+    for(let i=0;i<Resolve.RESOLVE_MAX;i++){const d=document.createElement("span");d.className="rpip "+(i<pr.player?"full":"");box.appendChild(d);}
+    setSpendEnabled(!busy&&!over);
+    // AI resolve only visible if Insight revealed it this match
+    if(aiResolveVisible) $("aimeter").textContent="foe 資 "+pr.ai;
+  }
+  let aiResolveVisible=false;
+  function setSpendEnabled(on){
+    const st=game?game.meter.state():{player:0};
+    $("insightbtn").disabled=!(on&&st.player>=1);
+    $("foresightbtn").disabled=!(on&&st.player>=2);
+  }
+  function applyReveal(action,payload){
+    if(action==="FORESIGHT"&&payload.predict){
+      clearForesight();
+      foresightNode=payload.predict.pick;
+      nodeEls[foresightNode].classList.add("foresight");
+      showToast("Foresight: foe likely "+STANCES[foresightNode].n);
+    }else if(action==="INSIGHT"){
+      aiResolveVisible=true;
+      Readout.render(game.state().playerHist,game.state().aiHist,game.state().outcomes,{aiRibbonK:10});
+      $("aimeter").textContent="foe 資 "+payload.oppResolve;
+      showToast("Insight: foe ribbon + Resolve revealed");
+    }
+  }
+  function clearForesight(){ if(foresightNode!=null){nodeEls[foresightNode]&&nodeEls[foresightNode].classList.remove("foresight");foresightNode=null;} }
+
+  function ribbonOpts(){
+    const charm=Assists.active(Engine.MODES[modeId]);
+    const k = (charm&&charm.id==="eye")?10:5;
+    return {aiRibbonK: aiResolveVisible?10:k, ribbonK:5};
+  }
+  function reduced(){ return Assists.settings().reducedMotion || (matchMedia&&matchMedia("(prefers-reduced-motion:reduce)").matches); }
+
+  /* ---- new game ---- */
+  function newGame(){
+    over=false;busy=false;aiResolveVisible=false;clearForesight();
+    const mode=Engine.MODES[modeId];
+    const seed = mode.seeded ? dailySeed() : (Math.floor(Math.random()*1e9)>>>0);
+    game=Engine.createGame({archetype:foeId,difficulty,mode,seed});
+    // fresh foe cosmetics + name
+    ai={name:rid(FOE_NAMES),face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS)};
+    Stage.init({pArt:artEl("P"),aArt:artEl("A"),hub:$("hub"),spark:$("spark"),
+      reducedMotion:reduced(),timed:mode.timed});
+    wireEvents(game);
+    // reset UI
+    nodeEls.forEach(el=>el.className="node");$("links").innerHTML="";
+    $("esc").classList.remove("on");$("verdict").style.color="";
+    $("roundlbl").textContent="Round 1";$("verdict").textContent="Choose";$("sub").textContent="tap a stance";
+    $("rematch").style.display="none";$("postmatch").classList.remove("show");$("aimeter").textContent="";
+    renderFighter("P");renderFighter("A");renderHP("P");renderHP("A");
+    Readout.render([],[],[],ribbonOpts());
+    $("pbar").classList.remove("show");$("abar").classList.remove("show");
+    updateFoeBar();updateMeter(game.meter.state());applyCompass();
+  }
+  function dailySeed(){ const d=new Date(); return (d.getUTCFullYear()*1e4+(d.getUTCMonth()+1)*100+d.getUTCDate())>>>0; }
+
+  function updateFoeBar(){
+    const a=Personalities.ARCHES[foeId];
+    $("foename").textContent=a.name;
+    $("foestars").textContent="★".repeat(a.stars)+"☆".repeat(5-a.stars);
+    $("foetell").textContent=a.tell;
+    const mode=Engine.MODES[modeId];
+    const mt=$("modetag"); mt.textContent=mode.id[0].toUpperCase()+mode.id.slice(1);
+    mt.classList.toggle("comp",!mode.honorsAssists);
+    $("compbanner").classList.toggle("show",!mode.honorsAssists && !!Assists.current());
+  }
+
+  /* ---- foe / mode / difficulty selectors ---- */
+  function buildSelectors(){
+    const foes=$("foes");
+    Personalities.ids().forEach(id=>{
+      const a=Personalities.ARCHES[id];
+      const o=document.createElement("div");o.className="opt sml"+(id===foeId?" sel":"");
+      o.textContent=a.name;o.title=a.tell;
+      o.onclick=()=>{foeId=id;syncSel(foes,o);updateFoeBar();};
+      foes.appendChild(o);
+    });
+    const modes=$("modes");
+    [["casual","Casual"],["practice","Practice"],["gauntlet","Gauntlet"],["daily","Daily"]].forEach(([id,lbl])=>{
+      const o=document.createElement("div");o.className="opt sml"+(id===modeId?" sel":"");
+      o.textContent=lbl;
+      o.onclick=()=>{modeId=id;syncSel(modes,o);updateFoeBar();applyCompass();updateCharmUI();};
+      modes.appendChild(o);
+    });
+    const diff=$("diff");
+    const stars=v=>{const n=Math.round(v*4)+1;return "★".repeat(n)+"☆".repeat(5-n);};
+    diff.oninput=()=>{difficulty=parseFloat(diff.value);$("difflbl").textContent=stars(difficulty);};
+    $("difflbl").textContent=stars(difficulty);
+  }
+
+  /* ---- accessibility + charms ---- */
+  function applyA11y(){
+    const s=Assists.settings();
+    document.body.classList.toggle("cb",s.colorblind);
+    document.body.classList.toggle("contrast",s.highContrast);
+    document.body.classList.toggle("bigtap",s.largeTapTargets);
+    document.body.classList.toggle("reduce",s.reducedMotion);
+    if(Stage.setReduced)Stage.setReduced(reduced());
+  }
+  function buildSettings(){
+    document.querySelectorAll("[data-a11y]").forEach(inp=>{
+      const key=inp.getAttribute("data-a11y");
+      inp.checked=!!Assists.settings()[key];
+      inp.addEventListener("change",()=>{Assists.setSetting(key,inp.checked);applyA11y();});
+    });
+    const box=$("charms");
+    const charms=[{id:null,name:"None",glyph:"∅"}].concat(Object.values(Assists.CHARMS));
+    charms.forEach(c=>{
+      const o=document.createElement("div");o.className="opt"+((Assists.current()?Assists.current().id:null)===c.id?" sel":"");
+      o.textContent=c.glyph;o.title=c.name+(c.effect?" — "+c.effect:"");
+      o.onclick=()=>{Assists.equip(c.id);syncSel(box,o);updateCharmUI();applyCompass();updateFoeBar();};
+      box.appendChild(o);
+    });
+    updateCharmUI();
+  }
+  function updateCharmUI(){
+    const mode=Engine.MODES[modeId], active=Assists.active(mode), equipped=Assists.current();
+    $("charmhint").textContent = (!mode.honorsAssists && equipped)
+      ? equipped.name+" is INERT here — "+mode.id+" is competitive."
+      : "Charms go inert the moment a match is ranked, seeded, or PvP.";
+  }
+  function applyCompass(){
+    const charm=Assists.active(Engine.MODES[modeId]);
+    compassOn = !!(charm && charm.id==="compass");
+    if(!compassOn) clearPreview();
+    // scroll charm: keep postmatch-style log visible (handled by ribbon history already)
+  }
+
+  /* ---- customizer ---- */
+  function buildCustomizer(){
+    const faces=$("faces"),pals=$("pals"),weaps=$("weaps"),cname=$("cname");
+    FACES.forEach(f=>{const o=document.createElement("div");o.className="opt"+(f===player.face?" sel":"");
+      o.textContent=f;o.onclick=()=>{player.face=f;syncSel(faces,o);renderFighter("P");};faces.appendChild(o);});
+    PALS.forEach(p=>{const o=document.createElement("div");o.className="opt pal"+(p===player.pal?" sel":"");
+      o.style.background=p;o.onclick=()=>{player.pal=p;syncSel(pals,o);renderFighter("P");};pals.appendChild(o);});
+    WEAPS.forEach(w=>{const o=document.createElement("div");o.className="opt"+(w===player.wb?" sel":"");
+      o.textContent=w.w;o.onclick=()=>{player.wb=w;syncSel(weaps,o);renderFighter("P");};weaps.appendChild(o);});
+    cname.value="";cname.oninput=()=>{player.name=cname.value.trim()||"You";$("pname").textContent=player.name;};
+  }
+  function syncSel(box,sel){[...box.children].forEach(c=>c.classList.remove("sel"));sel.classList.add("sel");}
+
+  function showToast(t){const el=$("toast");el.textContent=t;el.classList.add("show");clearTimeout(showToast._t);showToast._t=setTimeout(()=>el.classList.remove("show"),2600);}
+
+  /* ---- wire up ---- */
+  function toggleDrawer(id){$(id).classList.toggle("open");}
+  $("foedh").onclick=()=>toggleDrawer("foedrawer");
+  $("setdh").onclick=()=>toggleDrawer("setdrawer");
+  $("custdh").onclick=()=>toggleDrawer("custdrawer");
+  $("foebtn").onclick=()=>{$("foedrawer").classList.add("open");$("foedrawer").scrollIntoView({behavior:"smooth",block:"nearest"});};
+  $("rematch").onclick=()=>newGame();
+  $("howbtn").onclick=()=>showToast("Beat the 2 stances clockwise of yours · opposite = safe · same = bind");
+  $("insightbtn").onclick=()=>{ if(game)game.spend("P","INSIGHT"); };
+  $("foresightbtn").onclick=()=>{ if(game)game.spend("P","FORESIGHT"); };
+
+  buildWheel();buildSelectors();buildSettings();buildCustomizer();
+  applyA11y();renderFighter("P");renderFighter("A");
+  newGame();
+})();
+</script>
+</body>
+</html>

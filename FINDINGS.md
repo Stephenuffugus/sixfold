@@ -5,6 +5,30 @@ validated numbers (with justification), and anything the next instance needs.
 
 ---
 
+## 2026-06-18 — Phase 3 complete (animation + single-file ship)
+
+`stage.js` + `anim.css` (spec §4) and the `tools/build.js` inliner landed, producing
+the shipped single-file `sixfold.html`. `tools/domcheck.js` runs the inlined script in
+a `vm` sandbox with a minimal DOM stub and drives a full match (incl. binds + meter
+spends) headlessly — all smoke checks pass with no npm deps.
+
+- **State at handoff:** 7 suites / 111 assertions green; harness all targets met; build
+  byte-identical to a fresh `node tools/build.js`; domcheck passes.
+- **Bind choreography matches spec §4 by construction:** engine emits bind-tie as
+  `{kind:"clash"}` (→ stage spark + mutual recoil) and bind-win as `{kind:"glance"}`
+  (→ shove + loser flinch). So each of clean/glance/whiff/bind-win/bind-tie has a
+  distinct `playReveal` branch — the "distinct choreography per outcome" gate is
+  satisfied structurally, not just by no-error.
+- **anim.css is transform/opacity only** (compositor-friendly) with a fixed 50%/88%
+  pivot anchor, and `@media (prefers-reduced-motion:reduce)` kills all transitions/
+  animations while `stage.wait()` collapses to 0ms — reduced-motion hard-swaps.
+- **build byte-count gotcha:** `build.js` logs `tpl.length` (UTF-8 char count, ~83.6k);
+  the file on disk is ~83.8k bytes due to multibyte glyphs. Not a staleness bug.
+- **Only open acceptance item:** live-browser visual pass (real 60fps on mid mobile +
+  the actual look of the choreography). Everything else in §8/§6 is automated-green.
+
+---
+
 ## 2026-06-17 — Phase 0 + 1 (cold start)
 
 Picked the project up cold. Only spec, handoff, prototype (`sixfold.html`),

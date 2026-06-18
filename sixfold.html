@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>SIXFOLD — stance duel prototype</title>
+<title>SIXFOLD — stance duel</title>
+<meta name="theme-color" content="#171d30">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
@@ -14,148 +15,275 @@
     --seal:#cf4130; --jade:#5f9173; --steel:#7b8494; --gold:#cda64f;
     --disp:"Shippori Mincho",Georgia,serif; --ui:"Zen Maru Gothic",system-ui,sans-serif;
   }
+  /* colorblind-safe palette (accessibility setting) */
+  body.cb{ --seal:#d55e00; --jade:#0072b2; --steel:#999999; --gold:#e69f00; }
+  body.contrast{ --washi:#ffffff; --washi-dim:#e8e2d2; --line:#6b76a0; }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%}
   body{
     font-family:var(--ui); color:var(--washi);
-    background:
-      radial-gradient(120% 80% at 50% -10%, #2a3458 0%, var(--indigo) 55%, #10131f 100%);
+    background:radial-gradient(120% 80% at 50% -10%, #2a3458 0%, var(--indigo) 55%, #10131f 100%);
     min-height:100%; overflow-x:hidden;
-    display:flex; flex-direction:column; align-items:center;
-    padding:14px 14px 28px; gap:10px;
+    display:flex; flex-direction:column; align-items:center; padding:12px 12px 28px; gap:9px;
   }
-  /* faint paper grain */
   body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.05;
     background-image:radial-gradient(circle at 20% 30%, #fff 0, transparent 1px),
-      radial-gradient(circle at 70% 60%, #fff 0, transparent 1px);
-    background-size:7px 7px,11px 11px;}
+      radial-gradient(circle at 70% 60%, #fff 0, transparent 1px);background-size:7px 7px,11px 11px;}
 
   header{width:100%;max-width:460px;display:flex;align-items:baseline;justify-content:space-between}
-  h1{font-family:var(--disp);font-weight:800;letter-spacing:.18em;margin:0;font-size:24px;
-     color:var(--washi);text-shadow:0 1px 0 #0006}
+  h1{font-family:var(--disp);font-weight:800;letter-spacing:.18em;margin:0;font-size:23px;color:var(--washi);text-shadow:0 1px 0 #0006}
   h1 .dot{color:var(--seal)}
-  .tag{font-size:11px;letter-spacing:.14em;color:var(--washi-dim);text-transform:uppercase}
+  .tag{font-size:11px;letter-spacing:.12em;color:var(--washi-dim);text-transform:uppercase}
+
+  /* foe / mode bar */
+  .foebar{width:100%;max-width:460px;display:flex;align-items:center;justify-content:space-between;gap:8px;
+    background:#ffffff0d;border:1px solid #ffffff14;border-radius:11px;padding:8px 12px;font-size:12px}
+  .foebar .who{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .foebar .fn{font-family:var(--disp);font-weight:600;font-size:14px;color:var(--washi)}
+  .foebar .stars{color:var(--gold);letter-spacing:1px;font-size:11px}
+  .foebar .tell{color:var(--washi-dim);font-size:10.5px;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .foebar button{font-family:var(--ui);font-size:11px;font-weight:700;color:var(--washi);background:#ffffff14;
+    border:1px solid #ffffff22;border-radius:8px;padding:7px 10px;cursor:pointer;white-space:nowrap}
+  .modetag{font-size:9.5px;letter-spacing:.1em;color:var(--jade);text-transform:uppercase}
+  .modetag.comp{color:var(--seal)}
 
   .arena{width:100%;max-width:460px;display:flex;justify-content:space-between;gap:10px}
-  .fighter{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px}
-  .fighter .nm{font-family:var(--disp);font-size:15px;font-weight:600;max-width:100%;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .stage{position:relative;width:104px;height:118px;display:flex;align-items:flex-end;justify-content:center}
-  .banner{position:absolute;top:-2px;width:30px;height:64px;border-radius:2px 2px 0 0;
-    box-shadow:0 2px 6px #0007;z-index:1;display:flex;align-items:center;justify-content:center;
-    font-size:15px;color:#fff8;transform-origin:top center}
-  .banner.left{left:8px;transform:rotate(-7deg)} .banner.right{right:8px;transform:rotate(7deg)}
+  .fighter{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px}
+  .fighter .nm{font-family:var(--disp);font-size:14px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .stage{position:relative;width:104px;height:118px}
+  .banner{position:absolute;top:-2px;width:30px;height:62px;border-radius:2px 2px 0 0;box-shadow:0 2px 6px #0007;z-index:1;
+    display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff8;transform-origin:top center}
+  .banner.left{left:6px;transform:rotate(-7deg)} .banner.right{right:6px;transform:rotate(7deg)}
   .body{position:relative;z-index:2;filter:drop-shadow(0 4px 6px #0008)}
-  .face{position:absolute;z-index:3;top:26px;left:50%;transform:translateX(-50%);font-size:30px;
-    filter:drop-shadow(0 1px 1px #0006)}
+  .face{position:absolute;z-index:3;top:26px;left:50%;transform:translateX(-50%);font-size:30px;filter:drop-shadow(0 1px 1px #0006)}
   .weapon{position:absolute;z-index:4;bottom:6px;font-size:26px;filter:drop-shadow(0 1px 2px #0008)}
   .weapon.left{right:2px;transform:scaleX(-1)} .weapon.right{left:2px}
 
   .hp{display:flex;gap:4px;height:13px}
-  .pip{width:15px;height:13px;border-radius:2px;background:#0003;border:1px solid #ffffff22;
-    transition:background .25s,transform .25s}
-  .pip.full{background:linear-gradient(#e8645a,var(--seal));border-color:#ffffff44;
-    box-shadow:0 0 5px #cf413066}
+  .pip{width:15px;height:13px;border-radius:2px;background:#0003;border:1px solid #ffffff22;transition:background .25s,transform .25s}
+  .pip.full{background:linear-gradient(#e8645a,var(--seal));border-color:#ffffff44;box-shadow:0 0 5px #cf413066}
   .pip.lost{transform:scale(.7) rotate(8deg);opacity:.35}
 
-  /* WHEEL — the signature element */
-  .wheelwrap{position:relative;width:300px;height:300px;margin:2px 0}
+  /* stance ribbon + unpredictability bar */
+  .ribbon{display:flex;gap:3px;height:18px;align-items:center;justify-content:center}
+  .ribbon-cell{font-size:13px;width:17px;height:17px;border-radius:4px;display:flex;align-items:center;justify-content:center;
+    background:#ffffff10;border:1px solid #ffffff18;line-height:1}
+  .ribbon-cell.tint-seal{color:#fff;background:var(--seal);border-color:#fff4}
+  .ribbon-cell.tint-jade{color:#fff;background:var(--jade);border-color:#fff4}
+  .ribbon-cell.tint-steel{color:var(--washi);background:#ffffff14}
+  .ribbon-cell.tint-white{color:#222;background:#e9e2d0}
+  .bar{width:80px;height:8px;border-radius:5px;background:#ffffff14;position:relative;opacity:0;transition:opacity .3s;border:1px solid #ffffff14}
+  .bar.show{opacity:1}
+  .bar .bar-fill{height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,var(--jade),var(--gold));transition:width .4s}
+  .bar .bar-num{position:absolute;right:-26px;top:-5px;font-size:10px;color:var(--gold);font-weight:700}
+  .barwrap{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .barlbl{font-size:9px;letter-spacing:.08em;color:var(--washi-dim);text-transform:uppercase}
+
+  /* WHEEL */
+  .wheelwrap{position:relative;width:296px;height:296px;margin:0}
   svg.links{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
-  .node{position:absolute;width:74px;height:74px;margin:-37px 0 0 -37px;border-radius:50%;
-    background:linear-gradient(#28324f,#1c2236);
-    border:1.5px solid #49557a;
-    color:var(--washi);display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:1px;cursor:pointer;z-index:2;transition:transform .12s,border-color .2s,box-shadow .2s;
-    font-family:var(--ui)}
+  .node{position:absolute;width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;
+    background:linear-gradient(#28324f,#1c2236);border:1.5px solid #49557a;color:var(--washi);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;z-index:2;
+    transition:transform .12s,border-color .2s,box-shadow .2s;font-family:var(--ui)}
   .node:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
-  .node .g{font-size:23px;line-height:1}
-  .node .n{font-family:var(--disp);font-size:11px;letter-spacing:.04em;color:var(--washi-dim)}
+  .node .g{font-size:22px;line-height:1}
+  .node .n{font-family:var(--disp);font-size:10.5px;letter-spacing:.04em;color:var(--washi-dim)}
   .node:active{transform:scale(.93)}
   @media(hover:hover){.node:hover{border-color:var(--gold);box-shadow:0 0 14px #cda64f44}}
   .node.ppick{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 18px #cda64f88}
   .node.apick{border-color:var(--seal);box-shadow:0 0 0 2px var(--seal),0 0 18px #cf413088}
   .node.both{border-color:#fff;box-shadow:0 0 0 2px #fff,0 0 22px #fff8}
   .node.dim{opacity:.4}
-  /* relationship preview rings */
+  .node.foresight{border-color:var(--jade);box-shadow:0 0 0 2px var(--jade),0 0 16px #5f917399;animation:fpulse 1s infinite alternate}
+  @keyframes fpulse{to{box-shadow:0 0 0 3px var(--jade),0 0 24px #5f9173cc}}
   .node .ring{position:absolute;inset:-4px;border-radius:50%;border:2px solid transparent;opacity:0;transition:opacity .15s}
   .node.r-clean .ring{border-color:var(--seal);opacity:.9}
   .node.r-glance .ring{border-color:var(--jade);opacity:.9}
   .node.r-safe .ring{border-color:var(--steel);opacity:.7}
+  /* large tap targets (accessibility) */
+  body.bigtap .node{width:82px;height:82px;margin:-41px 0 0 -41px}
 
-  .hub{position:absolute;left:50%;top:50%;width:118px;height:118px;margin:-59px 0 0 -59px;border-radius:50%;
-    background:radial-gradient(circle at 50% 38%, #f3ead6 0%, #d8cbac 60%, #b9a982 100%);
-    color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;
-    z-index:3;box-shadow:inset 0 0 0 3px #ffffff55, 0 6px 18px #0007;text-align:center;padding:8px}
+  .hub{position:absolute;left:50%;top:50%;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;
+    background:radial-gradient(circle at 50% 38%, #f3ead6 0%, #d8cbac 60%, #b9a982 100%);color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;
+    box-shadow:inset 0 0 0 3px #ffffff55, 0 6px 18px #0007;text-align:center;padding:8px}
   .hub .round{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#7a6a48}
-  .hub .verdict{font-family:var(--disp);font-weight:800;font-size:21px;line-height:1.05;margin-top:2px}
-  .hub .sub{font-size:10.5px;color:#6c5d3f;margin-top:3px;max-width:96px;line-height:1.25}
+  .hub .verdict{font-family:var(--disp);font-weight:800;font-size:20px;line-height:1.05;margin-top:2px}
+  .hub .sub{font-size:10px;color:#6c5d3f;margin-top:3px;max-width:98px;line-height:1.25}
   .hub.flash-clean{animation:flashc .5s} .hub.flash-glance{animation:flashg .5s}
-  @keyframes flashc{0%{box-shadow:inset 0 0 0 3px #cf4130,0 0 40px #cf4130cc}100%{}}
-  @keyframes flashg{0%{box-shadow:inset 0 0 0 3px #5f9173,0 0 30px #5f9173aa}100%{}}
+  @keyframes flashc{0%{box-shadow:inset 0 0 0 3px var(--seal),0 0 40px #cf4130cc}100%{}}
+  @keyframes flashg{0%{box-shadow:inset 0 0 0 3px var(--jade),0 0 30px #5f9173aa}100%{}}
+  /* bind prompt — hub flips to 3 buttons */
+  .hub.bind-mode{background:radial-gradient(circle at 50% 38%,#f6dede,#d8b6ac 70%,#b98a82)}
+  .bind-title{font-family:var(--disp);font-weight:800;font-size:12px;letter-spacing:.2em;color:#7a3a30}
+  .bind-row{display:flex;gap:4px;margin-top:5px}
+  .bindbtn{display:flex;flex-direction:column;align-items:center;gap:1px;width:31px;padding:5px 2px;border-radius:8px;
+    border:1px solid #00000022;background:#fff7;cursor:pointer;font-family:var(--ui);color:var(--ink)}
+  .bindbtn:active{transform:scale(.92)}
+  .bindbtn .bg{font-size:16px;line-height:1} .bindbtn .bn{font-size:8.5px;letter-spacing:.03em}
 
   .esc{font-size:11px;letter-spacing:.12em;color:var(--gold);height:14px;text-transform:uppercase;opacity:0;transition:opacity .3s}
   .esc.on{opacity:1}
 
+  /* resolve meter */
+  .meter{width:100%;max-width:460px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+  .resolve{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--washi-dim)}
+  .rpip{width:13px;height:13px;border-radius:3px;background:#ffffff14;border:1px solid #ffffff22;transition:background .25s,box-shadow .25s}
+  .rpip.full{background:linear-gradient(#8ec0ff,#3f6fb0);border-color:#fff4;box-shadow:0 0 6px #3f6fb088}
+  .spendbtn{font-family:var(--ui);font-weight:700;font-size:11.5px;color:var(--washi);background:#ffffff12;
+    border:1px solid #ffffff22;border-radius:8px;padding:7px 9px;cursor:pointer;display:flex;gap:5px;align-items:center}
+  .spendbtn .c{color:#8ec0ff;font-size:10px}
+  .spendbtn:disabled{opacity:.35;cursor:default}
+  .aimeter{font-size:10px;color:var(--steel);min-width:54px;text-align:right}
+
   .controls{width:100%;max-width:460px;display:flex;gap:8px}
-  button.act{flex:1;font-family:var(--ui);font-weight:700;font-size:14px;letter-spacing:.02em;
-    padding:12px;border-radius:11px;border:1px solid #ffffff22;cursor:pointer;color:var(--washi);
-    background:linear-gradient(#2c3658,#202841)}
+  button.act{flex:1;font-family:var(--ui);font-weight:700;font-size:13.5px;letter-spacing:.02em;padding:12px;border-radius:11px;
+    border:1px solid #ffffff22;cursor:pointer;color:var(--washi);background:linear-gradient(#2c3658,#202841)}
   button.act:active{transform:translateY(1px)}
   button.primary{background:linear-gradient(#d9694f,var(--seal));border-color:#ffffff33;color:#1a0f0c}
   button.ghost{background:#ffffff10}
 
-  .legend{width:100%;max-width:460px;font-size:11px;color:var(--washi-dim);display:flex;
-    flex-wrap:wrap;gap:10px 14px;justify-content:center;line-height:1}
+  .legend{width:100%;max-width:460px;font-size:10.5px;color:var(--washi-dim);display:flex;flex-wrap:wrap;gap:8px 13px;justify-content:center;line-height:1}
   .legend b{color:var(--washi);font-weight:700}
   .sw{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:-1px;margin-right:4px}
 
-  /* customizer drawer */
-  .drawer{width:100%;max-width:460px;background:#ffffff0d;border:1px solid #ffffff1a;border-radius:14px;
-    overflow:hidden;transition:max-height .3s ease;max-height:46px}
-  .drawer.open{max-height:340px}
-  .drawer .dh{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;
-    font-weight:700;font-size:13px;letter-spacing:.04em}
+  /* post-match readout */
+  .postmatch{width:100%;max-width:460px;background:#ffffff0d;border:1px solid var(--gold);border-radius:12px;padding:12px 14px;
+    font-size:12px;line-height:1.5;display:none}
+  .postmatch.show{display:block}
+  .postmatch b{color:var(--gold)} .postmatch .dim{color:var(--washi-dim)}
+
+  /* drawers */
+  .drawer{width:100%;max-width:460px;background:#ffffff0d;border:1px solid #ffffff1a;border-radius:14px;overflow:hidden;
+    transition:max-height .3s ease;max-height:46px}
+  .drawer.open{max-height:520px}
+  .drawer .dh{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;font-weight:700;font-size:13px;letter-spacing:.04em}
   .drawer .dh .chev{transition:transform .3s} .drawer.open .dh .chev{transform:rotate(180deg)}
   .dbody{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
   .row{display:flex;flex-direction:column;gap:6px}
   .row label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--washi-dim)}
   .opts{display:flex;flex-wrap:wrap;gap:7px}
-  .opt{width:40px;height:40px;border-radius:9px;border:1.5px solid #ffffff22;background:#ffffff10;
-    display:flex;align-items:center;justify-content:center;font-size:21px;cursor:pointer}
+  .opt{min-width:40px;height:40px;padding:0 8px;border-radius:9px;border:1.5px solid #ffffff22;background:#ffffff10;
+    display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:var(--washi);font-family:var(--ui)}
+  .opt.sml{font-size:12px;font-weight:700}
   .opt.sel{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold)}
   .opt.pal{position:relative}
-  input.nm{font-family:var(--ui);font-size:14px;padding:9px 11px;border-radius:9px;border:1px solid #ffffff22;
-    background:#ffffff10;color:var(--washi);width:100%}
+  input.nm{font-family:var(--ui);font-size:14px;padding:9px 11px;border-radius:9px;border:1px solid #ffffff22;background:#ffffff10;color:var(--washi);width:100%}
   input.nm::placeholder{color:#ffffff55}
+  input[type=range]{width:100%}
+  .toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;padding:4px 0}
+  .toggle input{width:38px;height:22px;-webkit-appearance:none;appearance:none;background:#ffffff20;border-radius:12px;position:relative;cursor:pointer;transition:background .2s}
+  .toggle input:checked{background:var(--jade)}
+  .toggle input::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:2px;left:2px;transition:left .2s}
+  .toggle input:checked::after{left:18px}
+  .hint{font-size:10.5px;color:var(--washi-dim);line-height:1.4}
+  .compbanner{font-size:11px;color:var(--seal);font-weight:700;text-align:center;padding:4px;display:none}
+  .compbanner.show{display:block}
 
-  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;
-    background:#13182a;border:1px solid var(--gold);color:var(--gold);font-weight:700;font-size:13px;
-    padding:10px 18px;border-radius:30px;transition:.35s;z-index:20;pointer-events:none;letter-spacing:.04em}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;background:#13182a;border:1px solid var(--gold);
+    color:var(--gold);font-weight:700;font-size:13px;padding:10px 18px;border-radius:30px;transition:.35s;z-index:20;pointer-events:none;letter-spacing:.04em}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
   .shake{animation:shake .35s}
-  @keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-5px,2px)}
-    40%{transform:translate(5px,-2px)}60%{transform:translate(-4px,-1px)}80%{transform:translate(3px,2px)}}
+  @keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-5px,2px)}40%{transform:translate(5px,-2px)}60%{transform:translate(-4px,-1px)}80%{transform:translate(3px,2px)}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-  @media (max-width:360px){.wheelwrap{width:268px;height:268px}.node{width:66px;height:66px;margin:-33px 0 0 -33px}}
+  body.reduce *{animation:none!important;transition:none!important}
+  @media (max-width:360px){.wheelwrap{width:266px;height:266px}.node{width:64px;height:64px;margin:-32px 0 0 -32px}}
+
+  /* SIXFOLD — anim.css  (spec §4)
+ * Limited-animation illusion from 2 frames/character + GPU transforms.
+ * Transform/opacity ONLY (compositor-friendly -> trivial 60fps for 2 fighters).
+ * Fixed pivot anchor 50% x / 88% y aligns transforms across hundreds of warriors.
+ */
+
+/* the mirror lives on the WRAPPER so pose/lunge transforms (authored facing
+   right) compose cleanly for the opponent without fighting the flip. */
+.art-wrap { position: relative; width: 100%; height: 100%;
+  display: flex; align-items: flex-end; justify-content: center; }
+.art-wrap.opp { transform: scaleX(-1); }
+
+.fighter-art {
+  transform-origin: 50% 88%;
+  transition: transform .18s cubic-bezier(.34, 1.4, .5, 1), filter .2s;
+  will-change: transform;
+}
+
+/* held strike frame (when PNG frames exist) */
+.fighter-art.striking .frame-idle { opacity: 0; }
+.fighter-art.striking .frame-strike { opacity: 1; }
+.frame-idle, .frame-strike { transition: opacity .08s; }
+.frame-strike { opacity: 0; }
+
+/* impact spark — single radial flash at the hub */
+.spark { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px;
+  margin: -5px 0 0 -5px; border-radius: 50%; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle, #fff 0%, #cda64f 40%, transparent 70%); z-index: 6; }
+.spark.go { animation: sparkflash .42s ease-out; }
+@keyframes sparkflash {
+  0% { opacity: .95; transform: scale(.4); }
+  100% { opacity: 0; transform: scale(7); }
+}
+
+/* loser flinch (glance) and knockback (clean) — transform-only */
+.fighter-art.flinch { animation: flinch .26s; }
+@keyframes flinch { 0%,100% { } 40% { transform: translateX(4px) rotate(2deg); } }
+.fighter-art.knock { animation: knock .4s; }
+@keyframes knock { 0% { } 35% { transform: translateX(10px) rotate(6deg); filter: brightness(1.4); } 100% { } }
+
+/* finishing-blow slow-mo flash on the hub reuses the prototype flash classes */
+.hub.finish { animation: finishflash .8s ease-out; }
+@keyframes finishflash {
+  0% { box-shadow: inset 0 0 0 4px #fff, 0 0 60px #fff; }
+  100% { } }
+
+/* locked-blades: both fighters held leaning toward centre, paused */
+.fighter-art.locked { transition: transform .14s ease-out;
+  transform: translateX(7px) rotate(4deg) !important; }
+
+/* reduced motion: hard-swap frames, no lunges/shake/spark, instant pivots */
+@media (prefers-reduced-motion: reduce) {
+  .fighter-art { transition: none !important; }
+  .spark, .fighter-art.flinch, .fighter-art.knock, .hub.finish { animation: none !important; }
+  .frame-idle, .frame-strike { transition: none !important; }
+}
+
 </style>
 </head>
 <body>
   <header>
     <h1>SIX<span class="dot">·</span>FOLD</h1>
-    <span class="tag">stance duel — engine proto</span>
+    <span class="tag">stance duel</span>
   </header>
+
+  <div class="foebar">
+    <div class="who">
+      <span class="fn" id="foename">—</span>
+      <span class="stars" id="foestars"></span>
+      <span class="tell" id="foetell"></span>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <span class="modetag" id="modetag">Casual</span>
+      <button id="foebtn">Choose foe</button>
+    </div>
+  </div>
 
   <div class="arena">
     <div class="fighter" id="pf">
       <div class="nm" id="pname">You</div>
       <div class="stage" id="pstage"></div>
       <div class="hp" id="php"></div>
+      <div class="ribbon" id="pribbon"></div>
+      <div class="barwrap"><span class="barlbl">unpred</span>
+        <div class="bar" id="pbar"><div class="bar-fill"></div><span class="bar-num">—</span></div></div>
     </div>
     <div class="fighter" id="af">
       <div class="nm" id="aname">Ronin</div>
       <div class="stage" id="astage"></div>
       <div class="hp" id="ahp"></div>
+      <div class="ribbon" id="aribbon"></div>
+      <div class="barwrap"><span class="barlbl">unpred</span>
+        <div class="bar" id="abar"><div class="bar-fill"></div><span class="bar-num">—</span></div></div>
     </div>
   </div>
 
@@ -163,6 +291,7 @@
 
   <div class="wheelwrap" id="wheel">
     <svg class="links" id="links" viewBox="0 0 300 300"></svg>
+    <div class="spark" id="spark"></div>
     <div class="hub" id="hub">
       <div class="round" id="roundlbl">Round 1</div>
       <div class="verdict" id="verdict">Choose</div>
@@ -170,24 +299,64 @@
     </div>
   </div>
 
+  <div class="meter">
+    <div class="resolve" id="presolve" title="Resolve — buys information, never force">資 <span class="rpips"></span></div>
+    <button class="spendbtn" id="insightbtn">Insight <span class="c">1</span></button>
+    <button class="spendbtn" id="foresightbtn">Foresight <span class="c">2</span></button>
+    <span class="aimeter" id="aimeter"></span>
+  </div>
+
   <div class="legend">
     <span><span class="sw" style="background:var(--gold)"></span><b>you</b></span>
-    <span><span class="sw" style="background:var(--seal)"></span>clean · −2</span>
-    <span><span class="sw" style="background:var(--jade)"></span>glance · −1</span>
+    <span><span class="sw" style="background:var(--seal)"></span>clean −2</span>
+    <span><span class="sw" style="background:var(--jade)"></span>glance −1</span>
     <span><span class="sw" style="background:var(--steel)"></span>across = whiff</span>
-    <span>same = clash</span>
+    <span>same = clash → bind</span>
   </div>
+
+  <div class="postmatch" id="postmatch"></div>
 
   <div class="controls">
     <button class="act ghost" id="howbtn">How it works</button>
     <button class="act primary" id="rematch" style="display:none">Rematch</button>
   </div>
 
-  <div class="drawer" id="drawer">
-    <div class="dh" id="dh"><span>⚔ Customize your warrior</span><span class="chev">▾</span></div>
+  <div class="compbanner" id="compbanner">Assists off — competitive</div>
+
+  <!-- Foe select -->
+  <div class="drawer" id="foedrawer">
+    <div class="dh" id="foedh"><span>⚔ Choose your foe</span><span class="chev">▾</span></div>
     <div class="dbody">
-      <div class="row"><label>Name</label>
-        <input class="nm" id="cname" maxlength="14" placeholder="name your warrior"></div>
+      <div class="row"><label>Opponent</label><div class="opts" id="foes"></div></div>
+      <div class="row"><label>Difficulty (<span id="difflbl">★★★☆☆</span>)</label>
+        <input type="range" id="diff" min="0" max="1" step="0.05" value="0.5"></div>
+      <div class="row"><label>Mode</label><div class="opts" id="modes"></div></div>
+    </div>
+  </div>
+
+  <!-- Settings: accessibility (free) + assist charms (casual only) -->
+  <div class="drawer" id="setdrawer">
+    <div class="dh" id="setdh"><span>⚙ Settings &amp; assists</span><span class="chev">▾</span></div>
+    <div class="dbody">
+      <div class="row"><label>Accessibility — always free</label>
+        <div class="toggle"><span>Colorblind-safe palette</span><input type="checkbox" data-a11y="colorblind"></div>
+        <div class="toggle"><span>Reduced motion</span><input type="checkbox" data-a11y="reducedMotion"></div>
+        <div class="toggle"><span>High contrast</span><input type="checkbox" data-a11y="highContrast"></div>
+        <div class="toggle"><span>Large tap targets</span><input type="checkbox" data-a11y="largeTapTargets"></div>
+        <div class="toggle"><span>Slower reveal</span><input type="checkbox" data-a11y="slowReveal"></div>
+      </div>
+      <div class="row"><label>Assist charm — casual/practice only</label>
+        <div class="opts" id="charms"></div>
+        <div class="hint" id="charmhint">Charms go inert the moment a match is ranked, seeded, or PvP.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customizer -->
+  <div class="drawer" id="custdrawer">
+    <div class="dh" id="custdh"><span>🎨 Customize your warrior</span><span class="chev">▾</span></div>
+    <div class="dbody">
+      <div class="row"><label>Name</label><input class="nm" id="cname" maxlength="14" placeholder="name your warrior"></div>
       <div class="row"><label>Creature</label><div class="opts" id="faces"></div></div>
       <div class="row"><label>Armor color</label><div class="opts" id="pals"></div></div>
       <div class="row"><label>Weapon &amp; banner</label><div class="opts" id="weaps"></div></div>
@@ -198,230 +367,1432 @@
 
 <script>
 "use strict";
-/* ============ VALIDATED ENGINE (from 50k-match simulation) ============ */
-const N=6, HP=4, CLEAN=2, GLANCE=1, ESC_ROUND=6;
-// stance i sits at ring position i (clockwise from top). Icons literally point to their slot.
-const STANCES=[
-  {n:"Heaven",g:"↑"},{n:"Tiger",g:"↗"},{n:"River",g:"↘"},
-  {n:"Earth",g:"↓"},{n:"Crane",g:"↙"},{n:"Shadow",g:"↖"}
-];
-// my pick a vs their pick b -> clockwise distance decides everything
-function resolve(a,b){
-  const d=((b-a)%N+N)%N;
-  if(d===0)return{kind:"clash",win:null};
-  if(d===1)return{kind:"clean",win:"P"};
-  if(d===2)return{kind:"glance",win:"P"};
-  if(d===3)return{kind:"whiff",win:null};
-  if(d===4)return{kind:"glance",win:"A"};
-  return{kind:"clean",win:"A"};            // d===5
-}
-const counter=p=>((p-1)%N+N)%N;           // stance that CLEAN-hits p
+/* ============================ predictor.js ============================ */
+/* SIXFOLD — predictor.js  (spec §0, the keystone)
+ *
+ * An online ensemble of cheap predictors. Each watches a pick-stream and guesses
+ * the next pick; we track each one's running accuracy. The best one tells us how
+ * READABLE the stream is. Three systems consume only the public API below:
+ *   - AI reads the player via predict()
+ *   - the player's unpredictability score is readability()
+ *   - Foresight surfaces predict()
+ *
+ * Pure & stateless public API: predict()/readability() each replay the whole
+ * history through a fresh ensemble. Histories are short (<~24), so O(n) is fine
+ * and the functions stay referentially transparent (contract demands it).
+ *
+ * Parameterized by alphabet size N: N=6 for stances, N=3 for the Clash Bind.
+ */
+(function (root) {
+  "use strict";
 
-/* ============ READER AI (mirrors the simulated 'reader' strategy) ============ */
-function aiPick(playerHist){
-  const recent=playerHist.slice(-12);
-  if(recent.length>=3){
-    const c={};recent.forEach(x=>c[x]=(c[x]||0)+1);
-    let best=-1,bc=0;for(const k in c)if(c[k]>bc){bc=c[k];best=+k;}
-    if(bc/recent.length > (1/N)+0.08) return counter(best); // exploit a lean
+  const WINDOW = 12;
+
+  // --- individual predictors: history (incl. just-played pick) -> next guess ---
+  // Each returns a guess in 0..N-1, or null when it has no opinion yet.
+  function argmaxCount(hist, N) {
+    if (!hist.length) return null;
+    const recent = hist.slice(-WINDOW);
+    const c = new Array(N).fill(0);
+    for (const x of recent) c[x]++;
+    let best = 0;
+    for (let i = 1; i < N; i++) if (c[i] > c[best]) best = i;
+    return best;
   }
-  return Math.floor(Math.random()*N);
-}
 
-/* ============ COSMETICS (looks, not paper-doll) ============ */
-const FACES=["🦊","🐸","🐱","🐻","🐯","🐰","💀","👹","🐲","🦉"];
-const PALS=["#cf4130","#3f6fb0","#5f9173","#8a5bc0","#caa23a","#2b3550","#c96fa0","#46b0a6"];
-const WEAPS=[{w:"🗡️",b:"家"},{w:"⚔️",b:"武"},{w:"🔱",b:"龍"},{w:"🪓",b:"鬼"},{w:"🏹",b:"風"},{w:"🪭",b:"花"}];
-
-const rid=a=>a[Math.floor(Math.random()*a.length)];
-let player={hp:HP,name:"You",face:"🦊",pal:"#cf4130",wb:WEAPS[0]};
-let ai={hp:HP,name:"Ronin",face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS)};
-let round=1, busy=false, over=false, playerHist=[];
-
-/* armored-body svg, tinted by palette */
-function bodySVG(color){
-  return `<svg class="body" width="86" height="96" viewBox="0 0 86 96">
-    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="#000" stop-opacity=".45"/>
-    </linearGradient></defs>
-    <path d="M14 92 Q10 58 22 44 L30 50 Q43 40 56 50 L64 44 Q76 58 72 92 Z" fill="url(#g)" stroke="#0007" stroke-width="2"/>
-    <path d="M22 44 Q43 30 64 44 L60 58 Q43 50 26 58 Z" fill="${color}" stroke="#0006" stroke-width="1.5"/>
-    <rect x="36" y="60" width="14" height="26" rx="3" fill="#0004"/>
-    <path d="M22 44 Q43 18 64 44 Q43 34 22 44Z" fill="#1a1d2b" stroke="#0007"/>
-    <path d="M30 40 q13 -16 26 0" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"/>
-  </svg>`;
-}
-function renderFighter(side){
-  const f=side==="P"?player:ai, stage=document.getElementById(side==="P"?"pstage":"astage");
-  const dir=side==="P"?"left":"right";
-  stage.innerHTML=
-    `<div class="banner ${dir}" style="background:${f.pal}">${f.wb.b}</div>`+
-    bodySVG(f.pal)+
-    `<div class="face">${f.face}</div>`+
-    `<div class="weapon ${dir}">${f.wb.w}</div>`;
-  document.getElementById(side==="P"?"pname":"aname").textContent=f.name;
-  renderHP(side);
-}
-function renderHP(side){
-  const f=side==="P"?player:ai, box=document.getElementById(side==="P"?"php":"ahp");
-  box.innerHTML="";
-  for(let i=0;i<HP;i++){const p=document.createElement("div");
-    p.className="pip "+(i<f.hp?"full":"lost");box.appendChild(p);}
-}
-
-/* ============ WHEEL ============ */
-const wheel=document.getElementById("wheel");
-const nodeEls=[];
-function buildWheel(){
-  const R=110, cx=150, cy=150;
-  STANCES.forEach((s,i)=>{
-    const ang=(-90+i*60)*Math.PI/180;
-    const x=50+ (Math.cos(ang)*R/300*100), y=50+(Math.sin(ang)*R/300*100);
-    const el=document.createElement("button");
-    el.className="node";el.style.left=x+"%";el.style.top=y+"%";
-    el.setAttribute("aria-label",s.n+" stance");
-    el.innerHTML=`<span class="ring"></span><span class="g">${s.g}</span><span class="n">${s.n}</span>`;
-    el.addEventListener("click",()=>commit(i));
-    el.addEventListener("pointerenter",()=>preview(i));
-    el.addEventListener("pointerleave",clearPreview);
-    el.addEventListener("focus",()=>preview(i));
-    el.addEventListener("blur",clearPreview);
-    wheel.appendChild(el);nodeEls.push(el);
-  });
-}
-function nodeCenter(i){const R=110,ang=(-90+i*60)*Math.PI/180;
-  return{x:150+Math.cos(ang)*R,y:150+Math.sin(ang)*R};}
-function preview(i){
-  if(busy||over)return;
-  nodeEls.forEach((el,j)=>{
-    el.classList.remove("r-clean","r-glance","r-safe");
-    const d=((j-i)%N+N)%N;
-    if(d===1)el.classList.add("r-clean");
-    else if(d===2)el.classList.add("r-glance");
-    else if(d===3)el.classList.add("r-safe");
-  });
-}
-function clearPreview(){nodeEls.forEach(el=>el.classList.remove("r-clean","r-glance","r-safe"));}
-
-/* ============ ROUND FLOW ============ */
-const hub=document.getElementById("hub"),verdict=document.getElementById("verdict"),
-  sub=document.getElementById("sub"),roundlbl=document.getElementById("roundlbl"),
-  links=document.getElementById("links"),escEl=document.getElementById("esc");
-const reduce=matchMedia("(prefers-reduced-motion:reduce)").matches;
-
-function drawLink(p,a,color){
-  links.innerHTML="";
-  if(p===a){ // mirror: pulse single node
-    const c=nodeCenter(p);
-    links.innerHTML=`<circle cx="${c.x}" cy="${c.y}" r="42" fill="none" stroke="#fff" stroke-width="3" opacity=".8"/>`;
-    return;
+  function detectStep(hist, N) {
+    // rotation / metronome: if the last two transitions share a step, extrapolate.
+    // Abstain (null) without a steady cadence so cycle is never penalised on
+    // non-rotations and reaches accuracy 1.0 on true rotations (ties -> cycle wins).
+    if (hist.length < 3) return null;
+    const d1 = (hist[hist.length - 1] - hist[hist.length - 2] + N) % N;
+    const d2 = (hist[hist.length - 2] - hist[hist.length - 3] + N) % N;
+    // a steady NON-ZERO step is a rotation; step 0 is a repeat (repeat's job).
+    if (d1 === d2 && d1 !== 0) return (hist[hist.length - 1] + d1) % N;
+    return null; // no rotation cadence -> abstain (don't pollute accuracy)
   }
-  const A=nodeCenter(p),B=nodeCenter(a);
-  links.innerHTML=`<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" stroke="${color}" stroke-width="4" stroke-linecap="round" opacity=".95"/>`;
-}
 
-function commit(p){
-  if(busy||over)return; busy=true; clearPreview();
-  const a=aiPick(playerHist); playerHist.push(p);
-  nodeEls.forEach(el=>el.classList.add("dim"));
-  nodeEls[p].classList.remove("dim"); nodeEls[p].classList.add("ppick");
-  verdict.textContent="…"; sub.textContent="reading you";
-  const delay=reduce?60:560;
-  setTimeout(()=>{
+  function mostCommonAfter(hist, N) {
+    // markov-1: given the current last symbol, what most often follows it?
+    if (hist.length < 2) return null;
+    const prev = hist[hist.length - 1];
+    const c = new Array(N).fill(0);
+    let seen = 0;
+    for (let i = 0; i < hist.length - 1; i++) {
+      if (hist[i] === prev) { c[hist[i + 1]]++; seen++; }
+    }
+    if (!seen) return null;
+    let best = 0;
+    for (let i = 1; i < N; i++) if (c[i] > c[best]) best = i;
+    return best;
+  }
+
+  function leastRecent(hist, N) {
+    // antiRepeat ("they avoid repeating"): the symbol seen least recently.
+    if (!hist.length) return null;
+    let bestSym = 0, bestAge = -1;
+    for (let s = 0; s < N; s++) {
+      let age = hist.length; // never seen -> maximally "due"
+      for (let i = hist.length - 1; i >= 0; i--) {
+        if (hist[i] === s) { age = hist.length - 1 - i; break; }
+      }
+      if (age > bestAge) { bestAge = age; bestSym = s; }
+    }
+    return bestSym;
+  }
+
+  const PREDICTORS = {
+    cycle:      detectStep,                                  // checked before markov on ties
+    repeat:     (h) => (h.length ? h[h.length - 1] : null),
+    frequency:  argmaxCount,
+    markov1:    mostCommonAfter,
+    antiRepeat: leastRecent,
+  };
+  const NAMES = Object.keys(PREDICTORS);
+
+  const LABELS = {
+    cycle:      "Rotates in a fixed pattern",
+    repeat:     "Repeats the last stance",
+    frequency:  "Favours one stance",
+    markov1:    "Predictable transitions",
+    antiRepeat: "Never repeats the same stance",
+    none:       "Unreadable",
+  };
+  function humanLabel(name) { return LABELS[name] || LABELS.none; }
+
+  class Ensemble {
+    constructor(N) {
+      this.N = N || 6;
+      this.history = [];
+      this.acc = {};
+      this.lastGuess = {};
+      for (const n of NAMES) { this.acc[n] = { hits: 0, total: 0 }; this.lastGuess[n] = null; }
+    }
+    observe(actual) {
+      // score the guesses made *before* this pick (only count predictors that committed)
+      for (const n of NAMES) {
+        const g = this.lastGuess[n];
+        if (g !== null && g !== undefined) {
+          this.acc[n].total++;
+          if (g === actual) this.acc[n].hits++;
+        }
+      }
+      this.history.push(actual);
+      for (const n of NAMES) this.lastGuess[n] = PREDICTORS[n](this.history, this.N);
+    }
+    // best = highest accuracy among predictors with enough evidence; ties -> NAMES order.
+    best() {
+      let bestName = "none", bestAcc = 0;
+      for (const n of NAMES) {
+        const { hits, total } = this.acc[n];
+        const a = total >= 3 ? hits / total : 0;
+        if (a > bestAcc) { bestAcc = a; bestName = n; }
+      }
+      return { name: bestName, accuracy: bestAcc };
+    }
+  }
+
+  function buildEnsemble(history, N) {
+    const e = new Ensemble(N);
+    for (const pick of history) e.observe(pick);
+    return e;
+  }
+
+  function predict(history, N) {
+    N = N || 6;
+    if (!history || !history.length) {
+      return { pick: 0, confidence: 0, predictorName: "none" };
+    }
+    const e = buildEnsemble(history, N);
+    const b = e.best();
+    let pick = e.lastGuess[b.name];
+    if (pick === null || pick === undefined) pick = history[history.length - 1];
+    return { pick, confidence: b.accuracy, predictorName: b.name };
+  }
+
+  function readability(history, N) {
+    N = N || 6;
+    const e = buildEnsemble(history || [], N);
+    const b = e.best();
+    const base = 1 / N;
+    const score = Math.max(0, Math.min(1, (b.accuracy - base) / (1 - base)));
+    return { score, tell: humanLabel(b.name), predictorName: b.name, confidence: b.accuracy };
+  }
+
+  const api = { predict, readability, humanLabel, Ensemble, WINDOW };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.Predictor = api;
+})(typeof globalThis !== "undefined" ? globalThis : this);
+
+
+/* ============================ resolve.js ============================ */
+/* SIXFOLD — resolve.js  (spec §3)  Insight + Foresight only.
+ *
+ * Converts DEAD rounds into a resource that buys INFORMATION, never force.
+ * Honesty is structural, not promised:
+ *   - the only gains are SYMMETRIC (whiff -> +1 both, bind-entered -> +1 both),
+ *     so player and AI meters always hold identical totals;
+ *   - spend() mutates ONLY the meter and returns an info descriptor — it has no
+ *     HP/damage field and cannot reach the engine's damage path.
+ * Focus (the damage spend) was deliberately cut so the meter is unimpeachable.
+ *
+ * API (frozen, spec §5):
+ *   gain(outcome) ; onBindEntered() ; spend(side, action) -> InfoReveal|null ; state()
+ * Use createResolve() per match (the engine owns one instance).
+ */
+(function (root) {
+  "use strict";
+
+  const RESOLVE_MAX = 3;
+  const COST = { INSIGHT: 1, FORESIGHT: 2 };
+
+  function createResolve(opts) {
+    opts = opts || {};
+    // comeback drip (taking a clean -> +1 victim) is OFF by default: it would make
+    // per-player gains unequal and break the "gain identically" guarantee. Opt-in only.
+    const comebackDrip = !!opts.comebackDrip;
+    const state = { player: 0, ai: 0 };
+
+    const add = (side, n) => { state[side] = Math.min(RESOLVE_MAX, state[side] + n); };
+    const both = (n) => { add("player", n); add("ai", n); };
+
+    function gain(outcome) {
+      if (!outcome) return;
+      if (outcome.kind === "whiff") both(1);                 // symmetric
+      else if (comebackDrip && outcome.kind === "clean" && outcome.winner) {
+        add(outcome.winner === "P" ? "ai" : "player", 1);    // victim only (opt-in)
+      }
+    }
+
+    function onBindEntered() { both(1); }                    // fires on entering any bind
+
+    // returns InfoReveal {side, action, cost} on success, else null. NO damage field.
+    function spend(side, action) {
+      const cost = COST[action];
+      if (cost == null) return null;
+      if (state[side] < cost) return null;
+      state[side] -= cost;
+      return { side, action, cost };
+    }
+
+    function canSpend(side, action) {
+      const cost = COST[action];
+      return cost != null && state[side] >= cost;
+    }
+
+    function reset() { state.player = 0; state.ai = 0; }
+
+    return {
+      gain, onBindEntered, spend, canSpend, reset,
+      state: () => ({ player: state.player, ai: state.ai }),
+      MAX: RESOLVE_MAX, COST,
+    };
+  }
+
+  const api = { createResolve, RESOLVE_MAX, COST };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.Resolve = api;
+})(typeof globalThis !== "undefined" ? globalThis : this);
+
+
+/* ============================ readout.js ============================ */
+/* SIXFOLD — readout.js  (spec §2)
+ *
+ * Pure information UI: the stance ribbon (both fighters, always visible) and the
+ * live UNPREDICTABILITY score — the number players fight to raise. Mechanically
+ * inert. The score is the predictor ensemble's read, NOT histogram entropy: a
+ * perfect rotation has flat histogram yet is 100% predictable, and the ensemble's
+ * cycle/markov predictors catch exactly those sequential tells.
+ *
+ * API (frozen, spec §5): render(playerHist, aiHist, outcomes) ; postMatch(...)
+ * Scoring helpers are pure and unit-tested; DOM rendering is defensive (no-op
+ * without a document / supplied elements).
+ */
+(function (root) {
+  "use strict";
+  const Predictor = (typeof require !== "undefined") ? require("./predictor.js") : root.Predictor;
+
+  const N = 6;
+  const GLYPHS = ["↑", "↗", "↘", "↓", "↙", "↖"];   // Heaven Tiger River Earth Crane Shadow
+  const RIBBON_K = 5;
+
+  // ---- pure scoring ----
+  function readScorePct(hist) {
+    return Math.round(Predictor.readability(hist || [], N).score * 100);
+  }
+  function unpredictabilityPct(hist) {
+    return 100 - readScorePct(hist);
+  }
+  // biggest tell + the round where the player was most readable so far
+  function biggestTell(hist) {
+    const h = hist || [];
+    const overall = Predictor.readability(h, N);
+    let worstRound = 0, worstScore = -1;
+    for (let r = 4; r <= h.length; r++) {
+      const s = Predictor.readability(h.slice(0, r), N).score;
+      if (s > worstScore) { worstScore = s; worstRound = r; }
+    }
+    return { tell: overall.tell, worstRound, worstScore: Math.max(0, worstScore) };
+  }
+
+  // ribbon cells: last K picks newest-first, tinted by the outcome each produced
+  const TINT = { clean: "seal", glance: "jade", whiff: "steel", clash: "white" };
+  function ribbonData(hist, outcomes, k) {
+    k = k || RIBBON_K;
+    const out = [];
+    const h = hist || [], oc = outcomes || [];
+    const start = Math.max(0, h.length - k);
+    for (let i = h.length - 1; i >= start; i--) {
+      const o = oc[i];
+      out.push({ stance: h[i], glyph: GLYPHS[h[i]], tint: o ? (TINT[o.kind] || "steel") : "steel" });
+    }
+    return out; // newest-first
+  }
+
+  // ---- defensive DOM rendering ----
+  function elById(id) { return (typeof document !== "undefined") ? document.getElementById(id) : null; }
+
+  function renderRibbon(el, hist, outcomes, k) {
+    if (!el) return;
+    const cells = ribbonData(hist, outcomes, k);
+    el.innerHTML = "";
+    for (const c of cells) {
+      const span = document.createElement("span");
+      span.className = "ribbon-cell tint-" + c.tint;
+      span.textContent = c.glyph;
+      el.appendChild(span);
+    }
+  }
+  function renderBar(el, pct, label) {
+    if (!el) return;
+    el.style.setProperty("--pct", pct + "%");
+    const fill = el.querySelector(".bar-fill");
+    if (fill) fill.style.width = pct + "%";
+    const num = el.querySelector(".bar-num");
+    if (num) num.textContent = pct + "%";
+    if (label) el.setAttribute("aria-label", label + ": " + pct + "% unpredictable");
+  }
+
+  // render(playerHist, aiHist, outcomes) — updates ribbons + bars if the DOM exists.
+  // Element ids (created by the shipped HTML): #pribbon #aribbon #pbar #abar,
+  // and the bars only show once a fighter has >=4 picks (spec §2b).
+  function render(playerHist, aiHist, outcomes, opts) {
+    opts = opts || {};
+    const pk = opts.ribbonK || RIBBON_K, ak = opts.aiRibbonK || RIBBON_K;
+    renderRibbon(elById("pribbon"), playerHist, outcomes, pk);
+    renderRibbon(elById("aribbon"), aiHist, outcomes, ak);
+    if ((playerHist || []).length >= 4) {
+      const pb = elById("pbar");
+      if (pb) { pb.classList.add("show"); renderBar(pb, unpredictabilityPct(playerHist), "You"); }
+    }
+    if ((aiHist || []).length >= 4) {
+      const ab = elById("abar");
+      if (ab) { ab.classList.add("show"); renderBar(ab, unpredictabilityPct(aiHist), "Opponent"); }
+    }
+  }
+
+  // post-match teaching payoff (spec §2c)
+  function postMatch(playerHist, summary) {
+    const t = biggestTell(playerHist);
+    const up = unpredictabilityPct(playerHist);
+    const result = {
+      tell: t.tell,
+      worstRound: t.worstRound,
+      unpredictabilityPct: up,
+      rollingAvg: summary && summary.rollingAvg != null ? summary.rollingAvg : null,
+    };
+    const el = elById("postmatch");
+    if (el) {
+      el.innerHTML =
+        `<div>Your biggest tell: <b>${t.tell}</b></div>` +
+        (t.worstRound ? `<div>Most exploitable moment: round ${t.worstRound}</div>` : "") +
+        `<div>Unpredictability: <b>${up}%</b>` +
+        (result.rollingAvg != null ? ` <span class="dim">(last 20 avg: ${result.rollingAvg}%)</span>` : "") +
+        `</div>`;
+    }
+    return result;
+  }
+
+  const api = {
+    render, postMatch,
+    readScorePct, unpredictabilityPct, biggestTell, ribbonData, GLYPHS,
+  };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.Readout = api;
+})(typeof globalThis !== "undefined" ? globalThis : this);
+
+
+/* ============================ personalities.js ============================ */
+/* SIXFOLD — personalities.js  (spec §1)
+ *
+ * Each personality = a HABIT (the tell you exploit) + how well it READS you
+ * (the threat) + an entropy floor (noise = its ceiling). Difficulty is ONE knob:
+ * it scales reading up and the telegraph (noise) down. No stat ever changes —
+ * personalities only shift the *distribution* a fighter picks from. Symmetry and
+ * the validated damage model are untouched (engine owns all damage).
+ *
+ * API (frozen, spec §5):
+ *   create(id, rng)            -> profile instance (per-match params fixed here)
+ *   aiChoose(profile, ctx)     -> Stance 0..5
+ *   bindChoose(profile, ctx)   -> Bind 0..2
+ *   spendPolicy(profile, ctx)  -> {action,cost} | null
+ */
+(function (root) {
+  "use strict";
+  const Predictor = (typeof require !== "undefined") ? require("./predictor.js") : root.Predictor;
+
+  const N = 6;
+  const counter = (p) => ((p - 1) % N + N) % N;          // stance that CLEAN-hits p
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const wrap = (i) => ((i % N) + N) % N;
+
+  function normalize(d) {
+    let s = 0;
+    for (const x of d) s += x;
+    if (s <= 0) return new Array(N).fill(1 / N);
+    return d.map((x) => x / s);
+  }
+  function sample(d, rng) {
+    const nd = normalize(d);
+    let r = rng();
+    for (let i = 0; i < nd.length; i++) { r -= nd[i]; if (r <= 0) return i; }
+    return nd.length - 1;
+  }
+  function uniform() { return new Array(N).fill(1 / N); }
+  // normalized distribution with `purity` mass concentrated on `target`
+  function peak(target, purity) {
+    const d = new Array(N).fill((1 - purity) / N);
+    d[wrap(target)] += purity;
+    return d;
+  }
+  // arc of width 3 centred on `center`: most purity on centre, the rest on neighbours
+  function peakArc(center, purity) {
+    const d = new Array(N).fill((1 - purity) / N);
+    d[wrap(center)] += purity * 0.6;
+    d[wrap(center - 1)] += purity * 0.2;
+    d[wrap(center + 1)] += purity * 0.2;
+    return d;
+  }
+
+  // ---------- bias builders: (profile, ctx) -> normalized distribution ----------
+  const BIAS = {
+    favorStance: (p, ctx) => peak(p.favStance, 0.78),
+    homeArc:     (p, ctx) => peakArc(p.center, 0.85),
+    winStay:     (p, ctx) => {
+      const ai = ctx.aiHist;
+      if (ai.length && ctx.lastOutcome && ctx.lastOutcome.winner === "A") {
+        return peak(ai[ai.length - 1], 0.85);       // repeat the stance that just hit
+      }
+      return peak(ai.length ? ai[ai.length - 1] : 0, 0.25); // mild lean otherwise
+    },
+    neverRepeat: (p, ctx) => {
+      const ai = ctx.aiHist;
+      const d = new Array(N).fill(1);
+      if (ai.length) d[ai[ai.length - 1]] = 0.02;    // almost never the last pick
+      return normalize(d);
+    },
+    rotate: (p, ctx) => {
+      const ai = ctx.aiHist;
+      const base = ai.length ? ai[ai.length - 1] : (p.phase || 0);
+      return peak(base + p.dir * p.step, 0.9);        // march a fixed step
+    },
+    mirrorPlayer: (p, ctx) => {
+      const ph = ctx.playerHist;
+      if (!ph.length) return uniform();
+      return peak(ph[ph.length - 1], 0.85);           // play YOUR last stance
+    },
+    adaptiveCounter: (p, ctx) => readDist(p, ctx, 0.5).dist, // Echo's bias IS a read
+  };
+
+  // ---------- the read (threat): predict the player and aim a counter ----------
+  // yomi depth: 1 = counter the predicted pick (clean hit); 2 = one level deeper.
+  function readDist(p, ctx, readThreshold) {
+    if (!p.readStrength) return { dist: uniform(), confidence: 0 };
+    const pr = Predictor.predict(ctx.playerHist, N);
+    if (pr.confidence > readThreshold) {
+      const target = wrap(pr.pick - (p.yomi || 1));   // yomi=1 -> counter(predicted)
+      return { dist: peak(target, p.readStrength), confidence: pr.confidence };
+    }
+    return { dist: uniform(), confidence: pr.confidence };
+  }
+
+  // ---------- difficulty knob (spec §1) ----------
+  function knob(profile, skill) {
+    return {
+      wBias: profile.w.bias,
+      wRead: lerp(profile.w.read * 0.4, profile.w.read * 1.3, skill),
+      wNoise: lerp(profile.w.noise * 1.4, profile.w.noise * 0.7, skill),
+      readThreshold: lerp(0.30, 0.14, skill),
+    };
+  }
+
+  function applyTriggers(profile, dist, ctx) {
+    if (!profile.triggers) return;
+    for (const t of profile.triggers) {
+      if (t.when(ctx)) t.effect(dist, ctx);
+    }
+  }
+
+  function aiChoose(profile, ctx) {
+    ctx.profile = profile;                 // triggers read per-match params from here
+    const skill = (ctx.difficulty == null) ? 0.5 : ctx.difficulty;
+    const k = knob(profile, skill);
+    const bias = BIAS[profile.bias](profile, ctx);
+    const read = readDist(profile, ctx, k.readThreshold).dist;
+    const dist = new Array(N);
+    for (let i = 0; i < N; i++) {
+      dist[i] = k.wBias * bias[i] + k.wRead * read[i] + k.wNoise * (1 / N);
+    }
+    applyTriggers(profile, dist, ctx);
+    return sample(dist, ctx.rng);
+  }
+
+  // ---------- Clash Bind choice: Bind 0..2 (Drive>Trap>Slip>Drive) ----------
+  // AI beats player bind pb by playing (pb+2)%3  (d3=(a-p)%3==2 => ai wins)
+  const beatsBind = (pb) => (pb + 2) % 3;
+  function bindChoose(profile, ctx) {
+    const rng = ctx.rng;
+    switch (profile.bind) {
+      case "drive": return 0;                                   // Berserker always Drive
+      case "antiread": {                                        // Trickster anti-reads
+        const pr = Predictor.predict(ctx.bindHistP || [], 3);
+        if (pr.confidence > 0.25) return beatsBind(pr.pick);
+        return Math.floor(rng() * 3);
+      }
+      case "read": {                                            // Echo reads the bind stream
+        const pr = Predictor.predict(ctx.bindHistP || [], 3);
+        if (pr.confidence > 0.30) return beatsBind(pr.pick);
+        return Math.floor(rng() * 3);
+      }
+      default: return Math.floor(rng() * 3);                    // Ghost & co: random
+    }
+  }
+
+  // ---------- spend policy: flavor only, never power (engine guarantees) ----------
+  function spendPolicy(profile, ctx) {
+    const r = (ctx.resolve && ctx.resolve.ai) || 0;
+    switch (profile.spend) {
+      case "never": return null;                                // Berserker
+      case "hoard-foresight":                                   // Ghost
+        if (ctx.aiHP <= 2 && r >= 2) return { action: "FORESIGHT", cost: 2 };
+        return null;
+      case "foresight-on-doubt": {                              // Echo
+        const pr = Predictor.predict(ctx.playerHist, N);
+        if (pr.confidence < 0.3 && r >= 2) return { action: "FORESIGHT", cost: 2 };
+        if (r >= 1) return { action: "INSIGHT", cost: 1 };
+        return null;
+      }
+      default:                                                  // occasional Insight
+        if (r >= 3) return { action: "INSIGHT", cost: 1 };
+        return null;
+    }
+  }
+
+  // ---------- roster (ship 8) ----------
+  const ARCHES = {
+    berserker: {
+      name: "Berserker", tell: "Repeats the stance that just hit — counter the repeat.",
+      stars: 1, w: { bias: 0.60, read: 0.10, noise: 0.30 },
+      bias: "winStay", readStrength: 0.6, yomi: 1, bind: "drive", spend: "never",
+      triggers: [{ when: (c) => c.aiHP > c.playerHP, effect: (d, c) => {
+        const ai = c.aiHist; if (ai.length) d[ai[ai.length - 1]] *= 2.2; // ahead -> lean harder
+      } }],
+    },
+    stone: {
+      name: "Stone", tell: "Picks bunch in one arc — counter the cluster.",
+      stars: 2, w: { bias: 0.72, read: 0.08, noise: 0.20 },
+      bias: "homeArc", readStrength: 0.45, yomi: 1, bind: "random", spend: "insight",
+      // low HP -> narrow onto the home-arc centre
+      triggers: [{ when: (c) => c.aiHP <= 2, effect: (d, c) => {
+        const ctr = c.profile && c.profile.center;
+        if (ctr != null) d[ctr] *= 2.2;
+      } }],
+    },
+    drunkard: {
+      name: "Drunkard", tell: "Never repeats — eliminate its last pick.",
+      stars: 2, w: { bias: 0.74, read: 0.08, noise: 0.18 },
+      bias: "neverRepeat", readStrength: 0.45, yomi: 1, bind: "random", spend: "insight",
+    },
+    mirror: {
+      name: "Mirror", tell: "Plays YOUR last stance — counter your own previous move.",
+      stars: 2, w: { bias: 0.80, read: 0.00, noise: 0.20 },
+      bias: "mirrorPlayer", readStrength: 0, yomi: 1, bind: "random", spend: "insight",
+    },
+    metronome: {
+      name: "Metronome", tell: "Marches a fixed step — find the cadence, stay ahead.",
+      stars: 3, w: { bias: 0.75, read: 0.00, noise: 0.25 },
+      bias: "rotate", readStrength: 0, yomi: 1, bind: "random", spend: "insight",
+    },
+    trickster: {
+      name: "Trickster", tell: "Beats your counter — don't take the bait, go a level deeper.",
+      stars: 4, w: { bias: 0.20, read: 0.55, noise: 0.25 },
+      bias: "favorStance", readStrength: 0.85, yomi: 2, bind: "antiread", spend: "insight",
+    },
+    ghost: {
+      name: "Ghost", tell: "Near-random + sharp read — survive on your own unpredictability.",
+      stars: 5, w: { bias: 0.05, read: 0.35, noise: 0.60 },
+      bias: "favorStance", readStrength: 0.9, yomi: 1, bind: "random", spend: "hoard-foresight",
+    },
+    echo: {
+      name: "Echo", tell: "Learns you in real time — it does to you what you do to others.",
+      stars: 5, w: { bias: 0.10, read: 0.65, noise: 0.25 },
+      bias: "adaptiveCounter", readStrength: 0.9, yomi: 1, bind: "read", spend: "foresight-on-doubt",
+    },
+  };
+
+  function create(id, rng) {
+    const base = ARCHES[id];
+    if (!base) throw new Error("unknown personality: " + id);
+    const p = JSON.parse(JSON.stringify({
+      id, name: base.name, tell: base.tell, stars: base.stars,
+      w: base.w, bias: base.bias, readStrength: base.readStrength,
+      yomi: base.yomi, bind: base.bind, spend: base.spend,
+    }));
+    p.triggers = base.triggers || [];   // functions don't survive JSON; re-attach
+    // per-match fixed params
+    if (id === "stone") p.center = Math.floor(rng() * N);
+    if (id === "metronome") { p.step = rng() < 0.5 ? 1 : 2; p.dir = rng() < 0.5 ? 1 : -1; p.phase = Math.floor(rng() * N); }
+    if (id === "trickster" || id === "ghost") p.favStance = Math.floor(rng() * N);
+    return p;
+  }
+
+  const ids = () => Object.keys(ARCHES);
+  const api = {
+    create, aiChoose, bindChoose, spendPolicy,
+    ids, counter, ARCHES,
+  };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.Personalities = api;
+})(typeof globalThis !== "undefined" ? globalThis : this);
+
+
+/* ============================ stage.js ============================ */
+/* SIXFOLD — stage.js  (spec §4)
+ *
+ * Choreography over 2 frames/character + GPU transforms. Pivot toward the stance
+ * on select; lunge + strike-frame on reveal; the OUTCOME picks the finish. Also
+ * owns the locked-blades hold and the Clash Bind prompt UI.
+ *
+ * API (frozen, spec §5):
+ *   toStance(side, stance) ; playReveal(pPick, aPick, outcome) -> Promise
+ *   lockBlades() ; bindPrompt() -> Promise<Bind>
+ *
+ * Defensive: every method no-ops / resolves immediately if the DOM or the
+ * configured elements are absent (so tests and headless play never throw).
+ */
+(function (root) {
+  "use strict";
+
+  // stance -> lean transform (player faces right; opponent wrapper mirrors it)
+  const POSE = [
+    "translateY(-6px) rotate(0deg)",          // 0 Heaven  ↑
+    "translate(5px,-4px) rotate(7deg)",       // 1 Tiger   ↗
+    "translate(5px,4px) rotate(13deg)",       // 2 River   ↘
+    "translateY(5px) scaleY(.96)",            // 3 Earth   ↓
+    "translate(-5px,4px) rotate(-13deg)",     // 4 Crane   ↙
+    "translate(-5px,-4px) rotate(-7deg)",     // 5 Shadow  ↖
+  ];
+  const NEUTRAL = "translate(0,0) rotate(0deg)";
+
+  let els = {};        // {pArt, aArt, hub, spark, roundlbl, verdict, sub}
+  let reduced = false;
+  let timed = false;   // timed modes give the bind a snap timer
+  const hasDoc = (typeof document !== "undefined");
+
+  function init(refs) {
+    els = refs || {};
+    reduced = !!(refs && refs.reducedMotion);
+    timed = !!(refs && refs.timed);
+    if (hasDoc && typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion:reduce)").matches) {
+      reduced = true;
+    }
+  }
+  function setReduced(v) { reduced = !!v; }
+  function setTimed(v) { timed = !!v; }
+
+  function art(side) { return side === "P" ? els.pArt : els.aArt; }
+  function wait(ms) { return new Promise((res) => setTimeout(res, reduced ? 0 : ms)); }
+
+  function applyPose(el, stance, extra) {
+    if (!el) return;
+    const base = POSE[stance] != null ? POSE[stance] : NEUTRAL;
+    el.style.transform = extra ? base + " " + extra : base;
+  }
+
+  function toStance(side, stance) {
+    const el = art(side);
+    if (!el) return;
+    el.classList.remove("locked", "striking", "flinch", "knock");
+    applyPose(el, stance);
+  }
+
+  function strikeFrame(el, on) {
+    if (!el) return;
+    if (on) el.classList.add("striking"); else el.classList.remove("striking");
+  }
+
+  function spark() {
+    if (!els.spark || reduced) return;
+    els.spark.classList.remove("go"); void els.spark.offsetWidth; els.spark.classList.add("go");
+  }
+
+  // reveal timeline (spec §4): wind-up -> strike+lunge -> IMPACT branch -> settle
+  function playReveal(pPick, aPick, outcome) {
+    const p = art("P"), a = art("A");
+    // pivots
+    applyPose(p, pPick); applyPose(a, aPick);
+    if (!hasDoc || (!p && !a)) return Promise.resolve();
+
+    const lunge = "translateX(6px) scale(1.02)";
+    return wait(120).then(() => {
+      // strike frame + lunge to centre (both inners move +x; opp wrapper mirrors)
+      strikeFrame(p, true); strikeFrame(a, true);
+      applyPose(p, pPick, lunge); applyPose(a, aPick, lunge);
+      return wait(220);
+    }).then(() => {
+      // IMPACT branch on outcome
+      const k = outcome && outcome.kind;
+      const loser = outcome && outcome.winner ? (outcome.winner === "P" ? a : p) : null;
+      if (k === "clean") {
+        spark();
+        if (loser) loser.classList.add("knock");
+        if (els.hub) { els.hub.classList.add("finish"); }
+      } else if (k === "glance") {
+        spark();
+        if (loser) loser.classList.add("flinch");
+      } else if (k === "whiff") {
+        // pass-through: brief over-lunge then recover, no contact
+        applyPose(p, pPick, "translateX(9px)"); applyPose(a, aPick, "translateX(9px)");
+      } else if (k === "clash") {
+        spark(); // harmless bind tie -> mutual recoil handled by settle
+      }
+      const finishing = k === "clean" && outcome && (outcome.dmg || 0) >= 2;
+      return wait(finishing && !reduced ? 600 * 1.6 : 600);
+    }).then(() => {
+      // settle: strike->idle, pivot neutral, clear lunge/finish
+      strikeFrame(p, false); strikeFrame(a, false);
+      if (els.hub) els.hub.classList.remove("finish");
+      if (p) { p.classList.remove("flinch", "knock"); applyPose(p, pPick); }
+      if (a) { a.classList.remove("flinch", "knock"); applyPose(a, aPick); }
+    });
+  }
+
+  function lockBlades() {
+    const p = art("P"), a = art("A");
+    [p, a].forEach((el) => { if (el) { strikeFrame(el, true); el.classList.add("locked"); } });
+    spark();
+  }
+  function unlock() {
+    [art("P"), art("A")].forEach((el) => { if (el) { el.classList.remove("locked"); strikeFrame(el, false); } });
+  }
+
+  // Clash Bind prompt: flip the hub to 3 buttons, resolve on tap. Optional snap
+  // timer in timed modes (auto-picks a random bind on timeout). Returns Promise<Bind>.
+  const BINDS = [{ id: 0, name: "Drive", glyph: "⤚" }, { id: 1, name: "Slip", glyph: "⤳" }, { id: 2, name: "Trap", glyph: "⤲" }];
+  function bindPrompt() {
+    if (!hasDoc || !els.hub) return Promise.resolve(Math.floor(Math.random() * 3));
+    const hub = els.hub;
+    const prevHTML = hub.innerHTML;
+    return new Promise((resolve) => {
+      hub.classList.add("bind-mode");
+      hub.innerHTML =
+        '<div class="bind-title">BIND</div><div class="bind-row">' +
+        BINDS.map((b) => `<button class="bindbtn" data-b="${b.id}" aria-label="${b.name}"><span class="bg">${b.glyph}</span><span class="bn">${b.name}</span></button>`).join("") +
+        "</div>";
+      let done = false, timer = null;
+      function pick(b) {
+        if (done) return; done = true;
+        if (timer) clearTimeout(timer);
+        hub.classList.remove("bind-mode");
+        hub.innerHTML = prevHTML;
+        unlock();
+        resolve(b);
+      }
+      Array.prototype.forEach.call(hub.querySelectorAll(".bindbtn"), (btn) => {
+        btn.addEventListener("click", () => pick(parseInt(btn.getAttribute("data-b"), 10)));
+      });
+      if (timed) timer = setTimeout(() => pick(Math.floor(Math.random() * 3)), 2000);
+    });
+  }
+
+  const api = { init, setReduced, setTimed, toStance, playReveal, lockBlades, unlock, bindPrompt, POSE, BINDS };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.Stage = api;
+})(typeof globalThis !== "undefined" ? globalThis : this);
+
+
+/* ============================ assists.js ============================ */
+/* SIXFOLD — assists.js  (spec §4.5)
+ *
+ * Two STRICTLY separate buckets (conflating them is the trap):
+ *
+ *  A) Accessibility — FREE, always on, never equipped/unlocked/gated. Baseline
+ *     quality. Available in every mode including competitive.
+ *  B) Assist charms — one equip slot, casual/practice ONLY. They go completely
+ *     inert the moment a result is ranked / seeded / shared / PvP. No charm ever
+ *     touches damage or odds — only time, visible info, or clarity.
+ *
+ * The pillar guard lives in ONE place: active(mode) returns the equipped charm
+ * IFF mode.honorsAssists, else null. Competitive modes always get null.
+ */
+(function (root) {
+  "use strict";
+
+  const hasLS = (typeof localStorage !== "undefined");
+  const KEY = "sixfold.assists.v1";
+
+  const DEFAULT_A11Y = {
+    colorblind: false,      // colorblind-safe palette
+    reducedMotion: false,   // also auto-detected from prefers-reduced-motion at the UI layer
+    largeTapTargets: false,
+    haptics: false,
+    slowReveal: false,      // longer reveal beat
+    highContrast: false,
+    audioCues: false,       // distinct sound per outcome
+  };
+
+  const CHARMS = {
+    hourglass: { id: "hourglass", name: "Hourglass", glyph: "⌛",
+      effect: "+seconds on the commit timer", touches: "time" },
+    eye:       { id: "eye", name: "Eye", glyph: "👁",
+      effect: "opponent ribbon always shows last 10", touches: "info" },
+    compass:   { id: "compass", name: "Compass", glyph: "🧭",
+      effect: "relationship preview always on", touches: "clarity" },
+    scroll:    { id: "scroll", name: "Scroll", glyph: "📜",
+      effect: "round-by-round outcome log", touches: "clarity" },
+  };
+
+  let stateObj = {
+    a11y: Object.assign({}, DEFAULT_A11Y),
+    equipped: null,                 // charm id or null
+    unlocked: ["hourglass", "eye", "compass", "scroll"], // cosmetic unlocks; never gate a11y
+  };
+
+  function load() {
+    if (!hasLS) return;
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) {
+        const j = JSON.parse(raw);
+        stateObj.a11y = Object.assign({}, DEFAULT_A11Y, j.a11y || {});
+        stateObj.equipped = j.equipped || null;
+        if (Array.isArray(j.unlocked)) stateObj.unlocked = j.unlocked;
+      }
+    } catch (e) { /* ignore corrupt storage */ }
+  }
+  function save() {
+    if (!hasLS) return;
+    try { localStorage.setItem(KEY, JSON.stringify(stateObj)); } catch (e) { /* quota */ }
+  }
+  load();
+
+  // ---- accessibility: free, always available, returned regardless of mode ----
+  function settings() { return Object.assign({}, stateObj.a11y); }
+  function setSetting(key, val) {
+    if (!(key in DEFAULT_A11Y)) return settings();
+    stateObj.a11y[key] = !!val;
+    save();
+    return settings();
+  }
+
+  // ---- assist charms ----
+  function equip(charmId) {
+    if (charmId === null) { stateObj.equipped = null; save(); return null; }
+    if (!CHARMS[charmId]) return current();
+    if (stateObj.unlocked.indexOf(charmId) < 0) return current();  // not owned
+    stateObj.equipped = charmId;
+    save();
+    return current();
+  }
+  function current() { return stateObj.equipped ? CHARMS[stateObj.equipped] : null; }
+
+  // THE pillar guard: charms are inert unless the mode honours assists.
+  function active(mode) {
+    if (!mode || !mode.honorsAssists) return null;
+    return current();
+  }
+
+  // UI helper: the banner competitive modes must show.
+  function statusLabel(mode) {
+    if (mode && !mode.honorsAssists) return "Assists off — competitive";
+    const c = current();
+    return c ? ("Assist: " + c.name) : "Assists: none";
+  }
+
+  const api = {
+    settings, setSetting, equip, current, active, statusLabel,
+    CHARMS, DEFAULT_A11Y,
+    _reset() { stateObj = { a11y: Object.assign({}, DEFAULT_A11Y), equipped: null,
+      unlocked: ["hourglass", "eye", "compass", "scroll"] }; },
+  };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.Assists = api;
+})(typeof globalThis !== "undefined" ? globalThis : this);
+
+
+/* ============================ engine.js ============================ */
+/* SIXFOLD — engine.js  (spec §3.5 + §5)
+ *
+ * THE single source of truth for resolve(), Clash Bind resolution, damage,
+ * escalation, and the win check. No other module computes damage.
+ *
+ * Validated constants (do NOT change without re-running tools/harness.py):
+ *   N=6 · HP=4 · CLEAN=2 · GLANCE=1 · escalation +1 when round > 6
+ *
+ * Exposes: constants, resolve(), counter(), a tiny event bus, the mode registry,
+ * and a Game controller that orchestrates a match (interactive OR headless).
+ */
+(function (root) {
+  "use strict";
+  const req = (typeof require !== "undefined");
+  const Predictor    = req ? require("./predictor.js")    : root.Predictor;
+  const Personalities = req ? require("./personalities.js") : root.Personalities;
+  const Resolve      = req ? require("./resolve.js")       : root.Resolve;
+  const Readout      = req ? require("./readout.js")       : root.Readout;
+
+  const N = 6, HP = 4, CLEAN = 2, GLANCE = 1, ESC_ROUND = 6;
+
+  // my pick a vs their pick b -> clockwise distance decides everything
+  function resolve(a, b) {
+    const d = ((b - a) % N + N) % N;
+    if (d === 0) return { kind: "clash", winner: null };
+    if (d === 1) return { kind: "clean", winner: "P" };
+    if (d === 2) return { kind: "glance", winner: "P" };
+    if (d === 3) return { kind: "whiff", winner: null };
+    if (d === 4) return { kind: "glance", winner: "A" };
+    return { kind: "clean", winner: "A" };               // d === 5
+  }
+  const counter = (p) => ((p - 1) % N + N) % N;
+
+  // bind RPS-3: Drive=0, Slip=1, Trap=2. d3=(a-p) mod 3 -> 0 tie, 1 player, 2 ai.
+  // The formula (authoritative, matches harness + personalities.beatsBind) yields
+  // the cycle Drive>Slip>Trap>Drive. (Spec §3.5's parenthetical flavor named the
+  // reverse cycle; the formula wins — stats are convention-independent. See FINDINGS.)
+  function resolveBind3(pBind, aBind) {
+    const d3 = ((aBind - pBind) % 3 + 3) % 3;
+    if (d3 === 0) return { winner: null };
+    return { winner: d3 === 1 ? "P" : "A" };
+  }
+
+  // ---- mode registry (spec §4.5): competitive => honorsAssists:false ----
+  const MODES = {
+    casual:   { id: "casual",   honorsAssists: true,  timed: false, seeded: false },
+    practice: { id: "practice", honorsAssists: true,  timed: false, seeded: false },
+    gauntlet: { id: "gauntlet", honorsAssists: true,  timed: false, seeded: false },
+    daily:    { id: "daily",    honorsAssists: false, timed: false, seeded: true  },
+    blitz:    { id: "blitz",    honorsAssists: false, timed: true,  seeded: false },
+    ghost:    { id: "ghost",    honorsAssists: false, timed: false, seeded: false }, // async PvP replay
+  };
+
+  // ---- tiny event bus ----
+  function makeBus() {
+    const subs = {};
+    return {
+      on(evt, fn) { (subs[evt] = subs[evt] || []).push(fn); return () => {
+        subs[evt] = (subs[evt] || []).filter((f) => f !== fn);
+      }; },
+      emit(evt, payload) { (subs[evt] || []).forEach((f) => { try { f(payload); } catch (e) {} }); },
+    };
+  }
+
+  // mulberry32 seeded rng (deterministic for seeded modes/tests)
+  function rng32(seed) {
+    let a = (seed >>> 0) || 1;
+    return () => {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // ---- Game controller ----
+  function createGame(opts) {
+    opts = opts || {};
+    const mode = opts.mode || MODES.casual;
+    const difficulty = opts.difficulty == null ? 0.5 : opts.difficulty;
+    const rng = opts.rng || rng32(opts.seed != null ? opts.seed : ((Date.now ? 0 : 0) || 1));
+    const bus = opts.bus || makeBus();
+    const meter = Resolve.createResolve();
+    const profile = Personalities.create(opts.archetype || "ghost", rng);
+
+    const st = {
+      hpP: HP, hpA: HP, round: 1, over: false,
+      playerHist: [], aiHist: [], bindHistP: [], bindHistA: [],
+      lastOutcome: null, outcomes: [], pending: null,
+    };
+
+    function ctx() {
+      return {
+        playerHist: st.playerHist, aiHist: st.aiHist,
+        bindHistP: st.bindHistP, bindHistA: st.bindHistA,
+        aiHP: st.hpA, playerHP: st.hpP, round: st.round,
+        lastOutcome: st.lastOutcome, resolve: meter.state(), mode, difficulty, rng,
+      };
+    }
+
+    function escBump() { return st.round > ESC_ROUND ? 1 : 0; }
+
+    function applyDamage(outcome) {
+      const bump = escBump();
+      let dmg = 0;
+      if (outcome.kind === "clean") dmg = CLEAN + bump;
+      else if (outcome.kind === "glance") dmg = GLANCE + bump;
+      outcome.dmg = dmg;
+      if (outcome.winner === "P") st.hpA = Math.max(0, st.hpA - dmg);
+      else if (outcome.winner === "A") st.hpP = Math.max(0, st.hpP - dmg);
+    }
+
+    function finalize(outcome) {
+      outcome.round = st.round;
+      applyDamage(outcome);
+      meter.gain(outcome);                       // symmetric gains only
+      st.lastOutcome = outcome;
+      st.outcomes.push(outcome);
+      bus.emit("meter-changed", meter.state());
+      bus.emit("round-revealed", { pPick: st.playerHist[st.playerHist.length - 1],
+        aPick: st.aiHist[st.aiHist.length - 1], outcome });
+      if (st.hpP <= 0 || st.hpA <= 0) return matchOver();
+      st.round++;
+      return outcome;
+    }
+
+    function matchOver() {
+      st.over = true;
+      const winner = st.hpP > 0 ? "P" : "A";
+      const tell = Readout.biggestTell(st.playerHist);
+      const summary = {
+        winner, rounds: st.round,
+        unpredictabilityPct: Readout.unpredictabilityPct(st.playerHist),
+        difficulty, worstRound: tell.worstRound, tell: tell.tell,
+      };
+      bus.emit("match-over", { winner, summary });
+      return summary;
+    }
+
+    // interactive: player commits a stance. If it clashes, we enter the bind and
+    // WAIT for submitBind(); otherwise the round resolves immediately.
+    function chooseStance(pStance) {
+      if (st.over || st.pending) return null;
+      const aStance = Personalities.aiChoose(profile, ctx());
+      st.playerHist.push(pStance);
+      st.aiHist.push(aStance);
+      bus.emit("stance-selected", { side: "P", stance: pStance });
+      const r = resolve(pStance, aStance);
+      if (r.kind === "clash") {
+        meter.onBindEntered();                   // +1 both on ENTERING the bind
+        bus.emit("meter-changed", meter.state());
+        st.pending = { pStance, aStance };
+        bus.emit("clash-bind", { round: st.round });
+        return { clash: true };
+      }
+      bus.emit("stance-selected", { side: "A", stance: aStance });
+      return finalize({ kind: r.kind, winner: r.winner });
+    }
+
+    // interactive: resolve the pending bind with the player's bind pick.
+    function submitBind(pBind) {
+      if (!st.pending) return null;
+      const aBind = Personalities.bindChoose(profile, ctx());
+      st.bindHistP.push(pBind);
+      st.bindHistA.push(aBind);
+      const b = resolveBind3(pBind, aBind);
+      const pending = st.pending; st.pending = null;
+      bus.emit("stance-selected", { side: "A", stance: pending.aStance });
+      let outcome;
+      if (b.winner === null) outcome = { kind: "clash", winner: null, bind: { p: pBind, a: aBind } };
+      else outcome = { kind: "glance", winner: b.winner, bind: { p: pBind, a: aBind } };
+      return finalize(outcome);
+    }
+
+    // spend Resolve to buy INFORMATION. Computes the revealed payload and emits
+    // 'info-revealed'. Never alters damage/HP (Resolve.spend has no damage path).
+    function spend(side, action) {
+      const ok = meter.spend(side, action);
+      if (!ok) return null;
+      const oppHist = side === "P" ? st.aiHist : st.playerHist;
+      let payload = {};
+      if (action === "INSIGHT") {
+        payload = { ribbon: oppHist.slice(-10), oppResolve: meter.state()[side === "P" ? "ai" : "player"] };
+      } else if (action === "FORESIGHT") {
+        payload = { predict: Predictor.predict(oppHist, N) };
+      }
+      bus.emit("meter-changed", meter.state());
+      bus.emit("info-revealed", { side, action, payload });
+      return { side, action, payload };
+    }
+
+    // headless driver for tests/sim: scripted stance + bind providers.
+    function runMatch(stanceFn, bindFn, spendFn) {
+      let guard = 0;
+      while (!st.over && guard++ < 500) {
+        if (spendFn) spendFn(api);               // optional interleaved spends
+        const p = stanceFn(ctx());
+        const res = chooseStance(p);
+        if (res && res.clash) {
+          const pb = bindFn ? bindFn(ctx()) : Math.floor(rng() * 3);
+          submitBind(pb);
+        }
+      }
+      return matchOverSummary();
+    }
+    function matchOverSummary() {
+      return {
+        winner: st.hpP > 0 ? "P" : "A",
+        rounds: st.round, hpP: st.hpP, hpA: st.hpA,
+        damageDealtToP: HP - st.hpP, damageDealtToA: HP - st.hpA,
+      };
+    }
+
+    const api = {
+      bus, mode, difficulty, profile, meter,
+      chooseStance, submitBind, spend, runMatch,
+      state: () => ({ hpP: st.hpP, hpA: st.hpA, round: st.round, over: st.over,
+        playerHist: st.playerHist.slice(), aiHist: st.aiHist.slice(),
+        outcomes: st.outcomes.slice(), pending: !!st.pending }),
+    };
+    return api;
+  }
+
+  const api = {
+    N, HP, CLEAN, GLANCE, ESC_ROUND,
+    resolve, counter, resolveBind3, MODES, makeBus, rng32, createGame,
+  };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.Engine = api;
+})(typeof globalThis !== "undefined" ? globalThis : this);
+
+
+/* ============================ APP / GLUE ============================ */
+(function(){
+  const Engine = globalThis.Engine, Personalities = globalThis.Personalities,
+    Resolve = globalThis.Resolve, Readout = globalThis.Readout,
+    Stage = globalThis.Stage, Assists = globalThis.Assists, Predictor = globalThis.Predictor;
+
+  const STANCES=[{n:"Heaven",g:"↑"},{n:"Tiger",g:"↗"},{n:"River",g:"↘"},{n:"Earth",g:"↓"},{n:"Crane",g:"↙"},{n:"Shadow",g:"↖"}];
+  const N=Engine.N, HP=Engine.HP, ESC=Engine.ESC_ROUND;
+  const FACES=["🦊","🐸","🐱","🐻","🐯","🐰","💀","👹","🐲","🦉"];
+  const PALS=["#cf4130","#3f6fb0","#5f9173","#8a5bc0","#caa23a","#2b3550","#c96fa0","#46b0a6"];
+  const WEAPS=[{w:"🗡️",b:"家"},{w:"⚔️",b:"武"},{w:"🔱",b:"龍"},{w:"🪓",b:"鬼"},{w:"🏹",b:"風"},{w:"🪭",b:"花"}];
+  const FOE_NAMES=["Ronin","Kage","Hattori","Mukade","Yurei","Tetsu","Onibi","Sora","Raiden"];
+  const rid=a=>a[Math.floor(Math.random()*a.length)];
+  const getCss=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const $=id=>document.getElementById(id);
+
+  // persistent cosmetic + selection state
+  let player={name:"You",face:"🦊",pal:"#cf4130",wb:WEAPS[0]};
+  let ai={name:"Ronin",face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS)};
+  let foeId=rid(Personalities.ids()), difficulty=0.5, modeId="casual";
+  let game=null, busy=false, over=false, foresightNode=null;
+  let lastUnpred=[];
+
+  /* ---- fighter rendering (placeholder shapes; art-wrap enables stage transforms) ---- */
+  function bodySVG(color){
+    return `<svg class="body" width="86" height="96" viewBox="0 0 86 96">
+      <defs><linearGradient id="g${color.replace('#','')}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></linearGradient></defs>
+      <path d="M14 92 Q10 58 22 44 L30 50 Q43 40 56 50 L64 44 Q76 58 72 92 Z" fill="url(#g${color.replace('#','')})" stroke="#0007" stroke-width="2"/>
+      <path d="M22 44 Q43 30 64 44 L60 58 Q43 50 26 58 Z" fill="${color}" stroke="#0006" stroke-width="1.5"/>
+      <rect x="36" y="60" width="14" height="26" rx="3" fill="#0004"/>
+      <path d="M22 44 Q43 18 64 44 Q43 34 22 44Z" fill="#1a1d2b" stroke="#0007"/>
+      <path d="M30 40 q13 -16 26 0" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"/></svg>`;
+  }
+  function renderFighter(side){
+    const f=side==="P"?player:ai, stage=$(side==="P"?"pstage":"astage"), dir=side==="P"?"left":"right";
+    stage.innerHTML=
+      `<div class="banner ${dir}" style="background:${f.pal}">${f.wb.b}</div>`+
+      `<div class="art-wrap ${side==="A"?"opp":""}"><div class="fighter-art">`+
+        bodySVG(f.pal)+`<div class="face">${f.face}</div><div class="weapon ${dir}">${f.wb.w}</div>`+
+      `</div></div>`;
+    $(side==="P"?"pname":"aname").textContent=f.name;
+    renderHP(side);
+  }
+  function renderHP(side){
+    const hp=game?game.state()[side==="P"?"hpP":"hpA"]:HP, box=$(side==="P"?"php":"ahp");
+    box.innerHTML="";
+    for(let i=0;i<HP;i++){const p=document.createElement("div");p.className="pip "+(i<hp?"full":"lost");box.appendChild(p);}
+  }
+  function artEl(side){ return $(side==="P"?"pstage":"astage").querySelector(".fighter-art"); }
+
+  /* ---- wheel ---- */
+  const wheel=$("wheel"), nodeEls=[];
+  function buildWheel(){
+    const R=110;
+    STANCES.forEach((s,i)=>{
+      const ang=(-90+i*60)*Math.PI/180;
+      const x=50+(Math.cos(ang)*R/300*100), y=50+(Math.sin(ang)*R/300*100);
+      const el=document.createElement("button");
+      el.className="node";el.style.left=x+"%";el.style.top=y+"%";
+      el.setAttribute("aria-label",s.n+" stance");
+      el.innerHTML=`<span class="ring"></span><span class="g">${s.g}</span><span class="n">${s.n}</span>`;
+      el.addEventListener("click",()=>commit(i));
+      el.addEventListener("pointerenter",()=>preview(i));
+      el.addEventListener("pointerleave",clearPreview);
+      el.addEventListener("focus",()=>preview(i));
+      el.addEventListener("blur",clearPreview);
+      wheel.appendChild(el);nodeEls.push(el);
+    });
+  }
+  function nodeCenter(i){const R=110,ang=(-90+i*60)*Math.PI/180;return{x:150+Math.cos(ang)*R,y:150+Math.sin(ang)*R};}
+  let compassOn=false;
+  function preview(i){
+    if((busy||over)&&!compassOn)return;
+    if(busy||over)return;
+    nodeEls.forEach((el,j)=>{
+      el.classList.remove("r-clean","r-glance","r-safe");
+      const d=((j-i)%N+N)%N;
+      if(d===1)el.classList.add("r-clean");else if(d===2)el.classList.add("r-glance");else if(d===3)el.classList.add("r-safe");
+    });
+  }
+  function clearPreview(){ if(compassOn)return; nodeEls.forEach(el=>el.classList.remove("r-clean","r-glance","r-safe")); }
+  function drawLink(p,a,color){
+    const links=$("links");
+    if(p===a){const c=nodeCenter(p);links.innerHTML=`<circle cx="${c.x}" cy="${c.y}" r="42" fill="none" stroke="#fff" stroke-width="3" opacity=".8"/>`;return;}
+    const A=nodeCenter(p),B=nodeCenter(a);
+    links.innerHTML=`<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" stroke="${color}" stroke-width="4" stroke-linecap="round" opacity=".95"/>`;
+  }
+
+  /* ---- round flow (engine-driven) ---- */
+  const VERDICT={clean:"CLEAN!",glance:"Glance",whiff:"Whiff",clash:"Clash"};
+  function subText(o){
+    if(o.bind) return o.winner? (o.winner==="P"?"bind won — a cut":"bind lost — grazed") : "blades spark — locked";
+    return {clean:o.winner==="P"?"you struck deep":"you got opened up",
+      glance:o.winner==="P"?"a grazing cut":"grazed you",
+      whiff:"blades pass — nothing",clash:"stances mirror"}[o.kind];
+  }
+
+  function commit(p){
+    if(busy||over||!game)return; busy=true; clearPreview(); clearForesight();
+    nodeEls.forEach(el=>el.classList.add("dim"));
+    nodeEls[p].classList.remove("dim"); nodeEls[p].classList.add("ppick");
+    $("verdict").textContent="…"; $("sub").textContent="reading you";
+    game.chooseStance(p);   // engine emits events; handlers below drive the rest
+  }
+
+  function showAiPick(a, p){
     if(p===a){nodeEls[p].classList.remove("ppick");nodeEls[p].classList.add("both");}
     else{nodeEls[a].classList.remove("dim");nodeEls[a].classList.add("apick");}
-    const r=resolve(p,a);
-    const bump=round>ESC_ROUND?1:0;
-    const cleanD=CLEAN+bump, glanceD=GLANCE+bump;
-    const colors={clean:getCss("--seal"),glance:getCss("--jade"),whiff:getCss("--steel"),clash:"#fff"};
-    drawLink(p,a,colors[r.kind]);
-    let dmg=0,loser=null;
-    if(r.kind==="clean"){dmg=cleanD;}else if(r.kind==="glance"){dmg=glanceD;}
-    if(r.win==="P"){loser="A";} else if(r.win==="A"){loser="P";}
+  }
 
-    const txt={clean:"CLEAN!",glance:"Glance",whiff:"Whiff",clash:"Clash"}[r.kind];
-    const subtxt={
-      clean: r.win==="P"?"you struck deep":"you got opened up",
-      glance:r.win==="P"?"a grazing cut":"grazed you",
-      whiff:"blades pass — nothing",
-      clash:"stances mirror — parry"
-    }[r.kind];
-    verdict.textContent=txt; sub.textContent=subtxt;
-    hub.classList.remove("flash-clean","flash-glance");
-    void hub.offsetWidth;
-    if(r.kind==="clean")hub.classList.add("flash-clean");
-    if(r.kind==="glance")hub.classList.add("flash-glance");
+  function wireEvents(g){
+    g.bus.on("stance-selected",({side,stance})=>{ Stage.toStance(side,stance); });
+    g.bus.on("clash-bind",()=>{
+      $("verdict").textContent="LOCK"; $("sub").textContent="break the bind";
+      drawLink(game.state().playerHist.slice(-1)[0], game.state().playerHist.slice(-1)[0], "#fff");
+      Stage.lockBlades();
+      Stage.bindPrompt().then(b=>{ g.submitBind(b); });
+    });
+    g.bus.on("meter-changed",updateMeter);
+    g.bus.on("info-revealed",({side,action,payload})=>{ if(side==="P") applyReveal(action,payload); });
+    g.bus.on("round-revealed",({pPick,aPick,outcome})=>{
+      showAiPick(aPick,pPick);
+      const colors={clean:getCss("--seal"),glance:getCss("--jade"),whiff:getCss("--steel"),clash:"#fff"};
+      drawLink(pPick,aPick,outcome.bind?"#fff":colors[outcome.kind]);
+      $("verdict").textContent= outcome.bind && outcome.winner ? "BIND!" : VERDICT[outcome.kind];
+      $("sub").textContent=subText(outcome);
+      const hub=$("hub"); hub.classList.remove("flash-clean","flash-glance"); void hub.offsetWidth;
+      if(outcome.winner&&outcome.kind==="clean")hub.classList.add("flash-clean");
+      else if(outcome.winner&&outcome.kind==="glance")hub.classList.add("flash-glance");
+      Stage.playReveal(pPick,aPick,outcome).then(()=>{
+        renderHP("P");renderHP("A");
+        Readout.render(game.state().playerHist,game.state().aiHist,game.state().outcomes,ribbonOpts());
+        if(outcome.kind==="clean"&&outcome.winner&&!reduced()){document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),360);}
+        if(!over) endRoundUI();
+      });
+    });
+    g.bus.on("match-over",({winner,summary})=>{
+      over=true;busy=true;
+      const win=winner==="P";
+      $("roundlbl").textContent="Match over";
+      $("verdict").textContent=win?"VICTORY":"DEFEAT";
+      $("verdict").style.color=win?getCss("--gold"):getCss("--seal");
+      $("sub").textContent=win?"the duel is yours":"struck down";
+      $("rematch").style.display="block";
+      const r=Readout.postMatch(game.state().playerHist,{rollingAvg: rollingAvg()});
+      lastUnpred.push(r.unpredictabilityPct); if(lastUnpred.length>20)lastUnpred.shift();
+      $("postmatch").classList.add("show");
+      if(win){const beams=8+Math.round(summary.difficulty*8)+Math.round(summary.unpredictabilityPct/12);
+        showToast(`+${beams} ☀ sunbeams · skill & style`);}
+      setSpendEnabled(false);
+    });
+  }
+  function rollingAvg(){ if(!lastUnpred.length)return null; return Math.round(lastUnpred.reduce((a,b)=>a+b,0)/lastUnpred.length); }
 
-    if(loser){
-      const who=loser==="P"?player:ai; who.hp=Math.max(0,who.hp-dmg);
-      renderHP(loser);
-      if(r.kind==="clean"&&!reduce){document.body.classList.add("shake");
-        setTimeout(()=>document.body.classList.remove("shake"),360);}
+  function endRoundUI(){
+    const s=game.state();
+    nodeEls.forEach(el=>el.className="node");
+    $("links").innerHTML="";
+    $("roundlbl").textContent="Round "+s.round;
+    $("verdict").textContent="Choose"; $("sub").textContent="tap a stance";
+    if(s.round>ESC)$("esc").classList.add("on");
+    if(compassOn)preview(0),clearPreviewKeepCompass();
+    busy=false;
+    setSpendEnabled(true);
+  }
+  function clearPreviewKeepCompass(){}
+
+  /* ---- resolve meter UI ---- */
+  function updateMeter(state){
+    const pr=state||(game?game.meter.state():{player:0,ai:0});
+    const box=$("presolve").querySelector(".rpips"); box.innerHTML="";
+    for(let i=0;i<Resolve.RESOLVE_MAX;i++){const d=document.createElement("span");d.className="rpip "+(i<pr.player?"full":"");box.appendChild(d);}
+    setSpendEnabled(!busy&&!over);
+    // AI resolve only visible if Insight revealed it this match
+    if(aiResolveVisible) $("aimeter").textContent="foe 資 "+pr.ai;
+  }
+  let aiResolveVisible=false;
+  function setSpendEnabled(on){
+    const st=game?game.meter.state():{player:0};
+    $("insightbtn").disabled=!(on&&st.player>=1);
+    $("foresightbtn").disabled=!(on&&st.player>=2);
+  }
+  function applyReveal(action,payload){
+    if(action==="FORESIGHT"&&payload.predict){
+      clearForesight();
+      foresightNode=payload.predict.pick;
+      nodeEls[foresightNode].classList.add("foresight");
+      showToast("Foresight: foe likely "+STANCES[foresightNode].n);
+    }else if(action==="INSIGHT"){
+      aiResolveVisible=true;
+      Readout.render(game.state().playerHist,game.state().aiHist,game.state().outcomes,{aiRibbonK:10});
+      $("aimeter").textContent="foe 資 "+payload.oppResolve;
+      showToast("Insight: foe ribbon + Resolve revealed");
     }
-    setTimeout(endRound,reduce?80:900);
-  },delay);
-}
+  }
+  function clearForesight(){ if(foresightNode!=null){nodeEls[foresightNode]&&nodeEls[foresightNode].classList.remove("foresight");foresightNode=null;} }
 
-function endRound(){
-  if(player.hp<=0||ai.hp<=0){return finish();}
-  round++;
-  nodeEls.forEach(el=>el.className="node");
-  links.innerHTML="";
-  roundlbl.textContent="Round "+round;
-  verdict.textContent="Choose"; sub.textContent="tap a stance";
-  if(round>ESC_ROUND)escEl.classList.add("on");
-  busy=false;
-}
+  function ribbonOpts(){
+    const charm=Assists.active(Engine.MODES[modeId]);
+    const k = (charm&&charm.id==="eye")?10:5;
+    return {aiRibbonK: aiResolveVisible?10:k, ribbonK:5};
+  }
+  function reduced(){ return Assists.settings().reducedMotion || (matchMedia&&matchMedia("(prefers-reduced-motion:reduce)").matches); }
 
-function finish(){
-  over=true;busy=true;links.innerHTML="";
-  const win=player.hp>0;
-  roundlbl.textContent="Match over";
-  verdict.textContent=win?"VICTORY":"DEFEAT";
-  verdict.style.color=win?getCss("--gold"):getCss("--seal");
-  sub.textContent=win?"the duel is yours":"struck down — try again";
-  document.getElementById("rematch").style.display="block";
-  if(win){const r=8+Math.floor(Math.random()*8);
-    showToast(`+${r} ☀ sunbeams · mints to Lucid Winds`);}
-}
+  /* ---- new game ---- */
+  function newGame(){
+    over=false;busy=false;aiResolveVisible=false;clearForesight();
+    const mode=Engine.MODES[modeId];
+    const seed = mode.seeded ? dailySeed() : (Math.floor(Math.random()*1e9)>>>0);
+    game=Engine.createGame({archetype:foeId,difficulty,mode,seed});
+    // fresh foe cosmetics + name
+    ai={name:rid(FOE_NAMES),face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS)};
+    Stage.init({pArt:artEl("P"),aArt:artEl("A"),hub:$("hub"),spark:$("spark"),
+      reducedMotion:reduced(),timed:mode.timed});
+    wireEvents(game);
+    // reset UI
+    nodeEls.forEach(el=>el.className="node");$("links").innerHTML="";
+    $("esc").classList.remove("on");$("verdict").style.color="";
+    $("roundlbl").textContent="Round 1";$("verdict").textContent="Choose";$("sub").textContent="tap a stance";
+    $("rematch").style.display="none";$("postmatch").classList.remove("show");$("aimeter").textContent="";
+    renderFighter("P");renderFighter("A");renderHP("P");renderHP("A");
+    Readout.render([],[],[],ribbonOpts());
+    $("pbar").classList.remove("show");$("abar").classList.remove("show");
+    updateFoeBar();updateMeter(game.meter.state());applyCompass();
+  }
+  function dailySeed(){ const d=new Date(); return (d.getUTCFullYear()*1e4+(d.getUTCMonth()+1)*100+d.getUTCDate())>>>0; }
 
-function reset(){
-  player.hp=HP; ai={hp:HP,name:ai.name,face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS)};
-  // keep AI name as a fresh ronin
-  ai.name=rid(["Ronin","Kage","Hattori","Mukade","Yurei","Tetsu","Onibi"]);
-  round=1;busy=false;over=false;playerHist=[];
-  escEl.classList.remove("on");
-  verdict.style.color="";
-  nodeEls.forEach(el=>el.className="node");links.innerHTML="";
-  roundlbl.textContent="Round 1";verdict.textContent="Choose";sub.textContent="tap a stance";
-  document.getElementById("rematch").style.display="none";
-  renderFighter("P");renderFighter("A");
-}
+  function updateFoeBar(){
+    const a=Personalities.ARCHES[foeId];
+    $("foename").textContent=a.name;
+    $("foestars").textContent="★".repeat(a.stars)+"☆".repeat(5-a.stars);
+    $("foetell").textContent=a.tell;
+    const mode=Engine.MODES[modeId];
+    const mt=$("modetag"); mt.textContent=mode.id[0].toUpperCase()+mode.id.slice(1);
+    mt.classList.toggle("comp",!mode.honorsAssists);
+    $("compbanner").classList.toggle("show",!mode.honorsAssists && !!Assists.current());
+  }
 
-const getCss=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-function showToast(t){const el=document.getElementById("toast");el.textContent=t;
-  el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2600);}
+  /* ---- foe / mode / difficulty selectors ---- */
+  function buildSelectors(){
+    const foes=$("foes");
+    Personalities.ids().forEach(id=>{
+      const a=Personalities.ARCHES[id];
+      const o=document.createElement("div");o.className="opt sml"+(id===foeId?" sel":"");
+      o.textContent=a.name;o.title=a.tell;
+      o.onclick=()=>{foeId=id;syncSel(foes,o);updateFoeBar();};
+      foes.appendChild(o);
+    });
+    const modes=$("modes");
+    [["casual","Casual"],["practice","Practice"],["gauntlet","Gauntlet"],["daily","Daily"]].forEach(([id,lbl])=>{
+      const o=document.createElement("div");o.className="opt sml"+(id===modeId?" sel":"");
+      o.textContent=lbl;
+      o.onclick=()=>{modeId=id;syncSel(modes,o);updateFoeBar();applyCompass();updateCharmUI();};
+      modes.appendChild(o);
+    });
+    const diff=$("diff");
+    const stars=v=>{const n=Math.round(v*4)+1;return "★".repeat(n)+"☆".repeat(5-n);};
+    diff.oninput=()=>{difficulty=parseFloat(diff.value);$("difflbl").textContent=stars(difficulty);};
+    $("difflbl").textContent=stars(difficulty);
+  }
 
-/* ============ CUSTOMIZER ============ */
-function buildCustomizer(){
-  const faces=document.getElementById("faces"),pals=document.getElementById("pals"),
-    weaps=document.getElementById("weaps"),cname=document.getElementById("cname");
-  FACES.forEach(f=>{const o=document.createElement("div");o.className="opt"+(f===player.face?" sel":"");
-    o.textContent=f;o.onclick=()=>{player.face=f;syncSel(faces,o);renderFighter("P");};faces.appendChild(o);});
-  PALS.forEach(p=>{const o=document.createElement("div");o.className="opt pal"+(p===player.pal?" sel":"");
-    o.style.background=p;o.onclick=()=>{player.pal=p;syncSel(pals,o);renderFighter("P");};pals.appendChild(o);});
-  WEAPS.forEach(w=>{const o=document.createElement("div");o.className="opt"+(w===player.wb?" sel":"");
-    o.textContent=w.w;o.onclick=()=>{player.wb=w;syncSel(weaps,o);renderFighter("P");};weaps.appendChild(o);});
-  cname.value="";cname.oninput=()=>{player.name=cname.value.trim()||"You";renderFighter("P");};
-}
-function syncSel(box,sel){[...box.children].forEach(c=>c.classList.remove("sel"));sel.classList.add("sel");}
+  /* ---- accessibility + charms ---- */
+  function applyA11y(){
+    const s=Assists.settings();
+    document.body.classList.toggle("cb",s.colorblind);
+    document.body.classList.toggle("contrast",s.highContrast);
+    document.body.classList.toggle("bigtap",s.largeTapTargets);
+    document.body.classList.toggle("reduce",s.reducedMotion);
+    if(Stage.setReduced)Stage.setReduced(reduced());
+  }
+  function buildSettings(){
+    document.querySelectorAll("[data-a11y]").forEach(inp=>{
+      const key=inp.getAttribute("data-a11y");
+      inp.checked=!!Assists.settings()[key];
+      inp.addEventListener("change",()=>{Assists.setSetting(key,inp.checked);applyA11y();});
+    });
+    const box=$("charms");
+    const charms=[{id:null,name:"None",glyph:"∅"}].concat(Object.values(Assists.CHARMS));
+    charms.forEach(c=>{
+      const o=document.createElement("div");o.className="opt"+((Assists.current()?Assists.current().id:null)===c.id?" sel":"");
+      o.textContent=c.glyph;o.title=c.name+(c.effect?" — "+c.effect:"");
+      o.onclick=()=>{Assists.equip(c.id);syncSel(box,o);updateCharmUI();applyCompass();updateFoeBar();};
+      box.appendChild(o);
+    });
+    updateCharmUI();
+  }
+  function updateCharmUI(){
+    const mode=Engine.MODES[modeId], active=Assists.active(mode), equipped=Assists.current();
+    $("charmhint").textContent = (!mode.honorsAssists && equipped)
+      ? equipped.name+" is INERT here — "+mode.id+" is competitive."
+      : "Charms go inert the moment a match is ranked, seeded, or PvP.";
+  }
+  function applyCompass(){
+    const charm=Assists.active(Engine.MODES[modeId]);
+    compassOn = !!(charm && charm.id==="compass");
+    if(!compassOn) clearPreview();
+    // scroll charm: keep postmatch-style log visible (handled by ribbon history already)
+  }
 
-/* ============ WIRE UP ============ */
-document.getElementById("dh").onclick=()=>document.getElementById("drawer").classList.toggle("open");
-document.getElementById("rematch").onclick=reset;
-document.getElementById("howbtn").onclick=()=>showToast("Beat the 2 stances clockwise of yours · opposite = safe");
+  /* ---- customizer ---- */
+  function buildCustomizer(){
+    const faces=$("faces"),pals=$("pals"),weaps=$("weaps"),cname=$("cname");
+    FACES.forEach(f=>{const o=document.createElement("div");o.className="opt"+(f===player.face?" sel":"");
+      o.textContent=f;o.onclick=()=>{player.face=f;syncSel(faces,o);renderFighter("P");};faces.appendChild(o);});
+    PALS.forEach(p=>{const o=document.createElement("div");o.className="opt pal"+(p===player.pal?" sel":"");
+      o.style.background=p;o.onclick=()=>{player.pal=p;syncSel(pals,o);renderFighter("P");};pals.appendChild(o);});
+    WEAPS.forEach(w=>{const o=document.createElement("div");o.className="opt"+(w===player.wb?" sel":"");
+      o.textContent=w.w;o.onclick=()=>{player.wb=w;syncSel(weaps,o);renderFighter("P");};weaps.appendChild(o);});
+    cname.value="";cname.oninput=()=>{player.name=cname.value.trim()||"You";$("pname").textContent=player.name;};
+  }
+  function syncSel(box,sel){[...box.children].forEach(c=>c.classList.remove("sel"));sel.classList.add("sel");}
 
-buildWheel();buildCustomizer();renderFighter("P");renderFighter("A");
+  function showToast(t){const el=$("toast");el.textContent=t;el.classList.add("show");clearTimeout(showToast._t);showToast._t=setTimeout(()=>el.classList.remove("show"),2600);}
+
+  /* ---- wire up ---- */
+  function toggleDrawer(id){$(id).classList.toggle("open");}
+  $("foedh").onclick=()=>toggleDrawer("foedrawer");
+  $("setdh").onclick=()=>toggleDrawer("setdrawer");
+  $("custdh").onclick=()=>toggleDrawer("custdrawer");
+  $("foebtn").onclick=()=>{$("foedrawer").classList.add("open");$("foedrawer").scrollIntoView({behavior:"smooth",block:"nearest"});};
+  $("rematch").onclick=()=>newGame();
+  $("howbtn").onclick=()=>showToast("Beat the 2 stances clockwise of yours · opposite = safe · same = bind");
+  $("insightbtn").onclick=()=>{ if(game)game.spend("P","INSIGHT"); };
+  $("foresightbtn").onclick=()=>{ if(game)game.spend("P","FORESIGHT"); };
+
+  buildWheel();buildSelectors();buildSettings();buildCustomizer();
+  applyA11y();renderFighter("P");renderFighter("A");
+  newGame();
+})();
 </script>
 </body>
 </html>

@@ -147,15 +147,23 @@ Each warrior ships **2 PNGs** (`idle`, `strike`; optional `hit`, `ko`): same can
 
 ---
 
-## 11. First-session checklist
+## 11. Phase status (updated 2026-06-18)
 
-- [ ] Read `SIXFOLD_SPEC.md` end to end.
-- [ ] Confirm `sixfold.html` (prototype) runs and you understand its engine + loop.
-- [ ] Create `/src`, `/tools`, `/tests`, `FINDINGS.md`.
-- [ ] Write the CONTRACTS header + mock engine (Phase 0).
-- [ ] Stand up `tools/harness.py`; reproduce the Section 8 baseline + bind numbers.
-- [ ] Build + test `predictor.js`.
-- [ ] Commit. Update `HANDOFF.md` with where you stopped and what's next.
+- [x] Phase 0 — CONTRACTS + `tools/harness.py`; Section 8 baseline + bind numbers reproduced.
+- [x] Phase 1 — `predictor.js` + 19 tests.
+- [x] Phase 2 — `personalities.js`, `resolve.js`, `readout.js`, `assists.js` + tests.
+- [x] Phase 3 — `engine.js` (resolve, Clash Bind, bus, mode registry), `stage.js` + `anim.css`,
+      and the `tools/build.js` inliner producing the single-file `sixfold.html`.
+- [x] `tools/domcheck.js` — headless full-match smoke test (incl. binds + meter spends).
+- [x] All 7 test suites green (111 assertions); harness all targets met; build current.
+
+**The build meets every acceptance-gate item that can be verified without a GPU.**
+The ONE open item: a live-browser visual pass on the §4 animation (real 60fps on a
+mid mobile, and how the per-outcome choreography actually *looks*). Open `sixfold.html`
+in a browser and confirm: distinct finishes for clean/glance/whiff/bind-win/bind-tie,
+reduced-motion hard-swaps cleanly, no console errors offline. That's the last box.
+
+Fenced/later (Section 10): PWA manifest+SW, extra modes, Firebase/sunbeam wiring, juice.
 
 ## 12. Handoff hygiene (for the next instance)
 
