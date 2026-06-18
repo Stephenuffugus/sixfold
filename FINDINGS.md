@@ -115,4 +115,30 @@ picks, run with all spends firing vs no spends — winner, final HP, total damag
 and round count are byte-identical. Spends consume meter + emit info only; they
 never reach the damage path and never consume the RNG, so picks are unchanged.
 
+**Deployed live (2026-06-18):** GitHub Pages from `main`/root —
+https://stephenuffugus.github.io/sixfold/ . The codespace's `GITHUB_TOKEN`
+cannot enable Pages via API (403 "not accessible by integration"); the first
+enable must be done by the repo owner in Settings → Pages. After that, every
+push to `main` auto-publishes. PWA paths are all relative, so the project
+subpath (`/sixfold/`) works without a base href.
+
+**Mobile wheel collapse (fixed):** `.wheelwrap` is a direct child of the body
+column flexbox. On a phone the page exceeds viewport height, so flexbox shrank
+the wheel vertically *despite* `height:296px` — down to ~21px on a 320px screen,
+piling all 6 stance nodes on top of each other. Fix: `flex-shrink:0` on
+`.wheelwrap`. Added `tools/render-check.js` (Playwright, dev-only) — renders the
+shipped game at phone viewports, measures every node's box, and fails on
+overlap/clipping. This is the regression test the headless `domcheck` stub
+*can't* be (no layout engine). `node_modules` + screenshots are gitignored;
+runtime stays zero-dep.
+
+**Playtest polish (2026-06-18):** (1) Clash Bind moved out of the 120px hub into
+a full-screen overlay (`#bindstage`): backdrop blur+dim, `.hero` scales .5→1 with
+an overshoot bezier so the choices rush forward, big buttons labelled with what
+they beat, screen-shake on entry, reduced-motion safe. (2) First-run "How to
+duel" overlay (`#howto`, remembered via `localStorage.sixfold_seen`) because the
+teaching rings only fire on hover and so never show on touch — this was the
+"confusing" feedback. `Stage.bindPrompt()` now needs `els.bindStage`; SW cache
+bumped (→ v3) on each deploy so phones drop the stale shell.
+
 (continued below as work lands…)
