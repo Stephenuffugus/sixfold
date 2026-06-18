@@ -517,6 +517,13 @@
       <path d="M22 44 Q43 18 64 44 Q43 34 22 44Z" fill="#1a1d2b" stroke="#0007"/>
       <path d="M30 40 q13 -16 26 0" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"/></svg>`;
   }
+  // foe skin: distinct from the player's, preferring real art (atlas with a url)
+  // over the vector demos so opponents look like actual different characters.
+  function pickFoeSkin(){
+    const pool=Skins.list().map(s=>s.id).filter(id=>id!==player.skin);
+    const real=pool.filter(id=>Skins.get(id).url);
+    return rid(real.length?real:(pool.length?pool:[player.skin]));
+  }
   function vectorInner(f,dir){ return bodySVG(f.pal)+`<div class="face">${f.face}</div><div class="weapon ${dir}">${f.wb.w}</div>`; }
   function renderFighter(side){
     const f=side==="P"?player:ai, stage=$(side==="P"?"pstage":"astage"), dir=side==="P"?"left":"right";
@@ -656,8 +663,10 @@
       $("postmatch").classList.add("show");
       const beams=win?(8+Math.round(summary.difficulty*8)+Math.round(summary.unpredictabilityPct/12)):0;
       setSpendEnabled(false);
-      // result screen + victory/defeat sting, after the finishing blow lands
-      setTimeout(()=>{ Sfx.play(win?"victory":"defeat"); buzz(win?[0,45,45,45]:130); showResult(win,summary,beams); }, reduced()?0:1000);
+      // sting right as the final blow lands, then HOLD on the win/ko pose for a
+      // beat (so those frames are actually seen) before the result screen slides in.
+      setTimeout(()=>{ Sfx.play(win?"victory":"defeat"); buzz(win?[0,45,45,45]:130); }, reduced()?0:950);
+      setTimeout(()=>{ showResult(win,summary,beams); }, reduced()?0:2000);
     });
   }
   /* ---- victory / defeat result screen ---- */
@@ -751,7 +760,7 @@
     game=Engine.createGame({archetype:foeId,difficulty,mode,seed});
     matchWinner=null;
     // fresh foe cosmetics + name + skin
-    ai={name:rid(FOE_NAMES),face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS),skin:rid(Skins.list().map(s=>s.id))};
+    ai={name:rid(FOE_NAMES),face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS),skin:pickFoeSkin()};
     // render BEFORE Stage.init so it captures the live art elements (renderFighter
     // rebuilds the DOM; init must run after, never before).
     renderFighter("P");renderFighter("A");

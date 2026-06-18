@@ -74,11 +74,15 @@ const root = path.join(__dirname, "..");
       // weakest AI + cycling all 6 stances (high unpredictability) → usually a win.
       await page.evaluate(() => { const d = document.getElementById("diff"); if (d) { d.value = "0.05"; if (d.oninput) d.oninput(); } document.getElementById("rematch").click(); });
       await page.waitForTimeout(400);
+      let grabbedHold = false;
       for (let k = 0; k < 50; k++) {
         const st = await page.evaluate(() => ({
           result: document.getElementById("resultscreen").classList.contains("show"),
           bind: document.getElementById("bindstage").classList.contains("show"),
+          ended: /VICTORY|DEFEAT/.test(document.getElementById("verdict").textContent),
         }));
+        // the win/ko pose "hold" window (match ended, result screen not up yet)
+        if (st.ended && !st.result && !grabbedHold) { await page.screenshot({ path: path.join(root, "render-winpose.png") }); grabbedHold = true; }
         if (st.result) break;
         if (st.bind) await page.evaluate(() => { const b = document.querySelector("#bindstage .bindbtn-lg"); if (b) b.click(); });
         else await page.evaluate((i) => { const n = document.querySelectorAll(".node"); if (n.length) n[i % 6].click(); }, k);
