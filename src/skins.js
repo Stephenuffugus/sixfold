@@ -83,6 +83,8 @@
     // --- real watercolor sheets (1 PNG each, 3x2 layout; ART_SHEET.md) ---
     { id: "ronin", name: "Crimson Ronin", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/ronin.png" },
     { id: "kage", name: "Shadow", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/kage.png" },
+    { id: "tetsu", name: "Iron Monk", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/tetsu.png" },
+    { id: "onibi", name: "Ember Oni", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/onibi.png" },
   ];
 
   function list() {

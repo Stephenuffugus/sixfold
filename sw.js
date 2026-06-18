@@ -6,8 +6,9 @@
  *  - everything else: cache-first, then network (and cache same-origin GETs).
  * Bump CACHE on every deploy so clients drop the old shell.
  */
-const CACHE = "sixfold-v10";
-const ASSETS = ["./", "./index.html", "./sixfold.html", "./manifest.webmanifest", "./icon.svg", "./skins/ronin.png", "./skins/kage.png"];
+const CACHE = "sixfold-v11";
+const ASSETS = ["./", "./index.html", "./sixfold.html", "./manifest.webmanifest", "./icon.svg",
+  "./skins/ronin.png", "./skins/kage.png", "./skins/tetsu.png", "./skins/onibi.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
