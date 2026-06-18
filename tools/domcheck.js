@@ -46,8 +46,8 @@ function makeEl(tag) {
     scrollIntoView() {},
     querySelector: (sel) => el.querySelectorAll(sel)[0] || null,
     querySelectorAll: (sel) => {
-      // we only need ".bindbtn" (parsed from innerHTML) and ".fighter-art"/".bar-fill"/".bar-num"/".rpips"
-      if (sel === ".bindbtn") return el._bindbtns || [];
+      // we only need ".bindbtn-lg" (parsed from innerHTML) and ".fighter-art"/".bar-fill"/".bar-num"/".rpips"
+      if (sel === ".bindbtn-lg" || sel === ".bindbtn") return el._bindbtns || [];
       // children scan by class
       const want = sel.replace(/^\./, "");
       return el.children.filter((c) => c._cls && c._cls.has(want));
@@ -149,8 +149,8 @@ const finished = () => byId("rematch").style.display === "block" || /VICTORY|DEF
       }
       nodes[guard % 6].dispatch("click");   // cycle ALL 6 stances so a mirror (clash) is reliably hit
       await drain();
-      const hub = byId("hub");
-      if (hub._bindbtns && hub._bindbtns.length) { binds++; hub._bindbtns[binds % 3].dispatch("click"); await drain(); }
+      const bindStage = byId("bindstage");
+      if (bindStage._bindbtns && bindStage._bindbtns.length) { binds++; bindStage._bindbtns[binds % 3].dispatch("click"); await drain(); }
       taps++;
     }
     if (matches >= 1 && finished()) console.log(`  ok  played ${matches}+ matches to a winner (${taps} taps)`);

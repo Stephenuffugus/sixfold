@@ -126,29 +126,42 @@
     [art("P"), art("A")].forEach((el) => { if (el) { el.classList.remove("locked"); frameEl(el, "idle"); } });
   }
 
-  // Clash Bind prompt: flip the hub to 3 buttons, resolve on tap. Optional snap
-  // timer in timed modes (auto-picks a random bind on timeout). Returns Promise<Bind>.
-  const BINDS = [{ id: 0, name: "Drive", glyph: "⤚" }, { id: 1, name: "Slip", glyph: "⤳" }, { id: 2, name: "Trap", glyph: "⤲" }];
+  // Clash Bind prompt: pull the world out of focus and rush three big choices
+  // toward the player (full-screen overlay, not the tiny hub — this is the
+  // duel's escalation spike). The RPS-3 cycle is Drive>Slip>Trap>Drive, so each
+  // button shows what it beats. Optional snap timer in timed modes (auto-picks a
+  // random bind on timeout). Returns Promise<Bind>.
+  const BINDS = [
+    { id: 0, name: "Drive", glyph: "⤛", beats: "Slip" },
+    { id: 1, name: "Slip", glyph: "⤳", beats: "Trap" },
+    { id: 2, name: "Trap", glyph: "⤲", beats: "Drive" },
+  ];
   function bindPrompt() {
-    if (!hasDoc || !els.hub) return Promise.resolve(Math.floor(Math.random() * 3));
-    const hub = els.hub;
-    const prevHTML = hub.innerHTML;
+    const stage = els.bindStage;
+    if (!hasDoc || !stage) return Promise.resolve(Math.floor(Math.random() * 3));
     return new Promise((resolve) => {
-      hub.classList.add("bind-mode");
-      hub.innerHTML =
-        '<div class="bind-title">BIND</div><div class="bind-row">' +
-        BINDS.map((b) => `<button class="bindbtn" data-b="${b.id}" aria-label="${b.name}"><span class="bg">${b.glyph}</span><span class="bn">${b.name}</span></button>`).join("") +
+      stage.innerHTML =
+        '<div class="hero">' +
+        '<div class="clash-title">CLASH</div><div class="clash-sub">break the bind</div>' +
+        '<div class="bind-big-row">' +
+        BINDS.map((b) => `<button class="bindbtn-lg" data-b="${b.id}" aria-label="${b.name} — beats ${b.beats}"><span class="bg">${b.glyph}</span><span class="bn">${b.name}</span><span class="bd">beats ${b.beats}</span></button>`).join("") +
+        "</div>" +
+        '<div class="bind-timer' + (timed && !reduced ? " on" : "") + '"><div class="fill"></div></div>' +
         "</div>";
+      stage.setAttribute("aria-hidden", "false");
+      if (stage.offsetWidth !== undefined) void stage.offsetWidth; // reflow so the zoom/blur transition runs
+      stage.classList.add("show");
       let done = false, timer = null;
       function pick(b) {
         if (done) return; done = true;
         if (timer) clearTimeout(timer);
-        hub.classList.remove("bind-mode");
-        hub.innerHTML = prevHTML;
+        stage.classList.remove("show");
+        stage.setAttribute("aria-hidden", "true");
+        setTimeout(() => { stage.innerHTML = ""; }, reduced ? 0 : 280); // clear after fade-out
         unlock();
         resolve(b);
       }
-      Array.prototype.forEach.call(hub.querySelectorAll(".bindbtn"), (btn) => {
+      Array.prototype.forEach.call(stage.querySelectorAll(".bindbtn-lg"), (btn) => {
         btn.addEventListener("click", () => pick(parseInt(btn.getAttribute("data-b"), 10)));
       });
       if (timed) timer = setTimeout(() => pick(Math.floor(Math.random() * 3)), 2000);

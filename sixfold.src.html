@@ -203,6 +203,49 @@
   body.reduce *{animation:none!important;transition:none!important}
   @media (max-width:360px){.wheelwrap{width:266px;height:266px}.node{width:64px;height:64px;margin:-32px 0 0 -32px}}
 
+  /* ===== CLASH BIND — full-screen escalation moment =====
+     The bind is the duel's spike: the world pulls out of focus and the three
+     choices rush toward you. Backdrop blur dims the arena; .bind-hero scales
+     up with a slight overshoot so the buttons feel like they close in. */
+  .overlay{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center;
+    gap:16px;padding:24px;background:rgba(9,11,20,.42);-webkit-backdrop-filter:blur(9px) brightness(.5);
+    backdrop-filter:blur(9px) brightness(.5);opacity:0;transition:opacity .26s ease}
+  .overlay.show{display:flex;opacity:1}
+  .overlay .hero{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:420px;
+    transform:scale(.5);transition:transform .3s cubic-bezier(.18,1.5,.4,1)}
+  .overlay.show .hero{transform:scale(1)}
+  .clash-title{font-family:var(--disp);font-weight:800;font-size:38px;letter-spacing:.18em;color:var(--seal);
+    text-shadow:0 0 24px #cf4130aa,0 2px 0 #0008;margin:0}
+  .clash-sub{font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--washi-dim);margin-top:-6px}
+  .bind-big-row{display:flex;gap:13px}
+  .bindbtn-lg{display:flex;flex-direction:column;align-items:center;gap:6px;width:94px;padding:18px 8px 12px;border-radius:16px;
+    border:2px solid #ffffff30;background:linear-gradient(#303a5e,#1b2138);color:var(--washi);cursor:pointer;font-family:var(--ui);
+    box-shadow:0 10px 30px #0009;transition:transform .1s,border-color .15s,box-shadow .15s}
+  .bindbtn-lg .bg{font-size:40px;line-height:1}
+  .bindbtn-lg .bn{font-size:16px;font-weight:800;letter-spacing:.04em}
+  .bindbtn-lg .bd{font-size:10px;color:var(--washi-dim);letter-spacing:.02em}
+  .bindbtn-lg:active{transform:scale(.93)}
+  .bindbtn-lg:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+  @media(hover:hover){.bindbtn-lg:hover{border-color:var(--gold);box-shadow:0 12px 34px #cda64f55,0 10px 30px #0009;transform:translateY(-2px)}}
+  .bind-timer{height:4px;width:210px;border-radius:3px;background:#ffffff1a;overflow:hidden;opacity:0;margin-top:2px}
+  .bind-timer.on{opacity:1}
+  .bind-timer .fill{height:100%;width:100%;background:linear-gradient(90deg,var(--seal),var(--gold));transform-origin:left;animation:bindcount 2s linear forwards}
+  @keyframes bindcount{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
+  /* ===== HOW TO DUEL — first-run guide (reuses .overlay) ===== */
+  .howto{text-align:center}
+  .howto h2{font-family:var(--disp);font-weight:800;font-size:24px;letter-spacing:.14em;margin:0 0 4px;color:var(--washi)}
+  .howto ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px;text-align:left;font-size:13px;line-height:1.4}
+  .howto li{display:flex;gap:10px;align-items:flex-start}
+  .howto li .ic{flex:0 0 26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;
+    background:#ffffff14;border:1px solid #ffffff22}
+  .howto .k{color:var(--washi);font-weight:700}
+  .howto .c-clean{color:var(--seal);font-weight:700} .howto .c-glance{color:var(--jade);font-weight:700}
+  .howto .c-steel{color:var(--steel);font-weight:700} .howto .c-gold{color:var(--gold);font-weight:700}
+  .howto .gotit{margin-top:6px;font-family:var(--ui);font-weight:800;font-size:15px;letter-spacing:.04em;padding:13px 32px;border-radius:12px;
+    border:1px solid #ffffff33;cursor:pointer;color:#1a0f0c;background:linear-gradient(#d9694f,var(--seal))}
+  body.reduce .overlay,body.reduce .overlay .hero{transition:none}
+
   /*__ANIM_CSS__*/
 </style>
 </head>
@@ -317,6 +360,25 @@
       <div class="row"><label>Creature</label><div class="opts" id="faces"></div></div>
       <div class="row"><label>Armor color</label><div class="opts" id="pals"></div></div>
       <div class="row"><label>Weapon &amp; banner</label><div class="opts" id="weaps"></div></div>
+    </div>
+  </div>
+
+  <!-- Clash Bind escalation overlay (populated by stage.js) -->
+  <div class="overlay" id="bindstage" aria-hidden="true" role="dialog" aria-label="Break the bind"></div>
+
+  <!-- First-run / on-demand how-to guide -->
+  <div class="overlay" id="howto" aria-hidden="true" role="dialog" aria-label="How to play">
+    <div class="hero howto">
+      <h2>HOW TO DUEL</h2>
+      <ol>
+        <li><span class="ic">👆</span><span>Tap a stance on the wheel each round — you both reveal at once.</span></li>
+        <li><span class="ic">↻</span><span>You beat the <span class="k">2 stances clockwise</span> of yours: <span class="c-clean">CLEAN −2</span>, then <span class="c-glance">GLANCE −1</span>.</span></li>
+        <li><span class="ic">⇄</span><span>Directly <span class="c-steel">across = WHIFF</span> — blades pass, no damage.</span></li>
+        <li><span class="ic">⚔</span><span><span class="k">Same stance = CLASH</span> → break the bind: <span class="c-gold">Drive ▸ Slip ▸ Trap ▸ Drive</span>.</span></li>
+        <li><span class="ic">資</span><span>Dead rounds build <span class="c-gold">Resolve</span> — spend it to read the foe, never to hit harder.</span></li>
+        <li><span class="ic">🏆</span><span>Drop the foe's <span class="k">4 HP</span> first. Stay unpredictable — they're reading you too.</span></li>
+      </ol>
+      <button class="gotit" id="howtoclose">Got it</button>
     </div>
   </div>
 
@@ -453,6 +515,7 @@
       $("verdict").textContent="LOCK"; $("sub").textContent="break the bind";
       drawLink(game.state().playerHist.slice(-1)[0], game.state().playerHist.slice(-1)[0], "#fff");
       Stage.lockBlades();
+      if(!reduced()){document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),360);}
       Stage.bindPrompt().then(b=>{ g.submitBind(b); });
     });
     g.bus.on("meter-changed",updateMeter);
@@ -555,7 +618,7 @@
     // rebuilds the DOM; init must run after, never before).
     renderFighter("P");renderFighter("A");
     Stage.init({pArt:artEl("P"),aArt:artEl("A"),hub:$("hub"),spark:$("spark"),
-      reducedMotion:reduced(),timed:mode.timed});
+      bindStage:$("bindstage"),reducedMotion:reduced(),timed:mode.timed});
     wireEvents(game);
     // reset UI
     nodeEls.forEach(el=>el.className="node");$("links").innerHTML="";
@@ -666,13 +729,20 @@
   $("custdh").onclick=()=>toggleDrawer("custdrawer");
   $("foebtn").onclick=()=>{$("foedrawer").classList.add("open");$("foedrawer").scrollIntoView({behavior:"smooth",block:"nearest"});};
   $("rematch").onclick=()=>newGame();
-  $("howbtn").onclick=()=>showToast("Beat the 2 stances clockwise of yours · opposite = safe · same = bind");
+  function openHowto(){$("howto").classList.add("show");$("howto").setAttribute("aria-hidden","false");}
+  function closeHowto(){$("howto").classList.remove("show");$("howto").setAttribute("aria-hidden","true");
+    try{localStorage.setItem("sixfold_seen","1");}catch(e){}}
+  $("howbtn").onclick=openHowto;
+  $("howtoclose").onclick=closeHowto;
   $("insightbtn").onclick=()=>{ if(game)game.spend("P","INSIGHT"); };
   $("foresightbtn").onclick=()=>{ if(game)game.spend("P","FORESIGHT"); };
 
   buildWheel();buildSelectors();buildSettings();buildCustomizer();
   applyA11y();renderFighter("P");renderFighter("A");
   newGame();
+
+  // First-run: show the how-to guide once (remembered per browser).
+  try{ if(!localStorage.getItem("sixfold_seen")) openHowto(); }catch(e){}
 
   // PWA: register the service worker for offline play. Guarded so the game still
   // runs when opened as a local file:// (no SW) or in a headless test sandbox.
