@@ -209,6 +209,16 @@
   will-change: transform;
 }
 
+/* sprite-atlas skins: ONE sheet, the visible frame chosen by background-position
+   (instant hard cut — sprite animation). background-size is set inline per skin
+   to (cols*100% rows*100%). The vector placeholder has no .sprite, so frame calls
+   are inert and its pose rides entirely on the .fighter-art transform. */
+.fighter-art .sprite {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  background-repeat: no-repeat; background-position: 0% 0%;
+  pointer-events: none;
+}
+
 /* held strike frame (when PNG frames exist) */
 .fighter-art.striking .frame-idle { opacity: 0; }
 .fighter-art.striking .frame-strike { opacity: 1; }
@@ -357,6 +367,7 @@
     <div class="dh" id="custdh"><span>🎨 Customize your warrior</span><span class="chev">▾</span></div>
     <div class="dbody">
       <div class="row"><label>Name</label><input class="nm" id="cname" maxlength="14" placeholder="name your warrior"></div>
+      <div class="row"><label>Skin</label><div class="opts" id="skins"></div></div>
       <div class="row"><label>Creature</label><div class="opts" id="faces"></div></div>
       <div class="row"><label>Armor color</label><div class="opts" id="pals"></div></div>
       <div class="row"><label>Weapon &amp; banner</label><div class="opts" id="weaps"></div></div>
@@ -966,6 +977,105 @@
 })(typeof globalThis !== "undefined" ? globalThis : this);
 
 
+/* ============================ skins.js ============================ */
+/* SIXFOLD — skins.js  (cosmetic art layer)
+ *
+ * PILLAR: a skin is art only. Nothing here touches damage, odds, the meter, or
+ * the bind. Skins are pure swap-in cosmetics.
+ *
+ * A skin = ONE sprite atlas (the artist's single sheet IS the game asset) plus a
+ * frame map. The loader slices frames by CSS background-position, so swapping a
+ * frame is an instant GPU-cheap cut while the CSS pose/lunge transforms still
+ * play on the wrapper. Drop-in: add a REGISTRY entry pointing at a URL/dataURI —
+ * no other code changes. The vector "placeholder" renders when no atlas is set.
+ *
+ * Frame contract (matches the art sheet brief / ART_SHEET.md):
+ *   2x3 grid, fixed anchor 50% x / 88% y, transparent bg, facing right:
+ *     [ idle ][ strike ][ hit ]
+ *     [ ko   ][ guard  ][ win ]
+ *   Opponent = the same atlas mirrored with scaleX(-1) on the wrapper.
+ *
+ * API:
+ *   FRAMES                    -> ["idle","strike","hit","ko","guard","win"]
+ *   list()                    -> [{id,name,kind,cols,rows,frames}]
+ *   get(id)                   -> skin meta (falls back to placeholder)
+ *   atlasPos(skin, frameName) -> "x% y%"   (pure; for background-position)
+ *   src(skin, palette)        -> atlas URL/dataURI (demo skins are generated)
+ */
+(function (root) {
+  "use strict";
+
+  const FRAMES = ["idle", "strike", "hit", "ko", "guard", "win"];
+  // canonical 2x3 layout: [col,row] of each frame in the sheet
+  const GRID = {
+    cols: 3, rows: 2,
+    frames: { idle: [0, 0], strike: [1, 0], hit: [2, 0], ko: [0, 1], guard: [1, 1], win: [2, 1] },
+  };
+
+  // background-position for a frame, given the atlas' col/row count.
+  function atlasPos(skin, name) {
+    const map = (skin && skin.frames) || GRID.frames;
+    const f = map[name] || [0, 0];
+    const c = (skin && skin.cols) || GRID.cols;
+    const r = (skin && skin.rows) || GRID.rows;
+    const x = c > 1 ? (f[0] / (c - 1)) * 100 : 0;
+    const y = r > 1 ? (f[1] / (r - 1)) * 100 : 0;
+    return x + "% " + y + "%";
+  }
+
+  // ---- demo skin: one vector warrior posed across all 6 frames, tinted by the
+  // player's palette. Proves the atlas pipeline end-to-end before real art lands.
+  function demoAtlas(pal) {
+    pal = pal || "#cf4130";
+    const POSE = {
+      idle:   { rot: 0,   dy: 0,  head: 34, blade: [80, 70] },
+      strike: { rot: 8,   dy: 0,  head: 32, blade: [95, 47] },
+      hit:    { rot: -12, dy: 2,  head: 30, blade: [64, 80] },
+      ko:     { rot: 76,  dy: 12, head: 42, blade: [90, 88] },
+      guard:  { rot: 4,   dy: 1,  head: 33, blade: [57, 36] },
+      win:    { rot: -4,  dy: -2, head: 30, blade: [74, 16] },
+    };
+    function fig(p) {
+      const t = "translate(0 " + p.dy + ") rotate(" + p.rot + " 50 88)";
+      return '<g transform="' + t + '">' +
+        // robe
+        '<path d="M30 88 Q25 60 34 47 L44 51 Q50 47 56 51 L66 47 Q75 60 70 88 Z" fill="' + pal + '" stroke="#0007" stroke-width="2"/>' +
+        // sash / shoulders
+        '<path d="M34 47 Q50 36 66 47 L62 56 Q50 50 38 56 Z" fill="#1a1d2b" stroke="#0006" stroke-width="1.3"/>' +
+        // head
+        '<circle cx="50" cy="' + p.head + '" r="9" fill="#1a1d2b" stroke="#0007" stroke-width="1.5"/>' +
+        // blade
+        '<line x1="54" y1="54" x2="' + p.blade[0] + '" y2="' + p.blade[1] + '" stroke="' + pal + '" stroke-width="4.5" stroke-linecap="round"/>' +
+        '</g>';
+    }
+    let cells = "";
+    FRAMES.forEach((name) => {
+      const f = GRID.frames[name];
+      cells += '<g transform="translate(' + f[0] * 100 + " " + f[1] * 100 + ')">' + fig(POSE[name]) + "</g>";
+    });
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">' + cells + "</svg>";
+    return "data:image/svg+xml," + encodeURIComponent(svg);
+  }
+
+  const REGISTRY = [
+    { id: "placeholder", name: "Vector (default)", kind: "vector" },
+    { id: "inkblade", name: "Inkblade (demo)", kind: "atlas", cols: GRID.cols, rows: GRID.rows, frames: GRID.frames, gen: demoAtlas },
+    // Drop real skins in here — one PNG sheet per character, same 2x3 layout:
+    // { id:"ronin", name:"Crimson Ronin", kind:"atlas", cols:3, rows:2, frames:GRID.frames, url:"skins/ronin.png" },
+  ];
+
+  function list() {
+    return REGISTRY.map((s) => ({ id: s.id, name: s.name, kind: s.kind, cols: s.cols, rows: s.rows, frames: s.frames }));
+  }
+  function get(id) { return REGISTRY.find((s) => s.id === id) || REGISTRY[0]; }
+  function src(skin, pal) { if (!skin) return null; if (skin.gen) return skin.gen(pal); return skin.url || null; }
+
+  const api = { FRAMES, GRID, atlasPos, list, get, src };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.Skins = api;
+})(typeof globalThis !== "undefined" ? globalThis : this);
+
+
 /* ============================ stage.js ============================ */
 /* SIXFOLD — stage.js  (spec §4)
  *
@@ -976,6 +1086,8 @@
  * API (frozen, spec §5):
  *   toStance(side, stance) ; playReveal(pPick, aPick, outcome) -> Promise
  *   lockBlades() ; bindPrompt() -> Promise<Bind>
+ *   setFrame(side, name) -> show an atlas frame (idle/strike/hit/ko/guard/win);
+ *     glue sets el._framePos before play. No-op for the vector placeholder.
  *
  * Defensive: every method no-ops / resolves immediately if the DOM or the
  * configured elements are absent (so tests and headless play never throw).
@@ -1013,6 +1125,17 @@
   function art(side) { return side === "P" ? els.pArt : els.aArt; }
   function wait(ms) { return new Promise((res) => setTimeout(res, reduced ? 0 : ms)); }
 
+  // Show a named atlas frame (idle/strike/hit/ko/guard/win). For atlas skins the
+  // glue precomputes el._framePos[name] = "x% y%"; we just shift background-position
+  // (instant cut). No-op for the vector placeholder (no .sprite child) — its pose
+  // is carried entirely by the CSS transforms below.
+  function frameEl(el, name) {
+    if (!el || !el.querySelector) return;
+    const sp = el.querySelector(".sprite");
+    if (sp && el._framePos && el._framePos[name]) sp.style.backgroundPosition = el._framePos[name];
+  }
+  function setFrame(side, name) { frameEl(art(side), name); }
+
   function applyPose(el, stance, extra) {
     if (!el) return;
     const base = POSE[stance] != null ? POSE[stance] : NEUTRAL;
@@ -1023,12 +1146,8 @@
     const el = art(side);
     if (!el) return;
     el.classList.remove("locked", "striking", "flinch", "knock");
+    frameEl(el, "idle");
     applyPose(el, stance);
-  }
-
-  function strikeFrame(el, on) {
-    if (!el) return;
-    if (on) el.classList.add("striking"); else el.classList.remove("striking");
   }
 
   function spark() {
@@ -1046,7 +1165,7 @@
     const lunge = "translateX(6px) scale(1.02)";
     return wait(120).then(() => {
       // strike frame + lunge to centre (both inners move +x; opp wrapper mirrors)
-      strikeFrame(p, true); strikeFrame(a, true);
+      frameEl(p, "strike"); frameEl(a, "strike");
       applyPose(p, pPick, lunge); applyPose(a, aPick, lunge);
       return wait(220);
     }).then(() => {
@@ -1055,11 +1174,11 @@
       const loser = outcome && outcome.winner ? (outcome.winner === "P" ? a : p) : null;
       if (k === "clean") {
         spark();
-        if (loser) loser.classList.add("knock");
+        if (loser) { loser.classList.add("knock"); frameEl(loser, "hit"); }
         if (els.hub) { els.hub.classList.add("finish"); }
       } else if (k === "glance") {
         spark();
-        if (loser) loser.classList.add("flinch");
+        if (loser) { loser.classList.add("flinch"); frameEl(loser, "hit"); }
       } else if (k === "whiff") {
         // pass-through: brief over-lunge then recover, no contact
         applyPose(p, pPick, "translateX(9px)"); applyPose(a, aPick, "translateX(9px)");
@@ -1070,7 +1189,7 @@
       return wait(finishing && !reduced ? 600 * 1.6 : 600);
     }).then(() => {
       // settle: strike->idle, pivot neutral, clear lunge/finish
-      strikeFrame(p, false); strikeFrame(a, false);
+      frameEl(p, "idle"); frameEl(a, "idle");
       if (els.hub) els.hub.classList.remove("finish");
       if (p) { p.classList.remove("flinch", "knock"); applyPose(p, pPick); }
       if (a) { a.classList.remove("flinch", "knock"); applyPose(a, aPick); }
@@ -1079,11 +1198,11 @@
 
   function lockBlades() {
     const p = art("P"), a = art("A");
-    [p, a].forEach((el) => { if (el) { strikeFrame(el, true); el.classList.add("locked"); } });
+    [p, a].forEach((el) => { if (el) { frameEl(el, "guard"); el.classList.add("locked"); } });
     spark();
   }
   function unlock() {
-    [art("P"), art("A")].forEach((el) => { if (el) { el.classList.remove("locked"); strikeFrame(el, false); } });
+    [art("P"), art("A")].forEach((el) => { if (el) { el.classList.remove("locked"); frameEl(el, "idle"); } });
   }
 
   // Clash Bind prompt: flip the hub to 3 buttons, resolve on tap. Optional snap
@@ -1115,7 +1234,7 @@
     });
   }
 
-  const api = { init, setReduced, setTimed, toStance, playReveal, lockBlades, unlock, bindPrompt, POSE, BINDS };
+  const api = { init, setReduced, setTimed, toStance, setFrame, playReveal, lockBlades, unlock, bindPrompt, POSE, BINDS };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.Stage = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
@@ -1480,10 +1599,10 @@
   const $=id=>document.getElementById(id);
 
   // persistent cosmetic + selection state
-  let player={name:"You",face:"🦊",pal:"#cf4130",wb:WEAPS[0]};
-  let ai={name:"Ronin",face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS)};
+  let player={name:"You",face:"🦊",pal:"#cf4130",wb:WEAPS[0],skin:"inkblade"};
+  let ai={name:"Ronin",face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS),skin:"inkblade"};
   let foeId=rid(Personalities.ids()), difficulty=0.5, modeId="casual";
-  let game=null, busy=false, over=false, foresightNode=null;
+  let game=null, busy=false, over=false, foresightNode=null, matchWinner=null;
   let lastUnpred=[];
 
   /* ---- fighter rendering (placeholder shapes; art-wrap enables stage transforms) ---- */
@@ -1499,11 +1618,21 @@
   }
   function renderFighter(side){
     const f=side==="P"?player:ai, stage=$(side==="P"?"pstage":"astage"), dir=side==="P"?"left":"right";
+    const skin=Skins.get(f.skin||"placeholder");
+    let inner, artStyle="";
+    if(skin.kind==="atlas"){
+      const src=Skins.src(skin,f.pal);
+      artStyle=`position:relative;width:100px;height:100px`;
+      inner=`<div class="sprite" style="background-image:url('${src}');background-size:${skin.cols*100}% ${skin.rows*100}%"></div>`;
+    }else{
+      inner=bodySVG(f.pal)+`<div class="face">${f.face}</div><div class="weapon ${dir}">${f.wb.w}</div>`;
+    }
     stage.innerHTML=
       `<div class="banner ${dir}" style="background:${f.pal}">${f.wb.b}</div>`+
-      `<div class="art-wrap ${side==="A"?"opp":""}"><div class="fighter-art">`+
-        bodySVG(f.pal)+`<div class="face">${f.face}</div><div class="weapon ${dir}">${f.wb.w}</div>`+
-      `</div></div>`;
+      `<div class="art-wrap ${side==="A"?"opp":""}"><div class="fighter-art" style="${artStyle}">`+inner+`</div></div>`;
+    // precompute atlas frame positions so the stage can hard-cut frames cheaply
+    const el=artEl(side);
+    if(el){ el._framePos = skin.kind==="atlas" ? Skins.FRAMES.reduce((m,n)=>{m[n]=Skins.atlasPos(skin,n);return m;},{}) : null; }
     $(side==="P"?"pname":"aname").textContent=f.name;
     renderHP(side);
   }
@@ -1597,11 +1726,12 @@
         renderHP("P");renderHP("A");
         Readout.render(game.state().playerHist,game.state().aiHist,game.state().outcomes,ribbonOpts());
         if(outcome.kind==="clean"&&outcome.winner&&!reduced()){document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),360);}
-        if(!over) endRoundUI();
+        if(over){ if(matchWinner){Stage.setFrame(matchWinner,"win");Stage.setFrame(matchWinner==="P"?"A":"P","ko");} }
+        else endRoundUI();
       });
     });
     g.bus.on("match-over",({winner,summary})=>{
-      over=true;busy=true;
+      over=true;busy=true;matchWinner=winner;
       const win=winner==="P";
       $("roundlbl").textContent="Match over";
       $("verdict").textContent=win?"VICTORY":"DEFEAT";
@@ -1674,8 +1804,12 @@
     const mode=Engine.MODES[modeId];
     const seed = mode.seeded ? dailySeed() : (Math.floor(Math.random()*1e9)>>>0);
     game=Engine.createGame({archetype:foeId,difficulty,mode,seed});
-    // fresh foe cosmetics + name
-    ai={name:rid(FOE_NAMES),face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS)};
+    matchWinner=null;
+    // fresh foe cosmetics + name + skin
+    ai={name:rid(FOE_NAMES),face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS),skin:rid(Skins.list().map(s=>s.id))};
+    // render BEFORE Stage.init so it captures the live art elements (renderFighter
+    // rebuilds the DOM; init must run after, never before).
+    renderFighter("P");renderFighter("A");
     Stage.init({pArt:artEl("P"),aArt:artEl("A"),hub:$("hub"),spark:$("spark"),
       reducedMotion:reduced(),timed:mode.timed});
     wireEvents(game);
@@ -1684,7 +1818,7 @@
     $("esc").classList.remove("on");$("verdict").style.color="";
     $("roundlbl").textContent="Round 1";$("verdict").textContent="Choose";$("sub").textContent="tap a stance";
     $("rematch").style.display="none";$("postmatch").classList.remove("show");$("aimeter").textContent="";
-    renderFighter("P");renderFighter("A");renderHP("P");renderHP("A");
+    renderHP("P");renderHP("A");
     Readout.render([],[],[],ribbonOpts());
     $("pbar").classList.remove("show");$("abar").classList.remove("show");
     updateFoeBar();updateMeter(game.meter.state());applyCompass();
@@ -1765,7 +1899,10 @@
 
   /* ---- customizer ---- */
   function buildCustomizer(){
-    const faces=$("faces"),pals=$("pals"),weaps=$("weaps"),cname=$("cname");
+    const skins=$("skins"),faces=$("faces"),pals=$("pals"),weaps=$("weaps"),cname=$("cname");
+    Skins.list().forEach(s=>{const o=document.createElement("div");o.className="opt"+(s.id===player.skin?" sel":"");
+      o.textContent=s.name;o.style.fontSize="11px";o.style.width="auto";o.style.padding="0 8px";
+      o.onclick=()=>{player.skin=s.id;syncSel(skins,o);renderFighter("P");};skins.appendChild(o);});
     FACES.forEach(f=>{const o=document.createElement("div");o.className="opt"+(f===player.face?" sel":"");
       o.textContent=f;o.onclick=()=>{player.face=f;syncSel(faces,o);renderFighter("P");};faces.appendChild(o);});
     PALS.forEach(p=>{const o=document.createElement("div");o.className="opt pal"+(p===player.pal?" sel":"");

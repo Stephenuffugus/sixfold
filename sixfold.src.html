@@ -301,6 +301,7 @@
     <div class="dh" id="custdh"><span>🎨 Customize your warrior</span><span class="chev">▾</span></div>
     <div class="dbody">
       <div class="row"><label>Name</label><input class="nm" id="cname" maxlength="14" placeholder="name your warrior"></div>
+      <div class="row"><label>Skin</label><div class="opts" id="skins"></div></div>
       <div class="row"><label>Creature</label><div class="opts" id="faces"></div></div>
       <div class="row"><label>Armor color</label><div class="opts" id="pals"></div></div>
       <div class="row"><label>Weapon &amp; banner</label><div class="opts" id="weaps"></div></div>
@@ -330,10 +331,10 @@
   const $=id=>document.getElementById(id);
 
   // persistent cosmetic + selection state
-  let player={name:"You",face:"🦊",pal:"#cf4130",wb:WEAPS[0]};
-  let ai={name:"Ronin",face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS)};
+  let player={name:"You",face:"🦊",pal:"#cf4130",wb:WEAPS[0],skin:"inkblade"};
+  let ai={name:"Ronin",face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS),skin:"inkblade"};
   let foeId=rid(Personalities.ids()), difficulty=0.5, modeId="casual";
-  let game=null, busy=false, over=false, foresightNode=null;
+  let game=null, busy=false, over=false, foresightNode=null, matchWinner=null;
   let lastUnpred=[];
 
   /* ---- fighter rendering (placeholder shapes; art-wrap enables stage transforms) ---- */
@@ -349,11 +350,21 @@
   }
   function renderFighter(side){
     const f=side==="P"?player:ai, stage=$(side==="P"?"pstage":"astage"), dir=side==="P"?"left":"right";
+    const skin=Skins.get(f.skin||"placeholder");
+    let inner, artStyle="";
+    if(skin.kind==="atlas"){
+      const src=Skins.src(skin,f.pal);
+      artStyle=`position:relative;width:100px;height:100px`;
+      inner=`<div class="sprite" style="background-image:url('${src}');background-size:${skin.cols*100}% ${skin.rows*100}%"></div>`;
+    }else{
+      inner=bodySVG(f.pal)+`<div class="face">${f.face}</div><div class="weapon ${dir}">${f.wb.w}</div>`;
+    }
     stage.innerHTML=
       `<div class="banner ${dir}" style="background:${f.pal}">${f.wb.b}</div>`+
-      `<div class="art-wrap ${side==="A"?"opp":""}"><div class="fighter-art">`+
-        bodySVG(f.pal)+`<div class="face">${f.face}</div><div class="weapon ${dir}">${f.wb.w}</div>`+
-      `</div></div>`;
+      `<div class="art-wrap ${side==="A"?"opp":""}"><div class="fighter-art" style="${artStyle}">`+inner+`</div></div>`;
+    // precompute atlas frame positions so the stage can hard-cut frames cheaply
+    const el=artEl(side);
+    if(el){ el._framePos = skin.kind==="atlas" ? Skins.FRAMES.reduce((m,n)=>{m[n]=Skins.atlasPos(skin,n);return m;},{}) : null; }
     $(side==="P"?"pname":"aname").textContent=f.name;
     renderHP(side);
   }
@@ -447,11 +458,12 @@
         renderHP("P");renderHP("A");
         Readout.render(game.state().playerHist,game.state().aiHist,game.state().outcomes,ribbonOpts());
         if(outcome.kind==="clean"&&outcome.winner&&!reduced()){document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),360);}
-        if(!over) endRoundUI();
+        if(over){ if(matchWinner){Stage.setFrame(matchWinner,"win");Stage.setFrame(matchWinner==="P"?"A":"P","ko");} }
+        else endRoundUI();
       });
     });
     g.bus.on("match-over",({winner,summary})=>{
-      over=true;busy=true;
+      over=true;busy=true;matchWinner=winner;
       const win=winner==="P";
       $("roundlbl").textContent="Match over";
       $("verdict").textContent=win?"VICTORY":"DEFEAT";
@@ -524,8 +536,12 @@
     const mode=Engine.MODES[modeId];
     const seed = mode.seeded ? dailySeed() : (Math.floor(Math.random()*1e9)>>>0);
     game=Engine.createGame({archetype:foeId,difficulty,mode,seed});
-    // fresh foe cosmetics + name
-    ai={name:rid(FOE_NAMES),face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS)};
+    matchWinner=null;
+    // fresh foe cosmetics + name + skin
+    ai={name:rid(FOE_NAMES),face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS),skin:rid(Skins.list().map(s=>s.id))};
+    // render BEFORE Stage.init so it captures the live art elements (renderFighter
+    // rebuilds the DOM; init must run after, never before).
+    renderFighter("P");renderFighter("A");
     Stage.init({pArt:artEl("P"),aArt:artEl("A"),hub:$("hub"),spark:$("spark"),
       reducedMotion:reduced(),timed:mode.timed});
     wireEvents(game);
@@ -534,7 +550,7 @@
     $("esc").classList.remove("on");$("verdict").style.color="";
     $("roundlbl").textContent="Round 1";$("verdict").textContent="Choose";$("sub").textContent="tap a stance";
     $("rematch").style.display="none";$("postmatch").classList.remove("show");$("aimeter").textContent="";
-    renderFighter("P");renderFighter("A");renderHP("P");renderHP("A");
+    renderHP("P");renderHP("A");
     Readout.render([],[],[],ribbonOpts());
     $("pbar").classList.remove("show");$("abar").classList.remove("show");
     updateFoeBar();updateMeter(game.meter.state());applyCompass();
@@ -615,7 +631,10 @@
 
   /* ---- customizer ---- */
   function buildCustomizer(){
-    const faces=$("faces"),pals=$("pals"),weaps=$("weaps"),cname=$("cname");
+    const skins=$("skins"),faces=$("faces"),pals=$("pals"),weaps=$("weaps"),cname=$("cname");
+    Skins.list().forEach(s=>{const o=document.createElement("div");o.className="opt"+(s.id===player.skin?" sel":"");
+      o.textContent=s.name;o.style.fontSize="11px";o.style.width="auto";o.style.padding="0 8px";
+      o.onclick=()=>{player.skin=s.id;syncSel(skins,o);renderFighter("P");};skins.appendChild(o);});
     FACES.forEach(f=>{const o=document.createElement("div");o.className="opt"+(f===player.face?" sel":"");
       o.textContent=f;o.onclick=()=>{player.face=f;syncSel(faces,o);renderFighter("P");};faces.appendChild(o);});
     PALS.forEach(p=>{const o=document.createElement("div");o.className="opt pal"+(p===player.pal?" sel":"");

@@ -1,0 +1,96 @@
+/* SIXFOLD — skins.js  (cosmetic art layer)
+ *
+ * PILLAR: a skin is art only. Nothing here touches damage, odds, the meter, or
+ * the bind. Skins are pure swap-in cosmetics.
+ *
+ * A skin = ONE sprite atlas (the artist's single sheet IS the game asset) plus a
+ * frame map. The loader slices frames by CSS background-position, so swapping a
+ * frame is an instant GPU-cheap cut while the CSS pose/lunge transforms still
+ * play on the wrapper. Drop-in: add a REGISTRY entry pointing at a URL/dataURI —
+ * no other code changes. The vector "placeholder" renders when no atlas is set.
+ *
+ * Frame contract (matches the art sheet brief / ART_SHEET.md):
+ *   2x3 grid, fixed anchor 50% x / 88% y, transparent bg, facing right:
+ *     [ idle ][ strike ][ hit ]
+ *     [ ko   ][ guard  ][ win ]
+ *   Opponent = the same atlas mirrored with scaleX(-1) on the wrapper.
+ *
+ * API:
+ *   FRAMES                    -> ["idle","strike","hit","ko","guard","win"]
+ *   list()                    -> [{id,name,kind,cols,rows,frames}]
+ *   get(id)                   -> skin meta (falls back to placeholder)
+ *   atlasPos(skin, frameName) -> "x% y%"   (pure; for background-position)
+ *   src(skin, palette)        -> atlas URL/dataURI (demo skins are generated)
+ */
+(function (root) {
+  "use strict";
+
+  const FRAMES = ["idle", "strike", "hit", "ko", "guard", "win"];
+  // canonical 2x3 layout: [col,row] of each frame in the sheet
+  const GRID = {
+    cols: 3, rows: 2,
+    frames: { idle: [0, 0], strike: [1, 0], hit: [2, 0], ko: [0, 1], guard: [1, 1], win: [2, 1] },
+  };
+
+  // background-position for a frame, given the atlas' col/row count.
+  function atlasPos(skin, name) {
+    const map = (skin && skin.frames) || GRID.frames;
+    const f = map[name] || [0, 0];
+    const c = (skin && skin.cols) || GRID.cols;
+    const r = (skin && skin.rows) || GRID.rows;
+    const x = c > 1 ? (f[0] / (c - 1)) * 100 : 0;
+    const y = r > 1 ? (f[1] / (r - 1)) * 100 : 0;
+    return x + "% " + y + "%";
+  }
+
+  // ---- demo skin: one vector warrior posed across all 6 frames, tinted by the
+  // player's palette. Proves the atlas pipeline end-to-end before real art lands.
+  function demoAtlas(pal) {
+    pal = pal || "#cf4130";
+    const POSE = {
+      idle:   { rot: 0,   dy: 0,  head: 34, blade: [80, 70] },
+      strike: { rot: 8,   dy: 0,  head: 32, blade: [95, 47] },
+      hit:    { rot: -12, dy: 2,  head: 30, blade: [64, 80] },
+      ko:     { rot: 76,  dy: 12, head: 42, blade: [90, 88] },
+      guard:  { rot: 4,   dy: 1,  head: 33, blade: [57, 36] },
+      win:    { rot: -4,  dy: -2, head: 30, blade: [74, 16] },
+    };
+    function fig(p) {
+      const t = "translate(0 " + p.dy + ") rotate(" + p.rot + " 50 88)";
+      return '<g transform="' + t + '">' +
+        // robe
+        '<path d="M30 88 Q25 60 34 47 L44 51 Q50 47 56 51 L66 47 Q75 60 70 88 Z" fill="' + pal + '" stroke="#0007" stroke-width="2"/>' +
+        // sash / shoulders
+        '<path d="M34 47 Q50 36 66 47 L62 56 Q50 50 38 56 Z" fill="#1a1d2b" stroke="#0006" stroke-width="1.3"/>' +
+        // head
+        '<circle cx="50" cy="' + p.head + '" r="9" fill="#1a1d2b" stroke="#0007" stroke-width="1.5"/>' +
+        // blade
+        '<line x1="54" y1="54" x2="' + p.blade[0] + '" y2="' + p.blade[1] + '" stroke="' + pal + '" stroke-width="4.5" stroke-linecap="round"/>' +
+        '</g>';
+    }
+    let cells = "";
+    FRAMES.forEach((name) => {
+      const f = GRID.frames[name];
+      cells += '<g transform="translate(' + f[0] * 100 + " " + f[1] * 100 + ')">' + fig(POSE[name]) + "</g>";
+    });
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">' + cells + "</svg>";
+    return "data:image/svg+xml," + encodeURIComponent(svg);
+  }
+
+  const REGISTRY = [
+    { id: "placeholder", name: "Vector (default)", kind: "vector" },
+    { id: "inkblade", name: "Inkblade (demo)", kind: "atlas", cols: GRID.cols, rows: GRID.rows, frames: GRID.frames, gen: demoAtlas },
+    // Drop real skins in here — one PNG sheet per character, same 2x3 layout:
+    // { id:"ronin", name:"Crimson Ronin", kind:"atlas", cols:3, rows:2, frames:GRID.frames, url:"skins/ronin.png" },
+  ];
+
+  function list() {
+    return REGISTRY.map((s) => ({ id: s.id, name: s.name, kind: s.kind, cols: s.cols, rows: s.rows, frames: s.frames }));
+  }
+  function get(id) { return REGISTRY.find((s) => s.id === id) || REGISTRY[0]; }
+  function src(skin, pal) { if (!skin) return null; if (skin.gen) return skin.gen(pal); return skin.url || null; }
+
+  const api = { FRAMES, GRID, atlasPos, list, get, src };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.Skins = api;
+})(typeof globalThis !== "undefined" ? globalThis : this);

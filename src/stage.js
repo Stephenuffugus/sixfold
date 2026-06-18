@@ -7,6 +7,8 @@
  * API (frozen, spec §5):
  *   toStance(side, stance) ; playReveal(pPick, aPick, outcome) -> Promise
  *   lockBlades() ; bindPrompt() -> Promise<Bind>
+ *   setFrame(side, name) -> show an atlas frame (idle/strike/hit/ko/guard/win);
+ *     glue sets el._framePos before play. No-op for the vector placeholder.
  *
  * Defensive: every method no-ops / resolves immediately if the DOM or the
  * configured elements are absent (so tests and headless play never throw).
@@ -44,6 +46,17 @@
   function art(side) { return side === "P" ? els.pArt : els.aArt; }
   function wait(ms) { return new Promise((res) => setTimeout(res, reduced ? 0 : ms)); }
 
+  // Show a named atlas frame (idle/strike/hit/ko/guard/win). For atlas skins the
+  // glue precomputes el._framePos[name] = "x% y%"; we just shift background-position
+  // (instant cut). No-op for the vector placeholder (no .sprite child) — its pose
+  // is carried entirely by the CSS transforms below.
+  function frameEl(el, name) {
+    if (!el || !el.querySelector) return;
+    const sp = el.querySelector(".sprite");
+    if (sp && el._framePos && el._framePos[name]) sp.style.backgroundPosition = el._framePos[name];
+  }
+  function setFrame(side, name) { frameEl(art(side), name); }
+
   function applyPose(el, stance, extra) {
     if (!el) return;
     const base = POSE[stance] != null ? POSE[stance] : NEUTRAL;
@@ -54,12 +67,8 @@
     const el = art(side);
     if (!el) return;
     el.classList.remove("locked", "striking", "flinch", "knock");
+    frameEl(el, "idle");
     applyPose(el, stance);
-  }
-
-  function strikeFrame(el, on) {
-    if (!el) return;
-    if (on) el.classList.add("striking"); else el.classList.remove("striking");
   }
 
   function spark() {
@@ -77,7 +86,7 @@
     const lunge = "translateX(6px) scale(1.02)";
     return wait(120).then(() => {
       // strike frame + lunge to centre (both inners move +x; opp wrapper mirrors)
-      strikeFrame(p, true); strikeFrame(a, true);
+      frameEl(p, "strike"); frameEl(a, "strike");
       applyPose(p, pPick, lunge); applyPose(a, aPick, lunge);
       return wait(220);
     }).then(() => {
@@ -86,11 +95,11 @@
       const loser = outcome && outcome.winner ? (outcome.winner === "P" ? a : p) : null;
       if (k === "clean") {
         spark();
-        if (loser) loser.classList.add("knock");
+        if (loser) { loser.classList.add("knock"); frameEl(loser, "hit"); }
         if (els.hub) { els.hub.classList.add("finish"); }
       } else if (k === "glance") {
         spark();
-        if (loser) loser.classList.add("flinch");
+        if (loser) { loser.classList.add("flinch"); frameEl(loser, "hit"); }
       } else if (k === "whiff") {
         // pass-through: brief over-lunge then recover, no contact
         applyPose(p, pPick, "translateX(9px)"); applyPose(a, aPick, "translateX(9px)");
@@ -101,7 +110,7 @@
       return wait(finishing && !reduced ? 600 * 1.6 : 600);
     }).then(() => {
       // settle: strike->idle, pivot neutral, clear lunge/finish
-      strikeFrame(p, false); strikeFrame(a, false);
+      frameEl(p, "idle"); frameEl(a, "idle");
       if (els.hub) els.hub.classList.remove("finish");
       if (p) { p.classList.remove("flinch", "knock"); applyPose(p, pPick); }
       if (a) { a.classList.remove("flinch", "knock"); applyPose(a, aPick); }
@@ -110,11 +119,11 @@
 
   function lockBlades() {
     const p = art("P"), a = art("A");
-    [p, a].forEach((el) => { if (el) { strikeFrame(el, true); el.classList.add("locked"); } });
+    [p, a].forEach((el) => { if (el) { frameEl(el, "guard"); el.classList.add("locked"); } });
     spark();
   }
   function unlock() {
-    [art("P"), art("A")].forEach((el) => { if (el) { el.classList.remove("locked"); strikeFrame(el, false); } });
+    [art("P"), art("A")].forEach((el) => { if (el) { el.classList.remove("locked"); frameEl(el, "idle"); } });
   }
 
   // Clash Bind prompt: flip the hub to 3 buttons, resolve on tap. Optional snap
@@ -146,7 +155,7 @@
     });
   }
 
-  const api = { init, setReduced, setTimed, toStance, playReveal, lockBlades, unlock, bindPrompt, POSE, BINDS };
+  const api = { init, setReduced, setTimed, toStance, setFrame, playReveal, lockBlades, unlock, bindPrompt, POSE, BINDS };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.Stage = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

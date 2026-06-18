@@ -16,6 +16,16 @@
   will-change: transform;
 }
 
+/* sprite-atlas skins: ONE sheet, the visible frame chosen by background-position
+   (instant hard cut — sprite animation). background-size is set inline per skin
+   to (cols*100% rows*100%). The vector placeholder has no .sprite, so frame calls
+   are inert and its pose rides entirely on the .fighter-art transform. */
+.fighter-art .sprite {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  background-repeat: no-repeat; background-position: 0% 0%;
+  pointer-events: none;
+}
+
 /* held strike frame (when PNG frames exist) */
 .fighter-art.striking .frame-idle { opacity: 0; }
 .fighter-art.striking .frame-strike { opacity: 1; }

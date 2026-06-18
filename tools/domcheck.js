@@ -101,7 +101,7 @@ seededMath.random = (() => {
 })();
 
 const sandbox = {
-  console, Math: seededMath, Date, JSON, Array, Object, String, Number, Boolean, parseInt, parseFloat, isNaN,
+  console, Math: seededMath, Date, JSON, Array, Object, String, Number, Boolean, parseInt, parseFloat, isNaN, encodeURIComponent,
   setTimeout: (fn, ms) => { timers.push(fn); return timers.length; },
   clearTimeout: () => {},
   document,
@@ -130,10 +130,10 @@ const finished = () => byId("rematch").style.display === "block" || /VICTORY|DEF
     console.log("  ok  page script loaded without throwing");
     await drain();
 
-    ["Predictor", "Personalities", "Resolve", "Readout", "Stage", "Assists", "Engine"].forEach((g) => {
+    ["Predictor", "Personalities", "Resolve", "Readout", "Skins", "Stage", "Assists", "Engine"].forEach((g) => {
       if (!sandbox[g]) { console.error("  FAIL missing global", g); failed = true; }
     });
-    if (!failed) console.log("  ok  all 7 module globals present");
+    if (!failed) console.log("  ok  all 8 module globals present");
 
     const wheel = byId("wheel");
     const nodes = wheel.children.filter((c) => c._cls.has("node"));

@@ -163,6 +163,14 @@ mid mobile, and how the per-outcome choreography actually *looks*). Open `sixfol
 in a browser and confirm: distinct finishes for clean/glance/whiff/bind-win/bind-tie,
 reduced-motion hard-swaps cleanly, no console errors offline. That's the last box.
 
+**Post-Phase-3 — skin system (2026-06-18):** `src/skins.js` (+ tests) adds a drop-in
+cosmetic art layer — one sprite atlas (2×3: idle/strike/hit/ko/guard/win) per
+character, sliced by background-position. `ART_SHEET.md` is the artist brief for
+generating one consistent sheet per character. A generated vector demo ("Inkblade")
+ships so it works with no art files; real skins = one `REGISTRY` line + rebuild.
+`stage.js` gained `setFrame(side,name)`. Also fixed a stale-art-ref ordering bug in
+`newGame()` (render before `Stage.init`).
+
 Fenced/later (Section 10): PWA manifest+SW, extra modes, Firebase/sunbeam wiring, juice.
 
 ## 12. Handoff hygiene (for the next instance)

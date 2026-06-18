@@ -5,6 +5,33 @@ validated numbers (with justification), and anything the next instance needs.
 
 ---
 
+## 2026-06-18 — Skin system + art sheet + stale-art-ref fix
+
+Added a cosmetic **skin layer** (`src/skins.js`, +15 tests). A skin = one sprite
+atlas (2×3: idle/strike/hit/ko/guard/win); frames are sliced by CSS
+`background-position`, so the artist's single sheet IS the game asset and a new
+skin is one REGISTRY line + rebuild. Ships a generated vector demo ("Inkblade")
+so the pipeline is exercised with no art files. `ART_SHEET.md` is the artist
+brief (grid, anchor/contract, one-shot generation prompt, drop-in steps, 3/2-frame
+fallbacks). Pillar held: skins expose no damage/odds/meter surface (asserted).
+
+- **stage.js** gained `setFrame(side,name)` (frozen-API addition) and now hard-cuts
+  atlas frames through choreography (strike on lunge, hit on the loser, guard in the
+  bind, idle on settle); the glue sets win/ko on match-over. Decoupled from Skins:
+  the glue precomputes `el._framePos`, stage just shifts background-position. Vector
+  placeholder has no `.sprite`, so frame calls are inert and pose rides the CSS
+  transform — unchanged behavior.
+- **Latent bug fixed (would have shown in the browser pass):** `newGame()` called
+  `Stage.init()` with the art elements, then `renderFighter()` *replaced* those
+  elements via innerHTML — so Stage animated detached, stale nodes. Reordered to
+  render first, init second. All pose/lunge/flinch transforms now target live nodes.
+- **domcheck:** added `encodeURIComponent` to the sandbox (the demo atlas needs it)
+  and `Skins` to the global check (now 8 modules). Still deterministic + green.
+- Shipped file grew ~83.8k → ~91k bytes (the new module). Build order now
+  predictor→resolve→readout→personalities→**skins**→stage→assists→engine.
+
+---
+
 ## 2026-06-18 — Phase 3 complete (animation + single-file ship)
 
 `stage.js` + `anim.css` (spec §4) and the `tools/build.js` inliner landed, producing

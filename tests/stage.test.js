@@ -17,6 +17,23 @@ ok("3 bind options Drive/Slip/Trap", S.BINDS.length === 3 && S.BINDS[0].name ===
 ok("toStance no-ops safely without DOM", (() => { S.toStance("P", 2); S.toStance("A", 5); return true; })());
 ok("lockBlades no-ops safely", (() => { S.lockBlades(); S.unlock(); return true; })());
 
+// setFrame drives an atlas sprite by background-position (fake DOM element)
+(() => {
+  const sprite = { style: { backgroundPosition: "" } };
+  const fakeArt = {
+    _framePos: { idle: "0% 0%", strike: "50% 0%", win: "100% 100%" },
+    querySelector: (sel) => (sel === ".sprite" ? sprite : null),
+    classList: { add() {}, remove() {}, toggle() {} }, style: {},
+  };
+  S.init({ pArt: fakeArt, aArt: null });
+  S.setFrame("P", "strike");
+  ok("setFrame shifts sprite background-position", sprite.style.backgroundPosition === "50% 0%");
+  S.setFrame("P", "win");
+  ok("setFrame win -> bottom-right", sprite.style.backgroundPosition === "100% 100%");
+  ok("setFrame no-ops on a missing side", (() => { S.setFrame("A", "strike"); return true; })());
+  S.init({}); // restore headless state for the promise checks below
+})();
+
 // playReveal returns a resolving promise even headless
 let revealed = false;
 S.playReveal(2, 4, { kind: "clean", winner: "P", dmg: 2 }).then(() => { revealed = true; });
