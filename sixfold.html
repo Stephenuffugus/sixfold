@@ -306,6 +306,29 @@
   .result-actions button.primary{color:#1a0f0c;background:linear-gradient(#d9694f,var(--seal));border-color:#ffffff33}
   .result-actions button:active{transform:translateY(1px)}
 
+  /* ===== THE ASCENT — campaign ladder (reuses .overlay) ===== */
+  .ascent{text-align:center;width:100%;max-width:380px;max-height:88vh}
+  .ascent h2{font-family:var(--disp);font-weight:800;font-size:25px;letter-spacing:.16em;margin:0;color:var(--gold)}
+  .ascent .prog{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--washi-dim);margin-top:2px}
+  .ladder{display:flex;flex-direction:column;gap:8px;margin-top:6px;overflow-y:auto;max-height:62vh;padding:2px}
+  .rung{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;border:1px solid #ffffff18;
+    background:#ffffff0c;text-align:left}
+  .rung.done{border-color:#5f917366;background:#5f917318}
+  .rung.cur{border-color:var(--gold);background:#cda64f22;box-shadow:0 0 0 1px var(--gold)}
+  .rung.lock{opacity:.5}
+  .rung .ic{flex:0 0 30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;
+    background:#ffffff14;border:1px solid #ffffff22}
+  .rung .meta{flex:1;min-width:0}
+  .rung .fn{font-family:var(--disp);font-weight:600;font-size:14px;color:var(--washi)}
+  .rung .rw{font-size:10.5px;color:var(--washi-dim)}
+  .rung .rw b{color:var(--gold)}
+  .rung .stars{font-size:9px;color:var(--gold);letter-spacing:1px}
+  .rung button{font-family:var(--ui);font-weight:800;font-size:12px;padding:9px 13px;border-radius:9px;cursor:pointer;
+    color:#1a0f0c;background:linear-gradient(#d9694f,var(--seal));border:1px solid #ffffff33;white-space:nowrap}
+  .ascent .close{margin-top:4px;font-family:var(--ui);font-weight:700;font-size:13px;padding:11px 26px;border-radius:11px;
+    border:1px solid #ffffff28;cursor:pointer;color:var(--washi);background:#ffffff12}
+  .reward-banner{font-size:13px;font-weight:800;color:var(--gold);letter-spacing:.03em;margin:2px 0}
+
   /* SIXFOLD — anim.css  (spec §4)
  * Limited-animation illusion from 2 frames/character + GPU transforms.
  * Transform/opacity ONLY (compositor-friendly -> trivial 60fps for 2 fighters).
@@ -448,6 +471,7 @@
   <div class="postmatch" id="postmatch"></div>
 
   <div class="controls">
+    <button class="act ghost" id="ascentbtn">⛰ Ascent</button>
     <button class="act ghost" id="howbtn">How it works</button>
     <button class="act primary" id="rematch" style="display:none">Rematch</button>
   </div>
@@ -508,6 +532,9 @@
 
   <!-- Victory / Defeat result screen (populated by glue on match-over) -->
   <div class="overlay" id="resultscreen" aria-hidden="true" role="dialog" aria-label="Match result"></div>
+
+  <!-- The Ascent campaign ladder (populated by glue) -->
+  <div class="overlay" id="ascent" aria-hidden="true" role="dialog" aria-label="The Ascent"></div>
 
   <!-- First-run / on-demand how-to guide -->
   <div class="overlay" id="howto" aria-hidden="true" role="dialog" aria-label="How to play">
@@ -1318,6 +1345,7 @@
     { id: "kage", name: "Shadow", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/kage.png" },
     { id: "tetsu", name: "Iron Monk", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/tetsu.png" },
     { id: "onibi", name: "Ember Oni", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/onibi.png" },
+    { id: "sora", name: "Sky Crane", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/sora.png" },
   ];
 
   function list() {
@@ -2049,41 +2077,65 @@
       $("postmatch").classList.add("show");
       const beams=win?(8+Math.round(summary.difficulty*8)+Math.round(summary.unpredictabilityPct/12)):0;
       setSpendEnabled(false);
+      // Ascent: a win on the current frontier rung clears it and grants the reward.
+      let ascentInfo=null;
+      if(ascentRun>=0){
+        const newReward=(win && ascentRun===ascentCleared) ? ASCENT[ascentRun].reward : null;
+        if(newReward){ ascentCleared=Math.min(ASCENT.length,ascentCleared+1); saveAscent(); }
+        ascentInfo={run:ascentRun, win:win, reward:newReward, hasNext:ascentCleared<ASCENT.length};
+      }
       // sting right as the final blow lands, then HOLD on the win/ko pose for a
       // beat (so those frames are actually seen) before the result screen slides in.
       setTimeout(()=>{ Sfx.play(win?"victory":"defeat"); buzz(win?[0,45,45,45]:130); }, reduced()?0:950);
-      setTimeout(()=>{ showResult(win,summary,beams); }, reduced()?0:2000);
+      setTimeout(()=>{ showResult(win,summary,beams,ascentInfo); }, reduced()?0:2000);
     });
   }
   /* ---- victory / defeat result screen ---- */
   let streak=0;
   let bestStreak=(function(){try{return parseInt(localStorage.getItem("sixfold_beststreak")||"0",10)||0;}catch(e){return 0;}})();
   function saveBest(){try{localStorage.setItem("sixfold_beststreak",String(bestStreak));}catch(e){}}
-  function showResult(win,summary,beams){
+  function showResult(win,summary,beams,ascentInfo){
     const tell=summary.tell||"well hidden — no clear tell";
     const streakChip=streak>1?`<div class="chip streak"><b>×${streak}</b><span>win streak</span></div>`:"";
     const extra=win?`<div class="sunbeams">+${beams} ☀ sunbeams</div>`
                    :`<div class="result-tell">best streak <b>${bestStreak}</b> · they read you this time</div>`;
+    const reward=ascentInfo&&ascentInfo.reward;
+    const rewardBanner=reward?`<div class="reward-banner">⭐ ${reward.type==="title"?"Title earned: ":"Unlocked: "}${reward.name}</div>`:"";
+    // actions differ for Ascent vs Casual
+    let actions;
+    if(ascentInfo){
+      if(win){
+        actions = ascentInfo.hasNext
+          ? `<button class="primary" id="resNext">Next climb ⟶</button><button id="resMap">Ascent map</button>`
+          : `<div class="reward-banner">🏔 The Ascent is conquered.</div><button class="primary" id="resMap">Ascent map</button>`;
+      }else{
+        actions = `<button class="primary" id="resRetry">Retry climb</button><button id="resMap">Ascent map</button>`;
+      }
+    }else{
+      actions = `<button class="primary" id="resAgain">Duel again</button><button id="resFoe">Change foe</button>`;
+    }
     $("resultscreen").innerHTML=
       `<div class="hero result ${win?"win":"lose"}">`+
         `<div class="result-word">${win?"VICTORY":"DEFEAT"}</div>`+
         `<div class="result-flavor">${win?(ai.name+" falls."):(ai.name+" stands over you.")}</div>`+
+        rewardBanner+
         `<div class="stat-chips">`+
           `<div class="chip"><b>${summary.rounds}</b><span>rounds</span></div>`+
           `<div class="chip"><b>${summary.unpredictabilityPct}%</b><span>unpred</span></div>`+
           streakChip+
         `</div>`+extra+
         `<div class="result-tell">your tell: <b>${tell}</b></div>`+
-        `<div class="result-actions">`+
-          `<button class="primary" id="resAgain">Duel again</button>`+
-          `<button id="resFoe">Change foe</button>`+
-        `</div>`+
+        `<div class="result-actions">`+actions+`</div>`+
       `</div>`;
     const rs=$("resultscreen"); rs.setAttribute("aria-hidden","false");
     if(rs.offsetWidth!==undefined) void rs.offsetWidth;
     rs.classList.add("show");
-    const ra=$("resAgain"); if(ra) ra.onclick=()=>{ hideResult(); newGame(); };
-    const rf=$("resFoe"); if(rf) rf.onclick=()=>{ hideResult(); $("foedrawer").classList.add("open"); $("foedrawer").scrollIntoView({behavior:"smooth",block:"nearest"}); };
+    const on=(id,fn)=>{const el=$(id); if(el) el.onclick=fn;};
+    on("resAgain",()=>{ hideResult(); newGame(); });
+    on("resFoe",()=>{ ascentRun=-1; hideResult(); $("foedrawer").classList.add("open"); $("foedrawer").scrollIntoView({behavior:"smooth",block:"nearest"}); });
+    on("resNext",()=>{ hideResult(); startAscentRung(ascentCleared); });
+    on("resRetry",()=>{ hideResult(); startAscentRung(ascentInfo.run); });
+    on("resMap",()=>{ hideResult(); openAscent(); });
   }
   function hideResult(){ const rs=$("resultscreen"); if(!rs)return; rs.classList.remove("show"); rs.setAttribute("aria-hidden","true"); setTimeout(()=>{rs.innerHTML="";}, reduced()?0:280); }
   function rollingAvg(){ if(!lastUnpred.length)return null; return Math.round(lastUnpred.reduce((a,b)=>a+b,0)/lastUnpred.length); }
@@ -2147,6 +2199,8 @@
     matchWinner=null;
     // fresh foe cosmetics + name + skin
     ai={name:rid(FOE_NAMES),face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS),skin:pickFoeSkin()};
+    // Ascent duels: the foe wears the rung's themed skin and the archetype's name.
+    if(ascentRun>=0){ ai.skin=ASCENT[ascentRun].foeSkin; ai.name=Personalities.ARCHES[ASCENT[ascentRun].foe].name; }
     // render BEFORE Stage.init so it captures the live art elements (renderFighter
     // rebuilds the DOM; init must run after, never before).
     renderFighter("P");renderFighter("A");
@@ -2224,6 +2278,55 @@
     });
   }
 
+  /* ---- THE ASCENT: single-player campaign ladder ----
+     Climb a fixed sequence of foes; each win unlocks a fighter or arena (cosmetic
+     reward only — never changes combat odds; difficulty is a fair, symmetric knob).
+     Casual stays a fully open sandbox; the Ascent is the structured progression. */
+  const ASCENT=[
+    {foe:"berserker",diff:.25,arena:"sunset",foeSkin:"kage", reward:{type:"skin", id:"kage", name:"Shadow"}},
+    {foe:"stone",    diff:.35,arena:"dojo",  foeSkin:"ronin",reward:{type:"arena",id:"sunset",name:"Sunset Cliff"}},
+    {foe:"drunkard", diff:.45,arena:"torii", foeSkin:"tetsu",reward:{type:"skin", id:"tetsu",name:"Iron Monk"}},
+    {foe:"mirror",   diff:.55,arena:"bamboo",foeSkin:"kage", reward:{type:"arena",id:"bamboo",name:"Bamboo Grove"}},
+    {foe:"metronome",diff:.65,arena:"dojo",  foeSkin:"onibi",reward:{type:"skin", id:"onibi",name:"Ember Oni"}},
+    {foe:"trickster",diff:.78,arena:"bamboo",foeSkin:"tetsu",reward:{type:"arena",id:"torii",name:"Night Torii"}},
+    {foe:"ghost",    diff:.9, arena:"torii", foeSkin:"sora", reward:{type:"skin", id:"sora", name:"Sky Crane"}},
+    {foe:"echo",     diff:1,  arena:"sunset",foeSkin:"onibi",reward:{type:"title",id:"champion",name:"Champion of the Sixfold"}},
+  ];
+  let ascentCleared=(function(){try{return Math.min(ASCENT.length,parseInt(localStorage.getItem("sixfold_ascent")||"0",10)||0);}catch(e){return 0;}})();
+  let ascentRun=-1; // index of the rung being fought, or -1 for free play
+  function saveAscent(){try{localStorage.setItem("sixfold_ascent",String(ascentCleared));}catch(e){}}
+  function ascentStars(d){const n=Math.round(d*4)+1;return "★".repeat(n)+"☆".repeat(5-n);}
+  function rewardLabel(r){return r.type==="title"?("Title — "+r.name):((r.type==="skin"?"Unlock fighter: ":"Unlock arena: ")+r.name);}
+  function openAscent(){renderAscent();$("ascent").classList.add("show");$("ascent").setAttribute("aria-hidden","false");}
+  function closeAscent(){$("ascent").classList.remove("show");$("ascent").setAttribute("aria-hidden","true");}
+  function renderAscent(){
+    const rungs=ASCENT.map((r,i)=>{
+      const done=i<ascentCleared, cur=i===ascentCleared;
+      const a=Personalities.ARCHES[r.foe];
+      const status=done?"✓":(cur?"▶":"🔒"), cls=done?"done":(cur?"cur":"lock");
+      const btn=cur?`<button data-rung="${i}">${ascentCleared===0?"Begin":"Fight"}</button>`:"";
+      return `<div class="rung ${cls}"><div class="ic">${status}</div>`+
+        `<div class="meta"><div class="fn">${i+1}. ${a.name}</div>`+
+        `<div class="stars">${ascentStars(r.diff)}</div>`+
+        `<div class="rw">${done?"<b>✓ </b>":""}${rewardLabel(r.reward)}</div></div>${btn}</div>`;
+    }).join("");
+    $("ascent").innerHTML=
+      `<div class="hero ascent"><h2>THE ASCENT</h2>`+
+      `<div class="prog">${ascentCleared} / ${ASCENT.length} cleared</div>`+
+      `<div class="ladder">${rungs}</div>`+
+      `<button class="close" id="ascentclose">Close</button></div>`;
+    const c=$("ascentclose"); if(c) c.onclick=closeAscent;
+    Array.prototype.forEach.call($("ascent").querySelectorAll(".rung button[data-rung]"),(btn)=>{
+      btn.onclick=()=>startAscentRung(parseInt(btn.getAttribute("data-rung"),10));
+    });
+  }
+  function startAscentRung(i){
+    if(i<0||i>=ASCENT.length)return;
+    const r=ASCENT[i];
+    ascentRun=i; foeId=r.foe; difficulty=r.diff; modeId="casual";
+    closeAscent(); hideResult(); setArena(r.arena); updateFoeBar(); newGame();
+  }
+
   /* ---- foe / mode / difficulty selectors ---- */
   function buildSelectors(){
     const foes=$("foes");
@@ -2231,7 +2334,7 @@
       const a=Personalities.ARCHES[id];
       const o=document.createElement("div");o.className="opt sml"+(id===foeId?" sel":"");
       o.textContent=a.name;o.title=a.tell;
-      o.onclick=()=>{foeId=id;syncSel(foes,o);updateFoeBar();if(FOE_ARENA[id])setArena(FOE_ARENA[id]);};
+      o.onclick=()=>{ascentRun=-1;foeId=id;syncSel(foes,o);updateFoeBar();if(FOE_ARENA[id])setArena(FOE_ARENA[id]);};
       foes.appendChild(o);
     });
     const modes=$("modes");
@@ -2316,6 +2419,7 @@
     try{localStorage.setItem("sixfold_seen","1");}catch(e){}}
   $("howbtn").onclick=openHowto;
   $("howtoclose").onclick=closeHowto;
+  $("ascentbtn").onclick=openAscent;
   $("insightbtn").onclick=()=>{ if(game)game.spend("P","INSIGHT"); };
   $("foresightbtn").onclick=()=>{ if(game)game.spend("P","FORESIGHT"); };
 

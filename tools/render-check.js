@@ -100,6 +100,27 @@ const root = path.join(__dirname, "..");
       await page.evaluate(() => { document.getElementById("howto").classList.remove("show"); Stage.bindPrompt(); });
       await page.waitForTimeout(500);
       await page.screenshot({ path: path.join(root, "render-bind.png") });
+      await page.evaluate(() => { const b = document.querySelector("#bindstage .bindbtn-lg"); if (b) b.click(); });
+      await page.waitForTimeout(400);
+
+      // The Ascent: open the ladder, then play the first rung to a result
+      await page.evaluate(() => document.getElementById("ascentbtn").click());
+      await page.waitForTimeout(500);
+      await page.screenshot({ path: path.join(root, "render-ascent.png") });
+      await page.evaluate(() => { const b = document.querySelector("#ascent .rung button[data-rung]"); if (b) b.click(); });
+      await page.waitForTimeout(500);
+      for (let k = 0; k < 60; k++) {
+        const st = await page.evaluate(() => ({
+          result: document.getElementById("resultscreen").classList.contains("show"),
+          bind: document.getElementById("bindstage").classList.contains("show"),
+        }));
+        if (st.result) break;
+        if (st.bind) await page.evaluate(() => { const b = document.querySelector("#bindstage .bindbtn-lg"); if (b) b.click(); });
+        else await page.evaluate((i) => { const n = document.querySelectorAll(".node"); if (n.length) n[i % 6].click(); }, k);
+        await page.waitForTimeout(1100);
+      }
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: path.join(root, "render-ascent-result.png") });
     }
     await page.close();
   }

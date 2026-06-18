@@ -85,6 +85,7 @@
     { id: "kage", name: "Shadow", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/kage.png" },
     { id: "tetsu", name: "Iron Monk", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/tetsu.png" },
     { id: "onibi", name: "Ember Oni", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/onibi.png" },
+    { id: "sora", name: "Sky Crane", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/sora.png" },
   ];
 
   function list() {
