@@ -125,7 +125,8 @@
   .wheelwrap{position:relative;width:296px;height:296px;margin:0;flex-shrink:0}
   svg.links{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
   .node{position:absolute;width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;
-    background:linear-gradient(#28324f,#1c2236);border:1.5px solid #49557a;color:var(--washi);
+    background:linear-gradient(#2a3556ee,#1a2135f2);border:1.5px solid #5a6a93;color:var(--washi);
+    box-shadow:0 4px 12px #0007,inset 0 1px 0 #ffffff1f;
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;z-index:2;
     transition:transform .12s,border-color .2s,box-shadow .2s;font-family:var(--ui)}
   .node:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
@@ -149,7 +150,7 @@
   .hub{position:absolute;left:50%;top:50%;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;
     background:radial-gradient(circle at 50% 38%, #f3ead6 0%, #d8cbac 60%, #b9a982 100%);color:var(--ink);
     display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;
-    box-shadow:inset 0 0 0 3px #ffffff55, 0 6px 18px #0007;text-align:center;padding:8px}
+    box-shadow:inset 0 0 0 2px #ffffff66,inset 0 0 0 4px #b9a98244,0 8px 24px #0009;text-align:center;padding:8px}
   .hub .round{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#7a6a48}
   .hub .verdict{font-family:var(--disp);font-weight:800;font-size:20px;line-height:1.05;margin-top:2px}
   .hub .sub{font-size:10px;color:#6c5d3f;margin-top:3px;max-width:98px;line-height:1.25}
@@ -1898,23 +1899,32 @@
       <path d="M22 44 Q43 18 64 44 Q43 34 22 44Z" fill="#1a1d2b" stroke="#0007"/>
       <path d="M30 40 q13 -16 26 0" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"/></svg>`;
   }
+  function vectorInner(f,dir){ return bodySVG(f.pal)+`<div class="face">${f.face}</div><div class="weapon ${dir}">${f.wb.w}</div>`; }
   function renderFighter(side){
     const f=side==="P"?player:ai, stage=$(side==="P"?"pstage":"astage"), dir=side==="P"?"left":"right";
     const skin=Skins.get(f.skin||"placeholder");
-    let inner, artStyle="";
+    let inner, artStyle="", atlas=false;
     if(skin.kind==="atlas"){
       const src=Skins.src(skin,f.pal);
+      atlas=true;
       artStyle=`position:relative;width:100px;height:100px`;
       inner=`<div class="sprite" style="background-image:url('${src}');background-size:${skin.cols*100}% ${skin.rows*100}%"></div>`;
+      // De-risk real PNG sheets: if the file fails to load (missing/blocked/malformed),
+      // hot-swap that fighter to the vector stand-in so a bad art drop never breaks play.
+      if(src && src.slice(0,5)!=="data:" && typeof Image!=="undefined"){
+        const probe=new Image();
+        probe.onerror=()=>{ const w=artEl(side); if(w){ w.style.cssText=""; w.innerHTML=vectorInner(f,dir); w._framePos=null; } };
+        probe.src=src;
+      }
     }else{
-      inner=bodySVG(f.pal)+`<div class="face">${f.face}</div><div class="weapon ${dir}">${f.wb.w}</div>`;
+      inner=vectorInner(f,dir);
     }
     stage.innerHTML=
       `<div class="banner ${dir}" style="background:${f.pal}">${f.wb.b}</div>`+
       `<div class="art-wrap ${side==="A"?"opp":""}"><div class="fighter-art" style="${artStyle}">`+inner+`</div></div>`;
     // precompute atlas frame positions so the stage can hard-cut frames cheaply
     const el=artEl(side);
-    if(el){ el._framePos = skin.kind==="atlas" ? Skins.FRAMES.reduce((m,n)=>{m[n]=Skins.atlasPos(skin,n);return m;},{}) : null; }
+    if(el){ el._framePos = atlas ? Skins.FRAMES.reduce((m,n)=>{m[n]=Skins.atlasPos(skin,n);return m;},{}) : null; }
     $(side==="P"?"pname":"aname").textContent=f.name;
     renderHP(side);
   }
@@ -2178,6 +2188,11 @@
       wash1:"#3a2a66",wash2:"#7a2f50",floor1:"#1d1530",floor2:"#0c0814",ridge:ridgeURI("torii","#0e0a18")},
   };
   let arenaId="dojo";
+  // each foe has a "home" arena, so picking a foe sets the scene (still overridable)
+  const FOE_ARENA={berserker:"sunset",stone:"dojo",drunkard:"torii",mirror:"bamboo",
+    metronome:"dojo",trickster:"bamboo",ghost:"torii",echo:"sunset"};
+  function setArena(id){ if(!THEMES[id])return; arenaId=id; applyTheme(id);
+    const box=$("arenas"); if(box){[...box.children].forEach(c=>c.classList.toggle("sel",c._arena===id));} }
   function applyTheme(id){
     const t=THEMES[id]||THEMES.dojo, s=$("scene"); if(!s)return;
     s.style.setProperty("--sky",t.sky); s.style.setProperty("--disc",t.disc); s.style.setProperty("--glow",t.glow);
@@ -2189,8 +2204,9 @@
     const box=$("arenas"); if(!box)return;
     Object.keys(THEMES).forEach(id=>{
       const o=document.createElement("div");o.className="opt sml"+(id===arenaId?" sel":"");
+      o._arena=id;
       o.textContent=THEMES[id].glyph+" "+THEMES[id].name;o.style.fontSize="11px";o.style.width="auto";o.style.padding="0 9px";
-      o.onclick=()=>{arenaId=id;syncSel(box,o);applyTheme(id);};
+      o.onclick=()=>{setArena(id);};
       box.appendChild(o);
     });
   }
@@ -2202,7 +2218,7 @@
       const a=Personalities.ARCHES[id];
       const o=document.createElement("div");o.className="opt sml"+(id===foeId?" sel":"");
       o.textContent=a.name;o.title=a.tell;
-      o.onclick=()=>{foeId=id;syncSel(foes,o);updateFoeBar();};
+      o.onclick=()=>{foeId=id;syncSel(foes,o);updateFoeBar();if(FOE_ARENA[id])setArena(FOE_ARENA[id]);};
       foes.appendChild(o);
     });
     const modes=$("modes");
@@ -2291,7 +2307,7 @@
   $("foresightbtn").onclick=()=>{ if(game)game.spend("P","FORESIGHT"); };
 
   buildWheel();buildSelectors();buildArenaPicker();buildSettings();buildCustomizer();
-  applyA11y();applyTheme(arenaId);renderFighter("P");renderFighter("A");
+  applyA11y();setArena(FOE_ARENA[foeId]||arenaId);renderFighter("P");renderFighter("A");
   newGame();
 
   // First-run: show the how-to guide once (remembered per browser).
