@@ -80,8 +80,8 @@
   const REGISTRY = [
     { id: "placeholder", name: "Vector (default)", kind: "vector" },
     { id: "inkblade", name: "Inkblade (demo)", kind: "atlas", cols: GRID.cols, rows: GRID.rows, frames: GRID.frames, gen: demoAtlas },
-    // Drop real skins in here — one PNG sheet per character, same 2x3 layout:
-    // { id:"ronin", name:"Crimson Ronin", kind:"atlas", cols:3, rows:2, frames:GRID.frames, url:"skins/ronin.png" },
+    // --- real watercolor sheets (1 PNG each, 3x2 layout; ART_SHEET.md) ---
+    { id: "ronin", name: "Crimson Ronin", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/ronin.png" },
   ];
 
   function list() {
