@@ -90,6 +90,7 @@
     { id: "raiden", name: "Storm", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/raiden.png" },
     { id: "yurei", name: "Pale Ghost", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/yurei.png" },
     { id: "mukade", name: "Centipede", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/mukade.png" },
+    { id: "tengu", name: "Tengu", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/tengu.png" },
   ];
 
   function list() {
