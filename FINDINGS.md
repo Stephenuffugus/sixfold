@@ -159,4 +159,18 @@ roadmap the user floated: async Ghost-duel PvP → live PvP, with a sunbeam/dew
 *wager* — keep wagers OFF the combat path (pillar) and flag gambling/ratings
 implications for an Asia launch to the game manager.
 
+**Visual identity pass (2026-06-18):** art direction locked to **paper +
+watercolor** (owner call — not one of the presets). Built a data-driven
+`#scene` backdrop with `THEMES` (dojo/sunset/bamboo/torii), each a future
+unlockable "area" — adding one = a `THEMES` entry + a `ridgeURI` silhouette
+kind. Watercolor washes (blurred screen-blend), feTurbulence paper grain,
+sun/moon disc, silhouette ridge, vignette — all CSS/SVG, zero assets. Frosted
+panels (backdrop-blur), grounded fighters, brush wordmark underline. Arena
+picker in the foe drawer. `ART_SHEET.md` style line updated to the watercolor
+house style + a starter roster of 8 character concepts mapped to foe ids; the
+owner generates sheets in Midjourney/GPT and they drop in via one `REGISTRY`
+line. Owner's stated direction for the product: a LARGE unlockable cast +
+many areas as single-player rewards (cosmetic per pillar) — the theme + skin
+registries are the foundation for that.
+
 (continued below as work lands…)

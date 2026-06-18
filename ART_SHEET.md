@@ -63,6 +63,20 @@ one makes the character jitter or float relative to others.
 
 ---
 
+## House style (LOCKED 2026-06-18): paper + watercolor
+
+The game's visual identity is **watercolor pigment on washi paper** — soft wet-edge
+washes, visible paper grain, sumi-e brush linework, restrained palette with seal-red
+and gold accents. Every character must read as if **painted in that same scroll** so
+the roster feels like one collection. Keep this style line identical across all
+characters; only the `<<CHARACTER>>` slot changes.
+
+> Style line (paste verbatim into every prompt):
+> *"traditional Japanese watercolor and sumi-e ink wash painting, soft wet-on-wet
+> color bleeds, visible washi paper texture, expressive brush-stroke outlines, muted
+> natural pigments with a few bold accent colors, painterly not digital, no hard
+> cel-shading."*
+
 ## Ready-to-paste generation prompt (AI image tools)
 
 Generate the whole sheet in **one shot** so style/lighting/proportions stay consistent.
@@ -84,14 +98,44 @@ Cell order, left to right, top row then bottom row:
 5) GUARD — braced, weapon raised across the body, leaning into a blade clash.
 6) WIN — victorious flourish, weapon raised high, triumphant.
 
-Style: <<STYLE: e.g. crisp cel-shaded anime, bold ink outlines, flat dramatic
-color>>. No background, no ground shadow, no text, no grid lines, no border.
+Style: traditional Japanese watercolor and sumi-e ink wash painting, soft wet-on-wet
+color bleeds, visible washi paper texture, expressive brush-stroke outlines, muted
+natural pigments with a few bold accent colors, painterly not digital, no hard
+cel-shading. No background, no ground shadow, no text, no grid lines, no border.
 Transparent PNG. Full-body, consistent character design across all six poses.
 ```
 
 Tips for consistency: lock a seed if your tool supports it; generate the sheet once
 rather than per-frame; if a pose drifts, inpaint just that cell rather than
-regenerating the whole sheet.
+regenerating the whole sheet. In Midjourney use `--style raw` and a square-ish ar;
+the transparent-grid requirement is best honored by GPT image tools.
+
+## Starter roster (unlock rewards — fill the `<<CHARACTER>>` slot)
+
+A first batch of distinct silhouettes for the single-player unlock cast. Each is one
+sheet; drop in with one `REGISTRY` line (id in parens).
+
+1. **Crimson Ronin** (`ronin`) — a lean masked ronin in a flowing crimson kimono, a
+   single long katana, straw hat slung on the back.
+2. **Shadow (Kage)** (`kage`) — a slim ninja in deep indigo-black wraps, face hidden,
+   twin short blades, wisps of smoke.
+3. **Iron Monk (Tetsu)** (`tetsu`) — a broad bald warrior-monk in grey robes, iron-banded
+   forearms, a heavy bo staff; calm, immovable.
+4. **Pale Ghost (Yurei)** (`yurei`) — a translucent pale spirit in tattered white burial
+   robes, long black hair, a ghostly naginata, faint blue glow.
+5. **Ember Oni (Onibi)** (`onibi`) — a horned oni in charred armor, ember cracks glowing
+   orange, a massive iron kanabō club.
+6. **Sky Crane (Sora)** (`sora`) — an elegant duelist in pale blue & white with crane
+   motifs, a slender feather-light spear, graceful.
+7. **Storm (Raiden)** (`raiden`) — an armored warrior wreathed in faint lightning,
+   gold-trimmed black armor, a war-fan and a jagged blade.
+8. **Centipede (Mukade)** (`mukade`) — a sinister armored fighter in segmented dark-green
+   plate, paired sai, low coiled stance.
+
+Backdrops too: each arena theme (Moonlit Dojo / Sunset Cliff / Bamboo Grove / Night
+Torii) can later take a painted watercolor backdrop image — same house style, **16:9,
+no characters, soft depth** — to drop behind the CSS scene. Optional; the CSS scene
+ships today without it.
 
 ---
 
