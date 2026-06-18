@@ -31,4 +31,8 @@ tpl = tpl.replace("/*__MODULES__*/", modules);
 
 const out = path.join(root, "sixfold.html");
 fs.writeFileSync(out, tpl);
-console.log(`wrote ${out}  (${tpl.length} bytes, ${ORDER.length} modules inlined)`);
+// index.html is the GitHub Pages root entry — an exact copy of the canonical
+// single-file game so the bare site URL (and the PWA start_url "./") just works.
+const idx = path.join(root, "index.html");
+fs.writeFileSync(idx, tpl);
+console.log(`wrote ${out} + ${idx}  (${tpl.length} bytes, ${ORDER.length} modules inlined)`);

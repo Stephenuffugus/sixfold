@@ -1,0 +1,15 @@
+{
+  "name": "SIXFOLD — stance duel",
+  "short_name": "SIXFOLD",
+  "description": "A six-stance power-wheel duel. Read your foe, break the bind, win in under a minute.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#171d30",
+  "theme_color": "#171d30",
+  "categories": ["games"],
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
