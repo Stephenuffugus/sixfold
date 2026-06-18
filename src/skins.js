@@ -96,6 +96,7 @@
     { id: "lantern", name: "Lantern Wraith", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/lantern.png" },
     { id: "jorogumo", name: "Jorogumo", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/jorogumo.png" },
     { id: "moth", name: "Moth Priestess", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/moth.png" },
+    { id: "painter", name: "Brush Duelist", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/painter.png" },
   ];
 
   function list() {
