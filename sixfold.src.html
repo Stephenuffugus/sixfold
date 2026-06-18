@@ -213,6 +213,7 @@
     display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:var(--washi);font-family:var(--ui)}
   .opt.sml{font-size:12px;font-weight:700}
   .opt.sel{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold)}
+  .opt.lock{opacity:.42;cursor:default} .opt.lock.sel{box-shadow:none;border-color:#ffffff22}
   .opt.pal{position:relative}
   input.nm{font-family:var(--ui);font-size:14px;padding:9px 11px;border-radius:9px;border:1px solid #ffffff22;background:#ffffff10;color:var(--washi);width:100%}
   input.nm::placeholder{color:#ffffff55}
@@ -694,7 +695,7 @@
       let ascentInfo=null;
       if(ascentRun>=0){
         const newReward=(win && ascentRun===ascentCleared) ? ASCENT[ascentRun].reward : null;
-        if(newReward){ ascentCleared=Math.min(ASCENT.length,ascentCleared+1); saveAscent(); }
+        if(newReward){ ascentCleared=Math.min(ASCENT.length,ascentCleared+1); saveAscent(); refreshUnlocks(); }
         ascentInfo={run:ascentRun, win:win, reward:newReward, hasNext:ascentCleared<ASCENT.length};
       }
       // sting right as the final blow lands, then HOLD on the win/ko pose for a
@@ -871,7 +872,7 @@
   // each foe has a "home" arena, so picking a foe sets the scene (still overridable)
   const FOE_ARENA={berserker:"sunset",stone:"dojo",drunkard:"torii",mirror:"bamboo",
     metronome:"dojo",trickster:"bamboo",ghost:"torii",echo:"sunset"};
-  function setArena(id){ if(!THEMES[id])return; arenaId=id; applyTheme(id);
+  function setArena(id,force){ if(!THEMES[id])return; if(!force && !unlockedArenaSet().has(id))return; arenaId=id; applyTheme(id);
     const box=$("arenas"); if(box){[...box.children].forEach(c=>c.classList.toggle("sel",c._arena===id));} }
   function applyTheme(id){
     const t=THEMES[id]||THEMES.dojo, s=$("scene"); if(!s)return;
@@ -881,12 +882,15 @@
     const ridge=s.querySelector(".ridge"); if(ridge) ridge.style.backgroundImage='url("'+t.ridge+'")';
   }
   function buildArenaPicker(){
-    const box=$("arenas"); if(!box)return;
+    const box=$("arenas"); if(!box)return; box.innerHTML="";
+    const unlocked=unlockedArenaSet();
     Object.keys(THEMES).forEach(id=>{
-      const o=document.createElement("div");o.className="opt sml"+(id===arenaId?" sel":"");
+      const open=unlocked.has(id);
+      const o=document.createElement("div");o.className="opt sml"+(id===arenaId?" sel":"")+(open?"":" lock");
       o._arena=id;
-      o.textContent=THEMES[id].glyph+" "+THEMES[id].name;o.style.fontSize="11px";o.style.width="auto";o.style.padding="0 9px";
-      o.onclick=()=>{setArena(id);};
+      o.textContent=THEMES[id].glyph+" "+THEMES[id].name+(open?"":" 🔒");
+      o.style.fontSize="11px";o.style.width="auto";o.style.padding="0 9px";
+      o.onclick=open?(()=>setArena(id)):(()=>showToast(THEMES[id].name+" — unlock in the Ascent ⛰"));
       box.appendChild(o);
     });
   }
@@ -895,16 +899,26 @@
      Climb a fixed sequence of foes; each win unlocks a fighter or arena (cosmetic
      reward only — never changes combat odds; difficulty is a fair, symmetric knob).
      Casual stays a fully open sandbox; the Ascent is the structured progression. */
+  // The tower. You begin with the Ronin + the Dojo; every rung unlocks a fighter
+  // or arena (cosmetic only). Difficulty is the single fair, symmetric knob.
   const ASCENT=[
-    {foe:"berserker",diff:.25,arena:"sunset",foeSkin:"kage", reward:{type:"skin", id:"kage", name:"Shadow"}},
-    {foe:"stone",    diff:.35,arena:"dojo",  foeSkin:"ronin",reward:{type:"arena",id:"sunset",name:"Sunset Cliff"}},
-    {foe:"drunkard", diff:.45,arena:"torii", foeSkin:"tetsu",reward:{type:"skin", id:"tetsu",name:"Iron Monk"}},
-    {foe:"mirror",   diff:.55,arena:"bamboo",foeSkin:"kage", reward:{type:"arena",id:"bamboo",name:"Bamboo Grove"}},
-    {foe:"metronome",diff:.65,arena:"dojo",  foeSkin:"onibi",reward:{type:"skin", id:"onibi",name:"Ember Oni"}},
-    {foe:"trickster",diff:.78,arena:"bamboo",foeSkin:"tetsu",reward:{type:"arena",id:"torii",name:"Night Torii"}},
-    {foe:"ghost",    diff:.9, arena:"torii", foeSkin:"sora", reward:{type:"skin", id:"sora", name:"Sky Crane"}},
-    {foe:"echo",     diff:1,  arena:"sunset",foeSkin:"onibi",reward:{type:"title",id:"champion",name:"Champion of the Sixfold"}},
+    {foe:"berserker",diff:.18,arena:"sunset",foeSkin:"onibi",   reward:{type:"skin", id:"kage",    name:"Shadow"}},
+    {foe:"stone",    diff:.26,arena:"dojo",  foeSkin:"ronin",   reward:{type:"arena",id:"sunset",  name:"Sunset Cliff"}},
+    {foe:"drunkard", diff:.34,arena:"torii", foeSkin:"honekage",reward:{type:"skin", id:"tetsu",   name:"Iron Monk"}},
+    {foe:"mirror",   diff:.42,arena:"bamboo",foeSkin:"kage",    reward:{type:"skin", id:"mukade",  name:"Centipede"}},
+    {foe:"metronome",diff:.50,arena:"sunset",foeSkin:"raiden",  reward:{type:"arena",id:"bamboo",  name:"Bamboo Grove"}},
+    {foe:"trickster",diff:.58,arena:"bamboo",foeSkin:"mukade",  reward:{type:"skin", id:"onibi",   name:"Ember Oni"}},
+    {foe:"berserker",diff:.66,arena:"sunset",foeSkin:"onibi",   reward:{type:"skin", id:"raiden",  name:"Storm"}},
+    {foe:"ghost",    diff:.74,arena:"torii", foeSkin:"yurei",   reward:{type:"arena",id:"torii",   name:"Night Torii"}},
+    {foe:"trickster",diff:.82,arena:"bamboo",foeSkin:"sora",    reward:{type:"skin", id:"sora",    name:"Sky Crane"}},
+    {foe:"ghost",    diff:.89,arena:"torii", foeSkin:"honekage",reward:{type:"skin", id:"honekage",name:"Bonedrifter"}},
+    {foe:"echo",     diff:.95,arena:"sunset",foeSkin:"raiden",  reward:{type:"skin", id:"yurei",   name:"Pale Ghost"}},
+    {foe:"echo",     diff:1,  arena:"torii", foeSkin:"yurei",   reward:{type:"title",id:"champion",name:"Champion of the Sixfold"}},
   ];
+  // unlocks derive from how far you've climbed (base = Ronin + Dojo)
+  function unlockedSkinSet(){ const s=new Set(["ronin"]); for(let i=0;i<ascentCleared;i++){const r=ASCENT[i].reward; if(r.type==="skin")s.add(r.id);} return s; }
+  function unlockedArenaSet(){ const s=new Set(["dojo"]); for(let i=0;i<ascentCleared;i++){const r=ASCENT[i].reward; if(r.type==="arena")s.add(r.id);} return s; }
+  function refreshUnlocks(){ renderSkinPicker(); buildArenaPicker(); }
   let ascentCleared=(function(){try{return Math.min(ASCENT.length,parseInt(localStorage.getItem("sixfold_ascent")||"0",10)||0);}catch(e){return 0;}})();
   let ascentRun=-1; // index of the rung being fought, or -1 for free play
   function saveAscent(){try{localStorage.setItem("sixfold_ascent",String(ascentCleared));}catch(e){}}
@@ -937,7 +951,7 @@
     if(i<0||i>=ASCENT.length)return;
     const r=ASCENT[i];
     ascentRun=i; foeId=r.foe; difficulty=r.diff; modeId="casual";
-    closeAscent(); hideResult(); setArena(r.arena); updateFoeBar(); newGame();
+    closeAscent(); hideResult(); setArena(r.arena,true); updateFoeBar(); newGame();
   }
 
   /* ---- foe / mode / difficulty selectors ---- */
@@ -1003,11 +1017,22 @@
   }
 
   /* ---- customizer ---- */
+  // skin picker is gated: only fighters you've unlocked in the Ascent are equippable.
+  // (Demo/vector skins are hidden from players; the roster = real sheets with a url.)
+  function renderSkinPicker(){
+    const skins=$("skins"); if(!skins)return; skins.innerHTML="";
+    const unlocked=unlockedSkinSet();
+    Skins.list().filter(s=>Skins.get(s.id).url).forEach(s=>{
+      const open=unlocked.has(s.id);
+      const o=document.createElement("div");o.className="opt"+(s.id===player.skin?" sel":"")+(open?"":" lock");
+      o.textContent=s.name+(open?"":" 🔒");o.style.fontSize="11px";o.style.width="auto";o.style.padding="0 8px";
+      o.onclick=open?(()=>{player.skin=s.id;syncSel(skins,o);renderFighter("P");}):(()=>showToast(s.name+" — unlock in the Ascent ⛰"));
+      skins.appendChild(o);
+    });
+  }
   function buildCustomizer(){
-    const skins=$("skins"),faces=$("faces"),pals=$("pals"),weaps=$("weaps"),cname=$("cname");
-    Skins.list().forEach(s=>{const o=document.createElement("div");o.className="opt"+(s.id===player.skin?" sel":"");
-      o.textContent=s.name;o.style.fontSize="11px";o.style.width="auto";o.style.padding="0 8px";
-      o.onclick=()=>{player.skin=s.id;syncSel(skins,o);renderFighter("P");};skins.appendChild(o);});
+    const faces=$("faces"),pals=$("pals"),weaps=$("weaps"),cname=$("cname");
+    renderSkinPicker();
     FACES.forEach(f=>{const o=document.createElement("div");o.className="opt"+(f===player.face?" sel":"");
       o.textContent=f;o.onclick=()=>{player.face=f;syncSel(faces,o);renderFighter("P");};faces.appendChild(o);});
     PALS.forEach(p=>{const o=document.createElement("div");o.className="opt pal"+(p===player.pal?" sel":"");
@@ -1037,7 +1062,7 @@
   $("foresightbtn").onclick=()=>{ if(game)game.spend("P","FORESIGHT"); };
 
   buildWheel();buildSelectors();buildArenaPicker();buildSettings();buildCustomizer();
-  applyA11y();setArena(FOE_ARENA[foeId]||arenaId);renderFighter("P");renderFighter("A");
+  applyA11y();setArena("dojo",true);renderFighter("P");renderFighter("A");
   newGame();
 
   // First-run: show the how-to guide once (remembered per browser).
