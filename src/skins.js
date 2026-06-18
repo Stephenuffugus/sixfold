@@ -100,6 +100,7 @@
     { id: "heron", name: "Snow Heron", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/heron.png" },
     { id: "beetle", name: "Beetle Warrior", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/beetle.png" },
     { id: "tanuki", name: "Tanuki Warrior", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/tanuki.png" },
+    { id: "shikigami", name: "Paper Shikigami", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/shikigami.png" },
   ];
 
   function list() {
