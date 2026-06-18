@@ -82,6 +82,7 @@
     { id: "inkblade", name: "Inkblade (demo)", kind: "atlas", cols: GRID.cols, rows: GRID.rows, frames: GRID.frames, gen: demoAtlas },
     // --- real watercolor sheets (1 PNG each, 3x2 layout; ART_SHEET.md) ---
     { id: "ronin", name: "Crimson Ronin", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/ronin.png" },
+    { id: "kage", name: "Shadow", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/kage.png" },
   ];
 
   function list() {
