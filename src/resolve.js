@@ -23,7 +23,10 @@
     // comeback drip (taking a clean -> +1 victim) is OFF by default: it would make
     // per-player gains unequal and break the "gain identically" guarantee. Opt-in only.
     const comebackDrip = !!opts.comebackDrip;
-    const state = { player: 0, ai: 0 };
+    // optional symmetric starting stipend (both sides) so the perception layer
+    // (Insight/Foresight) is usable in short matches. Symmetric => pillar-safe.
+    const start = Math.max(0, Math.min(RESOLVE_MAX, opts.startWith || 0));
+    const state = { player: start, ai: start };
 
     const add = (side, n) => { state[side] = Math.min(RESOLVE_MAX, state[side] + n); };
     const both = (n) => { add("player", n); add("ai", n); };
@@ -52,7 +55,7 @@
       return cost != null && state[side] >= cost;
     }
 
-    function reset() { state.player = 0; state.ai = 0; }
+    function reset() { state.player = start; state.ai = start; }
 
     return {
       gain, onBindEntered, spend, canSpend, reset,

@@ -80,7 +80,7 @@
     const difficulty = opts.difficulty == null ? 0.5 : opts.difficulty;
     const rng = opts.rng || rng32(opts.seed != null ? opts.seed : ((Date.now ? 0 : 0) || 1));
     const bus = opts.bus || makeBus();
-    const meter = Resolve.createResolve();
+    const meter = Resolve.createResolve({ startWith: 1 }); // symmetric stipend: perception usable in short matches
     const profile = Personalities.create(opts.archetype || "ghost", rng);
 
     const st = {
