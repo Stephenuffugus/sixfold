@@ -173,6 +173,52 @@ ships so it works with no art files; real skins = one `REGISTRY` line + rebuild.
 
 Fenced/later (Section 10): PWA manifest+SW, extra modes, Firebase/sunbeam wiring, juice.
 
+## 12.5 — SHIPPED STATE + PICK-UP PLAN (updated 2026-06-18, session 2)
+
+**The game is live and in active content production.**
+- **Live:** https://stephenuffugus.github.io/sixfold/ — GitHub Pages from `main`/root.
+  Deploy = bump `CACHE` in `sw.js` → `node tools/build.js` → commit → push. Pages
+  builds in ~1–2.5 min. SW currently `sixfold-v25`. (Pages was enabled once by the
+  owner; the codespace token can't toggle it.)
+- **Done since the original build:** PWA (manifest/SW/icon) → live on Pages;
+  game-feel juice (Web Audio synth `src/audio.js`=`Sfx`, haptics, flash/shake,
+  Victory/Defeat result screen, win-streak); watercolor visual identity +
+  data-driven arena THEMES (dojo/sunset/bamboo/torii) with foe→home-arena; the
+  **20-fighter skin roster**; **The Ascent** 23-rung campaign with
+  **lock-until-earned** gating (start = Ronin + Dojo; rungs unlock fighters/arenas/
+  Champion title — all cosmetic, difficulty is the only fair/symmetric knob);
+  Foresight/Insight made usable (symmetric `startWith:1` Resolve stipend + glow +
+  hint); painted-backdrop drop-in support (`THEME.bg` → `.scenebg`).
+- **Pillar still intact:** harness all targets met; a random player wins ≈50% on
+  every rung (difficulty only punishes predictability). Re-run on any mechanic change.
+
+**Art pipeline (repeatable — owner drops raw sheets; this is the recipe):**
+1. `python3 tools/dealpha.py in.png skins/<id>.png` (dark chars). Pale/white-robed
+   → add `light` arg. Dark chars with enclosed white pockets or baked-in text
+   labels → global near-white key `(mn>=236)&(mx-mn<=14)` + connected-component
+   label-strip (see the Bonedrifter/Centipede commits).
+2. Downscale 768×512, `optimize=True`; if >500 KB `quantize(256, FASTOCTREE)`.
+3. Register in `src/skins.js` REGISTRY; add an Ascent rung in `sixfold.src.html`
+   `ASCENT[]` (foe, diff, arena, foeSkin, reward) in difficulty order.
+4. SW lazy-caches skins (precache = shell + ronin only) — no ASSETS edit needed,
+   just bump `CACHE`. Build, run the 4 checks, commit, push, verify live, delete
+   the raw drop + temp PNGs (render-*/audit-*/REFERENCE_* are gitignored).
+
+**Backgrounds (NEXT — owner is making them, will drop in later):** support is
+built. Put portrait PNGs (~1080×1920, no characters, calm/dark vertical center
+where the wheel sits, focal in upper third, watercolor style) in a `backgrounds/`
+dir and add `bg:"backgrounds/<id>.png"` to the matching THEME. Auto lazy-cached.
+
+**Recommended next improvements (from the 20-fighter audit, ranked):**
+1. Make reading the AI (Foresight) able to push win-rate >50% feel rewarding.
+2. One-time "you're being predictable" nudge to teach the core skill.
+3. Collection/gallery screen showcasing the unlocked roster.
+4. Rebalance the tower: **Mirror @ rung 4 is a ~4.5%-WR wall** vs patterned play —
+   move it later / teach its copy gimmick; smooth the archetype curve; consider
+   chaptering 23 rungs.
+
+Also persisted to agent memory: `sixfold-status`, `sixfold-collab`.
+
 ## 12. Handoff hygiene (for the next instance)
 
 Before you stop: leave the tree green, append a dated entry to `FINDINGS.md` (decisions made, anything surprising, open questions), and update the first-session checklist / Phase status in this file so the next Claude Code instance can resume cold. Never leave the engine constants or the pillar invariants changed without a `FINDINGS.md` justification and a spec update.
