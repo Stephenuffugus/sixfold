@@ -173,4 +173,24 @@ line. Owner's stated direction for the product: a LARGE unlockable cast +
 many areas as single-player rewards (cosmetic per pillar) — the theme + skin
 registries are the foundation for that.
 
+**Serious audit + testplay (2026-06-18, 20-fighter build):**
+- Pillar/fairness INTACT: harness all targets met; a truly-random player wins
+  ~50% on EVERY Ascent rung regardless of difficulty/archetype. So the difficulty
+  knob never raises the AI's raw strength — it only punishes *predictability*
+  harder (and lets a reading player exploit a low-diff AI for >50%). Felt
+  difficulty is real for humans (who leak patterns) but caps at 50% for perfect
+  unpredictable play. Implication: the 23-rung campaign's challenge is
+  collection + learning unpredictability, not an escalating raw-strength wall.
+- BALANCE SPIKE: a patterned (stance-rotation) player vs Mirror @ rung 4 wins
+  only ~4.5% (Mirror hard-counters rotations). Reader foes (trickster/ghost/echo)
+  sit ~28-37% for patterned play; habit foes ~50%. Curve is archetype-driven and
+  jagged, not monotonic in the displayed ★ difficulty. Mirror appearing at rung 4
+  is an early wall for beginners who fall into rhythms.
+- PERF: cold load ~284ms; lazy-cache SW (precache shell + ronin only) keeps it
+  flat as the roster grows; no console errors; 23-rung ladder scrolls.
+- ART: 20 distinct sheets; anchor/scale varies (standing vs crouched-yokai vs
+  floating-spirit). Minor at game scale; a per-skin anchorY/scale would normalize.
+- Quick-win shipped: Ascent auto-scrolls to the current rung on open.
+See the session's audit report for the prioritized improvement list.
+
 (continued below as work lands…)
