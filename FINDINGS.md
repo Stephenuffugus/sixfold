@@ -141,4 +141,22 @@ teaching rings only fire on hover and so never show on touch — this was the
 "confusing" feedback. `Stage.bindPrompt()` now needs `els.bindStage`; SW cache
 bumped (→ v3) on each deploy so phones drop the stale shell.
 
+**Juice / game-feel pass 1 (2026-06-18):** added `src/audio.js` — a Web Audio
+synth with NO sound files (cosmetic; keeps the single zero-asset file). Exported
+as **`Sfx`**, NOT `Audio` (that would clobber the built-in HTMLAudioElement
+ctor). Lazy context primed on first pointer gesture (browser autoplay rule).
+Cues wired to a synced impact (~330ms into the reveal), plus haptics
+(`navigator.vibrate`), a clean-finish screen flash, and a real Victory/Defeat
+result overlay (`#resultscreen`) with rounds/unpredictability/streak/sunbeams +
+Duel-again / Change-foe. Win streak best persists in `localStorage`.
+`audioCues` + `haptics` (already in the assists a11y model) now default **on**
+and are surfaced as Sound/Haptics toggles; assists test unaffected (it only
+checks `colorblind`). build ORDER gains `audio` first; domcheck tracks the 9th
+global; render-check now plays a full match and screenshots the result screen.
+All effects reduced-motion safe. Next polish candidates the user may pick:
+visual identity (dojo backdrop/art), flow & retention, in-match clarity. Bigger
+roadmap the user floated: async Ghost-duel PvP → live PvP, with a sunbeam/dew
+*wager* — keep wagers OFF the combat path (pillar) and flag gambling/ratings
+implications for an Asia launch to the game manager.
+
 (continued below as work lands…)
