@@ -91,6 +91,7 @@
     { id: "yurei", name: "Pale Ghost", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/yurei.png" },
     { id: "mukade", name: "Centipede", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/mukade.png" },
     { id: "tengu", name: "Tengu", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/tengu.png" },
+    { id: "kitsune", name: "Kitsune", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/kitsune.png" },
   ];
 
   function list() {
