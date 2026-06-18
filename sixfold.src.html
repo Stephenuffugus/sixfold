@@ -935,7 +935,8 @@
   function saveAscent(){try{localStorage.setItem("sixfold_ascent",String(ascentCleared));}catch(e){}}
   function ascentStars(d){const n=Math.round(d*4)+1;return "★".repeat(n)+"☆".repeat(5-n);}
   function rewardLabel(r){return r.type==="title"?("Title — "+r.name):((r.type==="skin"?"Unlock fighter: ":"Unlock arena: ")+r.name);}
-  function openAscent(){renderAscent();$("ascent").classList.add("show");$("ascent").setAttribute("aria-hidden","false");}
+  function openAscent(){renderAscent();const o=$("ascent");o.classList.add("show");o.setAttribute("aria-hidden","false");
+    const cur=o.querySelector(".rung.cur")||o.querySelector(".rung"); if(cur&&cur.scrollIntoView)cur.scrollIntoView({block:"center"});}
   function closeAscent(){$("ascent").classList.remove("show");$("ascent").setAttribute("aria-hidden","true");}
   function renderAscent(){
     const rungs=ASCENT.map((r,i)=>{
