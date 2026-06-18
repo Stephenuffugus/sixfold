@@ -94,6 +94,8 @@
     { id: "kitsune", name: "Kitsune", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/kitsune.png" },
     { id: "kappa", name: "Kappa Grappler", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/kappa.png" },
     { id: "lantern", name: "Lantern Wraith", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/lantern.png" },
+    { id: "jorogumo", name: "Jorogumo", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/jorogumo.png" },
+    { id: "moth", name: "Moth Priestess", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/moth.png" },
   ];
 
   function list() {
