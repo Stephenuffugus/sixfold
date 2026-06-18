@@ -60,6 +60,16 @@ const root = path.join(__dirname, "..");
 
     // capture the dramatized overlays + result screen at phone size only
     if (s.name === "iphone12") {
+      // arena themes (click each option in the arena picker)
+      const themes = await page.evaluate(() => [...document.querySelectorAll("#arenas .opt")].map((o) => o.textContent.trim()));
+      for (let t = 0; t < themes.length; t++) {
+        await page.evaluate((i) => document.querySelectorAll("#arenas .opt")[i].click(), t);
+        await page.waitForTimeout(750);
+        await page.screenshot({ path: path.join(root, `render-theme${t}.png`) });
+      }
+      console.log("THEMES:", themes);
+      await page.evaluate(() => document.querySelectorAll("#arenas .opt")[0].click());
+      await page.waitForTimeout(400);
       // play a full match to a result screen (drives the real juice + flow path).
       // weakest AI + cycling all 6 stances (high unpredictability) → usually a win.
       await page.evaluate(() => { const d = document.getElementById("diff"); if (d) { d.value = "0.05"; if (d.oninput) d.oninput(); } document.getElementById("rematch").click(); });

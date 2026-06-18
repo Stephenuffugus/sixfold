@@ -35,18 +35,45 @@
     min-height:100%; overflow-x:hidden;
     display:flex; flex-direction:column; align-items:center; padding:12px 12px 28px; gap:9px;
   }
-  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.05;
-    background-image:radial-gradient(circle at 20% 30%, #fff 0, transparent 1px),
-      radial-gradient(circle at 70% 60%, #fff 0, transparent 1px);background-size:7px 7px,11px 11px;}
+  /* ===== painted-scroll backdrop: data-driven arena themes =====
+     #scene sits behind everything. applyTheme() sets the --sky / disc / ridge /
+     accent vars per theme; the watercolor washes + paper grain are constant so
+     every area shares one cohesive "wet pigment on washi" language. */
+  #scene{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none;
+    background:var(--sky,linear-gradient(#2a3458,#10131f));transition:background .6s ease}
+  #scene .disc{position:absolute;left:50%;top:11%;width:160px;height:160px;margin-left:-80px;border-radius:50%;
+    background:var(--disc,radial-gradient(circle at 50% 45%,#f3ead6,#d8cbac 70%,transparent 72%));
+    filter:blur(.5px);opacity:.9;transition:background .6s ease}
+  #scene .glow{position:absolute;left:50%;top:11%;width:420px;height:420px;margin-left:-210px;margin-top:-130px;border-radius:50%;
+    background:radial-gradient(circle,var(--glow,#8ec0ff33) 0%,transparent 60%);transition:background .6s ease}
+  #scene .ridge{position:absolute;left:-5%;right:-5%;bottom:30%;height:46%;opacity:.5;
+    background:var(--ridge,none);background-size:cover;background-position:bottom center;transition:opacity .6s}
+  #scene .floor{position:absolute;left:0;right:0;bottom:0;height:34%;
+    background:linear-gradient(var(--floor1,#1a2138) ,var(--floor2,#0c0f18));opacity:.9;transition:background .6s ease}
+  /* watercolor pigment blooms — soft, irregular, multiply-blended */
+  #scene .wash{position:absolute;border-radius:50%;filter:blur(34px);mix-blend-mode:screen;opacity:.5}
+  #scene .w1{left:-8%;top:18%;width:55%;height:42%;background:var(--wash1,#3a4a8a)}
+  #scene .w2{right:-10%;top:34%;width:52%;height:46%;background:var(--wash2,#6a3550)}
+  /* paper fiber grain (static feTurbulence; cheap, no asset) */
+  #scene .grain{position:absolute;inset:0;opacity:.06;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size:200px 200px}
+  #scene .vignette{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 32%,transparent 40%,#0a0c14cc 100%)}
+  body.reduce #scene *{transition:none}
 
   header{width:100%;max-width:460px;display:flex;align-items:baseline;justify-content:space-between}
-  h1{font-family:var(--disp);font-weight:800;letter-spacing:.18em;margin:0;font-size:23px;color:var(--washi);text-shadow:0 1px 0 #0006}
+  h1{font-family:var(--disp);font-weight:800;letter-spacing:.18em;margin:0;font-size:23px;color:var(--washi);
+    text-shadow:0 1px 0 #0006;position:relative}
   h1 .dot{color:var(--seal)}
+  /* brush-stroke underline under the wordmark */
+  h1::after{content:"";position:absolute;left:0;right:38%;bottom:-4px;height:3px;border-radius:2px;
+    background:linear-gradient(90deg,var(--seal),transparent);opacity:.85}
   .tag{font-size:11px;letter-spacing:.12em;color:var(--washi-dim);text-transform:uppercase}
 
   /* foe / mode bar */
   .foebar{width:100%;max-width:460px;display:flex;align-items:center;justify-content:space-between;gap:8px;
-    background:#ffffff0d;border:1px solid #ffffff14;border-radius:11px;padding:8px 12px;font-size:12px}
+    background:#1a213acc;-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);
+    border:1px solid #ffffff1c;border-radius:11px;padding:8px 12px;font-size:12px;box-shadow:0 4px 18px #0005}
   .foebar .who{display:flex;flex-direction:column;gap:2px;min-width:0}
   .foebar .fn{font-family:var(--disp);font-weight:600;font-size:14px;color:var(--washi)}
   .foebar .stars{color:var(--gold);letter-spacing:1px;font-size:11px}
@@ -60,6 +87,9 @@
   .fighter{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px}
   .fighter .nm{font-family:var(--disp);font-size:14px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .stage{position:relative;width:104px;height:118px}
+  /* soft watercolor ground shadow at the art's foot anchor (~88% down) */
+  .stage::after{content:"";position:absolute;left:50%;bottom:8px;width:64px;height:15px;margin-left:-32px;border-radius:50%;
+    background:radial-gradient(closest-side,#0009,transparent);filter:blur(2px);z-index:1}
   .banner{position:absolute;top:-2px;width:30px;height:62px;border-radius:2px 2px 0 0;box-shadow:0 2px 6px #0007;z-index:1;
     display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff8;transform-origin:top center}
   .banner.left{left:6px;transform:rotate(-7deg)} .banner.right{right:6px;transform:rotate(7deg)}
@@ -167,7 +197,8 @@
   .postmatch b{color:var(--gold)} .postmatch .dim{color:var(--washi-dim)}
 
   /* drawers */
-  .drawer{width:100%;max-width:460px;background:#ffffff0d;border:1px solid #ffffff1a;border-radius:14px;overflow:hidden;
+  .drawer{width:100%;max-width:460px;background:#1a213acc;-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);
+    border:1px solid #ffffff1a;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px #0004;
     transition:max-height .3s ease;max-height:46px}
   .drawer.open{max-height:520px}
   .drawer .dh{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;font-weight:700;font-size:13px;letter-spacing:.04em}
@@ -277,6 +308,12 @@
 </style>
 </head>
 <body>
+  <div id="scene" aria-hidden="true">
+    <div class="glow"></div><div class="disc"></div>
+    <div class="wash w1"></div><div class="wash w2"></div>
+    <div class="ridge"></div><div class="floor"></div>
+    <div class="grain"></div><div class="vignette"></div>
+  </div>
   <header>
     <h1>SIX<span class="dot">·</span>FOLD</h1>
     <span class="tag">stance duel</span>
@@ -356,6 +393,7 @@
       <div class="row"><label>Opponent</label><div class="opts" id="foes"></div></div>
       <div class="row"><label>Difficulty (<span id="difflbl">★★★☆☆</span>)</label>
         <input type="range" id="diff" min="0" max="1" step="0.05" value="0.5"></div>
+      <div class="row"><label>Arena</label><div class="opts" id="arenas"></div></div>
       <div class="row"><label>Mode</label><div class="opts" id="modes"></div></div>
     </div>
   </div>
@@ -733,6 +771,47 @@
     $("compbanner").classList.toggle("show",!mode.honorsAssists && !!Assists.current());
   }
 
+  /* ---- arena themes (data-driven; each is an unlockable "area" later) ---- */
+  function ridgeURI(kind,c){
+    const W=600,H=200; let body="";
+    if(kind==="mountains") body=`<path d="M0 200 L120 70 L210 200 Z" fill="${c}"/><path d="M150 200 L330 44 L500 200 Z" fill="${c}" opacity=".85"/><path d="M380 200 L520 92 L600 150 L600 200 Z" fill="${c}" opacity=".7"/>`;
+    else if(kind==="roofline") body=`<path d="M0 200 L0 142 L44 142 L66 104 Q300 42 534 104 L556 142 L600 142 L600 200 Z" fill="${c}"/>`;
+    else if(kind==="bamboo"){ for(let i=0;i<10;i++){const x=18+i*62+(i%2)*9; body+=`<rect x="${x}" y="0" width="9" height="200" fill="${c}" opacity="${0.45+0.06*(i%3)}"/>`; for(let y=24;y<200;y+=44) body+=`<rect x="${x-2}" y="${y}" width="13" height="4" fill="${c}"/>`; } }
+    else if(kind==="torii"){ const g=(x,s)=>`<g transform="translate(${x} 0) scale(${s})"><rect x="-50" y="44" width="14" height="156" fill="${c}"/><rect x="36" y="44" width="14" height="156" fill="${c}"/><rect x="-68" y="36" width="136" height="15" fill="${c}"/><rect x="-58" y="58" width="116" height="9" fill="${c}"/></g>`; body=g(150,1)+g(450,.78); }
+    return "data:image/svg+xml,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${body}</svg>`);
+  }
+  const THEMES={
+    dojo:{name:"Moonlit Dojo",glyph:"🌙",sky:"linear-gradient(#20294a,#283357 45%,#3a3a5c)",
+      disc:"radial-gradient(circle at 50% 45%,#f6f1e0,#d9d2bb 66%,transparent 70%)",glow:"#cfe0ff44",
+      wash1:"#33407e",wash2:"#5b3a6e",floor1:"#171d33",floor2:"#0a0d17",ridge:ridgeURI("roofline","#10131f")},
+    sunset:{name:"Sunset Cliff",glyph:"🌄",sky:"linear-gradient(#3a2c52,#7a3f4e 42%,#d98a4e 82%,#f0b85e)",
+      disc:"radial-gradient(circle at 50% 45%,#fff4d6,#ffb24d 60%,transparent 66%)",glow:"#ffae5577",
+      wash1:"#9c4a3a",wash2:"#e0954a",floor1:"#3a2438",floor2:"#1a1020",ridge:ridgeURI("mountains","#2a1830")},
+    bamboo:{name:"Bamboo Grove",glyph:"🎋",sky:"linear-gradient(#23402f,#2f5a3e 50%,#4a7350)",
+      disc:"radial-gradient(circle at 50% 45%,#eef6da,#cfe0a8 60%,transparent 66%)",glow:"#d7f0a855",
+      wash1:"#2f6a45",wash2:"#7a8f3a",floor1:"#1c3326",floor2:"#0c1810",ridge:ridgeURI("bamboo","#16271b")},
+    torii:{name:"Night Torii",glyph:"⛩️",sky:"linear-gradient(#1a1530,#2a1d44 50%,#43264f)",
+      disc:"radial-gradient(circle at 50% 45%,#ffe3a8,#e08a3a 55%,transparent 60%)",glow:"#ff9a4d55",
+      wash1:"#3a2a66",wash2:"#7a2f50",floor1:"#1d1530",floor2:"#0c0814",ridge:ridgeURI("torii","#0e0a18")},
+  };
+  let arenaId="dojo";
+  function applyTheme(id){
+    const t=THEMES[id]||THEMES.dojo, s=$("scene"); if(!s)return;
+    s.style.setProperty("--sky",t.sky); s.style.setProperty("--disc",t.disc); s.style.setProperty("--glow",t.glow);
+    s.style.setProperty("--wash1",t.wash1); s.style.setProperty("--wash2",t.wash2);
+    s.style.setProperty("--floor1",t.floor1); s.style.setProperty("--floor2",t.floor2);
+    const ridge=s.querySelector(".ridge"); if(ridge) ridge.style.backgroundImage='url("'+t.ridge+'")';
+  }
+  function buildArenaPicker(){
+    const box=$("arenas"); if(!box)return;
+    Object.keys(THEMES).forEach(id=>{
+      const o=document.createElement("div");o.className="opt sml"+(id===arenaId?" sel":"");
+      o.textContent=THEMES[id].glyph+" "+THEMES[id].name;o.style.fontSize="11px";o.style.width="auto";o.style.padding="0 9px";
+      o.onclick=()=>{arenaId=id;syncSel(box,o);applyTheme(id);};
+      box.appendChild(o);
+    });
+  }
+
   /* ---- foe / mode / difficulty selectors ---- */
   function buildSelectors(){
     const foes=$("foes");
@@ -828,8 +907,8 @@
   $("insightbtn").onclick=()=>{ if(game)game.spend("P","INSIGHT"); };
   $("foresightbtn").onclick=()=>{ if(game)game.spend("P","FORESIGHT"); };
 
-  buildWheel();buildSelectors();buildSettings();buildCustomizer();
-  applyA11y();renderFighter("P");renderFighter("A");
+  buildWheel();buildSelectors();buildArenaPicker();buildSettings();buildCustomizer();
+  applyA11y();applyTheme(arenaId);renderFighter("P");renderFighter("A");
   newGame();
 
   // First-run: show the how-to guide once (remembered per browser).
