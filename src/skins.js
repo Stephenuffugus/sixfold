@@ -92,6 +92,8 @@
     { id: "mukade", name: "Centipede", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/mukade.png" },
     { id: "tengu", name: "Tengu", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/tengu.png" },
     { id: "kitsune", name: "Kitsune", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/kitsune.png" },
+    { id: "kappa", name: "Kappa Grappler", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/kappa.png" },
+    { id: "lantern", name: "Lantern Wraith", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/lantern.png" },
   ];
 
   function list() {
