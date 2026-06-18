@@ -2,3 +2,6 @@ node_modules/
 package.json
 package-lock.json
 render-*.png
+audit-*.png
+roster_contact.png
+REFERENCE_*.png
