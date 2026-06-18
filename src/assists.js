@@ -21,10 +21,10 @@
     colorblind: false,      // colorblind-safe palette
     reducedMotion: false,   // also auto-detected from prefers-reduced-motion at the UI layer
     largeTapTargets: false,
-    haptics: false,
+    haptics: true,          // phone buzz on hits/bind (juice; on by default)
     slowReveal: false,      // longer reveal beat
     highContrast: false,
-    audioCues: false,       // distinct sound per outcome
+    audioCues: true,        // distinct sound per outcome (juice; on by default)
   };
 
   const CHARMS = {

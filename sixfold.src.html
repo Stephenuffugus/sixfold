@@ -246,6 +246,33 @@
     border:1px solid #ffffff33;cursor:pointer;color:#1a0f0c;background:linear-gradient(#d9694f,var(--seal))}
   body.reduce .overlay,body.reduce .overlay .hero{transition:none}
 
+  /* clean-finish flash */
+  .flash{position:fixed;inset:0;z-index:55;background:#fff;opacity:0;pointer-events:none}
+  .flash.go{animation:flashgo .3s ease-out}
+  @keyframes flashgo{0%{opacity:.0}12%{opacity:.6}100%{opacity:0}}
+  body.reduce .flash.go{animation:none}
+
+  /* ===== VICTORY / DEFEAT result screen (reuses .overlay) ===== */
+  .result{text-align:center;gap:16px}
+  .result-word{font-family:var(--disp);font-weight:800;font-size:46px;letter-spacing:.14em;margin:0;line-height:1}
+  .result.win .result-word{color:var(--gold);text-shadow:0 0 30px #cda64f88,0 2px 0 #0008}
+  .result.lose .result-word{color:var(--seal);text-shadow:0 0 26px #cf413088,0 2px 0 #0008}
+  .result-flavor{font-size:13px;letter-spacing:.06em;color:var(--washi-dim);margin-top:-8px}
+  .stat-chips{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
+  .chip{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:62px;padding:9px 11px;border-radius:11px;
+    background:#ffffff10;border:1px solid #ffffff1e}
+  .chip b{font-family:var(--disp);font-size:19px;color:var(--washi);line-height:1}
+  .chip span{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--washi-dim)}
+  .chip.streak b{color:var(--gold)}
+  .sunbeams{font-size:15px;font-weight:800;color:var(--gold);letter-spacing:.03em}
+  .result-tell{font-size:11px;color:var(--washi-dim);line-height:1.4;max-width:300px}
+  .result-tell b{color:var(--washi)}
+  .result-actions{display:flex;gap:9px;margin-top:4px}
+  .result-actions button{font-family:var(--ui);font-weight:800;font-size:14px;letter-spacing:.03em;padding:13px 22px;border-radius:12px;
+    border:1px solid #ffffff28;cursor:pointer;color:var(--washi);background:linear-gradient(#2c3658,#202841)}
+  .result-actions button.primary{color:#1a0f0c;background:linear-gradient(#d9694f,var(--seal));border-color:#ffffff33}
+  .result-actions button:active{transform:translateY(1px)}
+
   /*__ANIM_CSS__*/
 </style>
 </head>
@@ -337,6 +364,10 @@
   <div class="drawer" id="setdrawer">
     <div class="dh" id="setdh"><span>⚙ Settings &amp; assists</span><span class="chev">▾</span></div>
     <div class="dbody">
+      <div class="row"><label>Sound &amp; feel</label>
+        <div class="toggle"><span>Sound effects</span><input type="checkbox" data-a11y="audioCues"></div>
+        <div class="toggle"><span>Haptics (vibrate)</span><input type="checkbox" data-a11y="haptics"></div>
+      </div>
       <div class="row"><label>Accessibility — always free</label>
         <div class="toggle"><span>Colorblind-safe palette</span><input type="checkbox" data-a11y="colorblind"></div>
         <div class="toggle"><span>Reduced motion</span><input type="checkbox" data-a11y="reducedMotion"></div>
@@ -363,8 +394,14 @@
     </div>
   </div>
 
+  <!-- clean-finish screen flash -->
+  <div class="flash" id="flash"></div>
+
   <!-- Clash Bind escalation overlay (populated by stage.js) -->
   <div class="overlay" id="bindstage" aria-hidden="true" role="dialog" aria-label="Break the bind"></div>
+
+  <!-- Victory / Defeat result screen (populated by glue on match-over) -->
+  <div class="overlay" id="resultscreen" aria-hidden="true" role="dialog" aria-label="Match result"></div>
 
   <!-- First-run / on-demand how-to guide -->
   <div class="overlay" id="howto" aria-hidden="true" role="dialog" aria-label="How to play">
@@ -392,7 +429,25 @@
 (function(){
   const Engine = globalThis.Engine, Personalities = globalThis.Personalities,
     Resolve = globalThis.Resolve, Readout = globalThis.Readout,
-    Stage = globalThis.Stage, Assists = globalThis.Assists, Predictor = globalThis.Predictor;
+    Stage = globalThis.Stage, Assists = globalThis.Assists, Predictor = globalThis.Predictor,
+    Sfx = globalThis.Sfx;
+
+  // juice helpers (cosmetic only). haptics honor the same setting flag as sound's sibling.
+  function buzz(ms){ try{ if(Assists.settings().haptics && typeof navigator!=="undefined" && navigator.vibrate) navigator.vibrate(ms); }catch(e){} }
+  function flash(){ if(reduced())return; const f=$("flash"); if(!f)return; f.classList.remove("go"); void f.offsetWidth; f.classList.add("go"); }
+  function shake(){ if(reduced())return; document.body.classList.add("shake"); setTimeout(()=>document.body.classList.remove("shake"),360); }
+  // impact juice (sound + haptics + flash), fired at the strike moment. Cosmetic.
+  function outcomeJuice(o){
+    if(o.bind){
+      if(o.winner==="P"){Sfx.play("bindwin");buzz(35);flash();shake();}
+      else if(o.winner==="A"){Sfx.play("bindlose");buzz([20,30,20]);shake();}
+      else{Sfx.play("whiff");}
+      return;
+    }
+    if(o.kind==="clean"){Sfx.play("clean");buzz(60);flash();shake();}
+    else if(o.kind==="glance"){Sfx.play("glance");buzz(25);}
+    else{Sfx.play("whiff");}
+  }
 
   const STANCES=[{n:"Heaven",g:"↑"},{n:"Tiger",g:"↗"},{n:"River",g:"↘"},{n:"Earth",g:"↓"},{n:"Crane",g:"↙"},{n:"Shadow",g:"↖"}];
   const N=Engine.N, HP=Engine.HP, ESC=Engine.ESC_ROUND;
@@ -497,7 +552,7 @@
   }
 
   function commit(p){
-    if(busy||over||!game)return; busy=true; clearPreview(); clearForesight();
+    if(busy||over||!game)return; busy=true; Sfx.unlock(); Sfx.play("tap"); clearPreview(); clearForesight();
     nodeEls.forEach(el=>el.classList.add("dim"));
     nodeEls[p].classList.remove("dim"); nodeEls[p].classList.add("ppick");
     $("verdict").textContent="…"; $("sub").textContent="reading you";
@@ -515,6 +570,7 @@
       $("verdict").textContent="LOCK"; $("sub").textContent="break the bind";
       drawLink(game.state().playerHist.slice(-1)[0], game.state().playerHist.slice(-1)[0], "#fff");
       Stage.lockBlades();
+      Sfx.play("bind"); buzz([18,40,18]);
       if(!reduced()){document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),360);}
       Stage.bindPrompt().then(b=>{ g.submitBind(b); });
     });
@@ -529,10 +585,10 @@
       const hub=$("hub"); hub.classList.remove("flash-clean","flash-glance"); void hub.offsetWidth;
       if(outcome.winner&&outcome.kind==="clean")hub.classList.add("flash-clean");
       else if(outcome.winner&&outcome.kind==="glance")hub.classList.add("flash-glance");
+      setTimeout(()=>outcomeJuice(outcome), reduced()?0:330); // sync cue to the strike
       Stage.playReveal(pPick,aPick,outcome).then(()=>{
         renderHP("P");renderHP("A");
         Readout.render(game.state().playerHist,game.state().aiHist,game.state().outcomes,ribbonOpts());
-        if(outcome.kind==="clean"&&outcome.winner&&!reduced()){document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),360);}
         if(over){ if(matchWinner){Stage.setFrame(matchWinner,"win");Stage.setFrame(matchWinner==="P"?"A":"P","ko");} }
         else endRoundUI();
       });
@@ -540,6 +596,7 @@
     g.bus.on("match-over",({winner,summary})=>{
       over=true;busy=true;matchWinner=winner;
       const win=winner==="P";
+      if(win){streak++; if(streak>bestStreak){bestStreak=streak;saveBest();}} else streak=0;
       $("roundlbl").textContent="Match over";
       $("verdict").textContent=win?"VICTORY":"DEFEAT";
       $("verdict").style.color=win?getCss("--gold"):getCss("--seal");
@@ -548,11 +605,43 @@
       const r=Readout.postMatch(game.state().playerHist,{rollingAvg: rollingAvg()});
       lastUnpred.push(r.unpredictabilityPct); if(lastUnpred.length>20)lastUnpred.shift();
       $("postmatch").classList.add("show");
-      if(win){const beams=8+Math.round(summary.difficulty*8)+Math.round(summary.unpredictabilityPct/12);
-        showToast(`+${beams} ☀ sunbeams · skill & style`);}
+      const beams=win?(8+Math.round(summary.difficulty*8)+Math.round(summary.unpredictabilityPct/12)):0;
       setSpendEnabled(false);
+      // result screen + victory/defeat sting, after the finishing blow lands
+      setTimeout(()=>{ Sfx.play(win?"victory":"defeat"); buzz(win?[0,45,45,45]:130); showResult(win,summary,beams); }, reduced()?0:1000);
     });
   }
+  /* ---- victory / defeat result screen ---- */
+  let streak=0;
+  let bestStreak=(function(){try{return parseInt(localStorage.getItem("sixfold_beststreak")||"0",10)||0;}catch(e){return 0;}})();
+  function saveBest(){try{localStorage.setItem("sixfold_beststreak",String(bestStreak));}catch(e){}}
+  function showResult(win,summary,beams){
+    const tell=summary.tell||"well hidden — no clear tell";
+    const streakChip=streak>1?`<div class="chip streak"><b>×${streak}</b><span>win streak</span></div>`:"";
+    const extra=win?`<div class="sunbeams">+${beams} ☀ sunbeams</div>`
+                   :`<div class="result-tell">best streak <b>${bestStreak}</b> · they read you this time</div>`;
+    $("resultscreen").innerHTML=
+      `<div class="hero result ${win?"win":"lose"}">`+
+        `<div class="result-word">${win?"VICTORY":"DEFEAT"}</div>`+
+        `<div class="result-flavor">${win?(ai.name+" falls."):(ai.name+" stands over you.")}</div>`+
+        `<div class="stat-chips">`+
+          `<div class="chip"><b>${summary.rounds}</b><span>rounds</span></div>`+
+          `<div class="chip"><b>${summary.unpredictabilityPct}%</b><span>unpred</span></div>`+
+          streakChip+
+        `</div>`+extra+
+        `<div class="result-tell">your tell: <b>${tell}</b></div>`+
+        `<div class="result-actions">`+
+          `<button class="primary" id="resAgain">Duel again</button>`+
+          `<button id="resFoe">Change foe</button>`+
+        `</div>`+
+      `</div>`;
+    const rs=$("resultscreen"); rs.setAttribute("aria-hidden","false");
+    if(rs.offsetWidth!==undefined) void rs.offsetWidth;
+    rs.classList.add("show");
+    const ra=$("resAgain"); if(ra) ra.onclick=()=>{ hideResult(); newGame(); };
+    const rf=$("resFoe"); if(rf) rf.onclick=()=>{ hideResult(); $("foedrawer").classList.add("open"); $("foedrawer").scrollIntoView({behavior:"smooth",block:"nearest"}); };
+  }
+  function hideResult(){ const rs=$("resultscreen"); if(!rs)return; rs.classList.remove("show"); rs.setAttribute("aria-hidden","true"); setTimeout(()=>{rs.innerHTML="";}, reduced()?0:280); }
   function rollingAvg(){ if(!lastUnpred.length)return null; return Math.round(lastUnpred.reduce((a,b)=>a+b,0)/lastUnpred.length); }
 
   function endRoundUI(){
@@ -625,6 +714,7 @@
     $("esc").classList.remove("on");$("verdict").style.color="";
     $("roundlbl").textContent="Round 1";$("verdict").textContent="Choose";$("sub").textContent="tap a stance";
     $("rematch").style.display="none";$("postmatch").classList.remove("show");$("aimeter").textContent="";
+    hideResult();
     renderHP("P");renderHP("A");
     Readout.render([],[],[],ribbonOpts());
     $("pbar").classList.remove("show");$("abar").classList.remove("show");
@@ -674,6 +764,7 @@
     document.body.classList.toggle("bigtap",s.largeTapTargets);
     document.body.classList.toggle("reduce",s.reducedMotion);
     if(Stage.setReduced)Stage.setReduced(reduced());
+    Sfx.setEnabled(s.audioCues);
   }
   function buildSettings(){
     document.querySelectorAll("[data-a11y]").forEach(inp=>{
@@ -743,6 +834,9 @@
 
   // First-run: show the how-to guide once (remembered per browser).
   try{ if(!localStorage.getItem("sixfold_seen")) openHowto(); }catch(e){}
+
+  // Prime the audio context on the very first user gesture (browser autoplay rule).
+  if(typeof window!=="undefined" && window.addEventListener) window.addEventListener("pointerdown",()=>Sfx.unlock(),{passive:true});
 
   // PWA: register the service worker for offline play. Guarded so the game still
   // runs when opened as a local file:// (no SW) or in a headless test sandbox.

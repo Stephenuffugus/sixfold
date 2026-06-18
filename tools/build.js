@@ -11,8 +11,8 @@ const fs = require("fs");
 const path = require("path");
 const root = path.join(__dirname, "..");
 
-// dependency order: predictor -> resolve -> readout -> personalities -> skins -> stage -> assists -> engine
-const ORDER = ["predictor", "resolve", "readout", "personalities", "skins", "stage", "assists", "engine"];
+// dependency order: audio (standalone) -> predictor -> resolve -> readout -> personalities -> skins -> stage -> assists -> engine
+const ORDER = ["audio", "predictor", "resolve", "readout", "personalities", "skins", "stage", "assists", "engine"];
 
 const modules = ORDER.map((n) => {
   const code = fs.readFileSync(path.join(root, "src", n + ".js"), "utf8");

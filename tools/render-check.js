@@ -58,16 +58,34 @@ const root = path.join(__dirname, "..");
 
     await page.screenshot({ path: path.join(root, `render-${s.name}.png`), fullPage: true });
 
-    // capture the dramatized overlays at phone size only
+    // capture the dramatized overlays + result screen at phone size only
     if (s.name === "iphone12") {
-      await page.evaluate(() => { Stage.bindPrompt(); }); // fire-and-forget: don't await the pending promise
-      await page.waitForTimeout(500);
-      await page.screenshot({ path: path.join(root, "render-bind.png") });
-      await page.evaluate(() => { const b = document.querySelector("#bindstage .bindbtn-lg"); if (b) b.click(); });
+      // play a full match to a result screen (drives the real juice + flow path).
+      // weakest AI + cycling all 6 stances (high unpredictability) → usually a win.
+      await page.evaluate(() => { const d = document.getElementById("diff"); if (d) { d.value = "0.05"; if (d.oninput) d.oninput(); } document.getElementById("rematch").click(); });
       await page.waitForTimeout(400);
+      for (let k = 0; k < 50; k++) {
+        const st = await page.evaluate(() => ({
+          result: document.getElementById("resultscreen").classList.contains("show"),
+          bind: document.getElementById("bindstage").classList.contains("show"),
+        }));
+        if (st.result) break;
+        if (st.bind) await page.evaluate(() => { const b = document.querySelector("#bindstage .bindbtn-lg"); if (b) b.click(); });
+        else await page.evaluate((i) => { const n = document.querySelectorAll(".node"); if (n.length) n[i % 6].click(); }, k);
+        await page.waitForTimeout(1100);
+      }
+      await page.waitForTimeout(500);
+      await page.screenshot({ path: path.join(root, "render-result.png") });
+
+      await page.evaluate(() => { const b = document.getElementById("resAgain"); if (b) b.click(); });
+      await page.waitForTimeout(300);
       await page.evaluate(() => document.getElementById("howbtn").click());
       await page.waitForTimeout(400);
       await page.screenshot({ path: path.join(root, "render-howto.png") });
+
+      await page.evaluate(() => { document.getElementById("howto").classList.remove("show"); Stage.bindPrompt(); });
+      await page.waitForTimeout(500);
+      await page.screenshot({ path: path.join(root, "render-bind.png") });
     }
     await page.close();
   }
