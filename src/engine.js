@@ -182,7 +182,11 @@
       if (action === "INSIGHT") {
         payload = { ribbon: oppHist.slice(-10), oppResolve: meter.state()[side === "P" ? "ai" : "player"] };
       } else if (action === "FORESIGHT") {
-        payload = { predict: Predictor.predict(oppHist, N) };
+        // surface the read AND the stance that cleanly counters it, so the
+        // info->action->payoff loop is actionable (still pure info: the counter
+        // mapping is the fixed, public wheel — no force, no damage path).
+        const p = Predictor.predict(oppHist, N);
+        payload = { predict: p, counter: counter(p.pick) };
       }
       bus.emit("meter-changed", meter.state());
       bus.emit("info-revealed", { side, action, payload });

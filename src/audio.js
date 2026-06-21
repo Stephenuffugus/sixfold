@@ -11,7 +11,7 @@
  *   unlock()                     resume/create the context (call on first tap)
  *   setEnabled(bool)             mute/unmute
  *   play(name)                   names below
- *     tap glance clean whiff bind bindwin bindlose victory defeat
+ *     tap glance clean whiff bind bindwin bindlose victory defeat read
  *
  * Defensive: every call no-ops when Web Audio is absent (tests / headless).
  */
@@ -82,6 +82,8 @@
     victory()  { [C5, D5, E5, A4].forEach((f, i) => tone(i === 3 ? f * 2 : f, i * 0.11, 0.5, "triangle", 0.2)); noise(0, 0.3, 0.18, 400); },
     // low descending minor
     defeat()   { tone(D4, 0, 0.4, "sine", 0.26, 110); tone(A3, 0.14, 0.5, "sine", 0.22, 90); },
+    // called shot: bright ascending ping + airy breath — "you saw it coming"
+    read()     { tone(A4, 0, 0.16, "triangle", 0.16); tone(E5, 0.05, 0.2, "triangle", 0.2); tone(A4 * 2, 0.11, 0.3, "triangle", 0.18); noise(0.08, 0.16, 0.1, 5200, true); },
   };
 
   function play(name) {

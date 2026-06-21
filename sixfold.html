@@ -146,6 +146,11 @@
   .node.dim{opacity:.4}
   .node.foresight{border-color:var(--jade);box-shadow:0 0 0 2px var(--jade),0 0 16px #5f917399;animation:fpulse 1s infinite alternate}
   @keyframes fpulse{to{box-shadow:0 0 0 3px var(--jade),0 0 24px #5f9173cc}}
+  /* Foresight's recommended counter — the stance to STRIKE to land the read */
+  .node.calledshot{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 18px #cda64fbb;animation:cspulse .85s infinite alternate}
+  .node.calledshot::after{content:"⚔";position:absolute;top:-9px;right:-3px;font-size:11px;color:var(--gold);text-shadow:0 0 4px #000}
+  @keyframes cspulse{to{box-shadow:0 0 0 3px var(--gold),0 0 28px #cda64fee}}
+  body.reduce .node.calledshot,body.reduce .node.foresight{animation:none}
   .node .ring{position:absolute;inset:-4px;border-radius:50%;border:2px solid transparent;opacity:0;transition:opacity .15s}
   .node.r-clean .ring{border-color:var(--seal);opacity:.9}
   .node.r-glance .ring{border-color:var(--jade);opacity:.9}
@@ -161,8 +166,11 @@
   .hub .verdict{font-family:var(--disp);font-weight:800;font-size:20px;line-height:1.05;margin-top:2px}
   .hub .sub{font-size:10px;color:#6c5d3f;margin-top:3px;max-width:98px;line-height:1.25}
   .hub.flash-clean{animation:flashc .5s} .hub.flash-glance{animation:flashg .5s}
+  .hub.flash-read{animation:flashr .6s}
   @keyframes flashc{0%{box-shadow:inset 0 0 0 3px var(--seal),0 0 40px #cf4130cc}100%{}}
   @keyframes flashg{0%{box-shadow:inset 0 0 0 3px var(--jade),0 0 30px #5f9173aa}100%{}}
+  @keyframes flashr{0%{box-shadow:inset 0 0 0 4px var(--gold),0 0 52px #cda64fee}100%{}}
+  .hub .verdict.read{color:#7a5e1a}
   /* bind prompt — hub flips to 3 buttons */
   .hub.bind-mode{background:radial-gradient(circle at 50% 38%,#f6dede,#d8b6ac 70%,#b98a82)}
   .bind-title{font-family:var(--disp);font-weight:800;font-size:12px;letter-spacing:.2em;color:#7a3a30}
@@ -308,6 +316,7 @@
   .chip b{font-family:var(--disp);font-size:19px;color:var(--washi);line-height:1}
   .chip span{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--washi-dim)}
   .chip.streak b{color:var(--gold)}
+  .chip.reads b{color:var(--gold)} .chip.reads{box-shadow:0 0 0 1px #cda64f55,0 0 12px #cda64f33}
   .sunbeams{font-size:15px;font-weight:800;color:var(--gold);letter-spacing:.03em}
   .result-tell{font-size:11px;color:var(--washi-dim);line-height:1.4;max-width:300px}
   .result-tell b{color:var(--washi)}
@@ -557,7 +566,7 @@
         <li><span class="ic">↻</span><span>You beat the <span class="k">2 stances clockwise</span> of yours: <span class="c-clean">CLEAN −2</span>, then <span class="c-glance">GLANCE −1</span>.</span></li>
         <li><span class="ic">⇄</span><span>Directly <span class="c-steel">across = WHIFF</span> — blades pass, no damage.</span></li>
         <li><span class="ic">⚔</span><span><span class="k">Same stance = CLASH</span> → break the bind: <span class="c-gold">Drive ▸ Slip ▸ Trap ▸ Drive</span>.</span></li>
-        <li><span class="ic">資</span><span>Dead rounds build <span class="c-gold">Resolve</span> — spend it to read the foe, never to hit harder.</span></li>
+        <li><span class="ic">資</span><span>Dead rounds build <span class="c-gold">Resolve</span> — spend it to read the foe, never to hit harder. <span class="c-gold">Foresight</span> names their next stance and the one to strike: land it for a <span class="c-gold">READ 🎯</span>.</span></li>
         <li><span class="ic">🏆</span><span>Drop the foe's <span class="k">4 HP</span> first. Stay unpredictable — they're reading you too.</span></li>
       </ol>
       <button class="gotit" id="howtoclose">Got it</button>
@@ -582,7 +591,7 @@
  *   unlock()                     resume/create the context (call on first tap)
  *   setEnabled(bool)             mute/unmute
  *   play(name)                   names below
- *     tap glance clean whiff bind bindwin bindlose victory defeat
+ *     tap glance clean whiff bind bindwin bindlose victory defeat read
  *
  * Defensive: every call no-ops when Web Audio is absent (tests / headless).
  */
@@ -653,6 +662,8 @@
     victory()  { [C5, D5, E5, A4].forEach((f, i) => tone(i === 3 ? f * 2 : f, i * 0.11, 0.5, "triangle", 0.2)); noise(0, 0.3, 0.18, 400); },
     // low descending minor
     defeat()   { tone(D4, 0, 0.4, "sine", 0.26, 110); tone(A3, 0.14, 0.5, "sine", 0.22, 90); },
+    // called shot: bright ascending ping + airy breath — "you saw it coming"
+    read()     { tone(A4, 0, 0.16, "triangle", 0.16); tone(E5, 0.05, 0.2, "triangle", 0.2); tone(A4 * 2, 0.11, 0.3, "triangle", 0.18); noise(0.08, 0.16, 0.1, 5200, true); },
   };
 
   function play(name) {
@@ -1861,7 +1872,11 @@
       if (action === "INSIGHT") {
         payload = { ribbon: oppHist.slice(-10), oppResolve: meter.state()[side === "P" ? "ai" : "player"] };
       } else if (action === "FORESIGHT") {
-        payload = { predict: Predictor.predict(oppHist, N) };
+        // surface the read AND the stance that cleanly counters it, so the
+        // info->action->payoff loop is actionable (still pure info: the counter
+        // mapping is the fixed, public wheel — no force, no damage path).
+        const p = Predictor.predict(oppHist, N);
+        payload = { predict: p, counter: counter(p.pick) };
       }
       bus.emit("meter-changed", meter.state());
       bus.emit("info-revealed", { side, action, payload });
@@ -1947,8 +1962,12 @@
   let player={name:"You",face:"🦊",pal:"#cf4130",wb:WEAPS[0],skin:"ronin"};
   let ai={name:"Ronin",face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS),skin:"inkblade"};
   let foeId=rid(Personalities.ids()), difficulty=0.5, modeId="casual";
-  let game=null, busy=false, over=false, foresightNode=null, matchWinner=null;
+  let game=null, busy=false, over=false, foresightNode=null, foresightStrike=null, matchWinner=null;
+  let committedForesight=null;   // foresight read in play when the current pick was committed
+  let matchReads=0;              // called shots landed this match (mastery payoff)
   let lastUnpred=[];
+  let lifetimeReads=(function(){try{return parseInt(localStorage.getItem("sixfold_reads")||"0",10)||0;}catch(e){return 0;}})();
+  function addLifetimeReads(n){ lifetimeReads+=n; try{localStorage.setItem("sixfold_reads",String(lifetimeReads));}catch(e){} }
 
   /* ---- fighter rendering (placeholder shapes; art-wrap enables stage transforms) ---- */
   function bodySVG(color){
@@ -2052,7 +2071,10 @@
   }
 
   function commit(p){
-    if(busy||over||!game)return; busy=true; Sfx.unlock(); Sfx.play("tap"); clearPreview(); clearForesight();
+    if(busy||over||!game)return; busy=true; Sfx.unlock(); Sfx.play("tap"); clearPreview();
+    // snapshot the active read so round-revealed can tell if the player called it
+    committedForesight = (foresightNode!=null) ? {node:foresightNode, strike:foresightStrike, pick:p} : null;
+    clearForesight();
     nodeEls.forEach(el=>el.classList.add("dim"));
     nodeEls[p].classList.remove("dim"); nodeEls[p].classList.add("ppick");
     $("verdict").textContent="…"; $("sub").textContent="reading you";
@@ -2078,14 +2100,24 @@
     g.bus.on("info-revealed",({side,action,payload})=>{ if(side==="P") applyReveal(action,payload); });
     g.bus.on("round-revealed",({pPick,aPick,outcome})=>{
       showAiPick(aPick,pPick);
+      // a called shot: Foresight was up, you struck its recommended counter, and
+      // the foe walked into the predicted stance. The prediction was dead-on, so
+      // this is always a CLEAN — but it's a read, not luck, so we crown it.
+      const cf=committedForesight; committedForesight=null;
+      const read = !!(cf && aPick===cf.node && pPick===cf.strike && outcome.winner==="P");
+      const misread = !!(cf && pPick===cf.strike && !read); // acted on the read, foe slipped it
       const colors={clean:getCss("--seal"),glance:getCss("--jade"),whiff:getCss("--steel"),clash:"#fff"};
       drawLink(pPick,aPick,outcome.bind?"#fff":colors[outcome.kind]);
-      $("verdict").textContent= outcome.bind && outcome.winner ? "BIND!" : VERDICT[outcome.kind];
-      $("sub").textContent=subText(outcome);
-      const hub=$("hub"); hub.classList.remove("flash-clean","flash-glance"); void hub.offsetWidth;
-      if(outcome.winner&&outcome.kind==="clean")hub.classList.add("flash-clean");
+      const vEl=$("verdict"); vEl.classList.toggle("read",read);
+      vEl.textContent= read ? "READ!" : (outcome.bind && outcome.winner ? "BIND!" : VERDICT[outcome.kind]);
+      $("sub").textContent= read ? "you called it — clean" : (misread ? "they slipped your read" : subText(outcome));
+      const hub=$("hub"); hub.classList.remove("flash-clean","flash-glance","flash-read"); void hub.offsetWidth;
+      if(read)hub.classList.add("flash-read");
+      else if(outcome.winner&&outcome.kind==="clean")hub.classList.add("flash-clean");
       else if(outcome.winner&&outcome.kind==="glance")hub.classList.add("flash-glance");
+      if(read){ matchReads++; addLifetimeReads(1); onReadLanded(); }
       setTimeout(()=>outcomeJuice(outcome), reduced()?0:330); // sync cue to the strike
+      if(read) setTimeout(()=>{ Sfx.play("read"); buzz([0,30,40,30]); }, reduced()?0:430);
       Stage.playReveal(pPick,aPick,outcome).then(()=>{
         renderHP("P");renderHP("A");
         Readout.render(game.state().playerHist,game.state().aiHist,game.state().outcomes,ribbonOpts());
@@ -2105,7 +2137,9 @@
       const r=Readout.postMatch(game.state().playerHist,{rollingAvg: rollingAvg()});
       lastUnpred.push(r.unpredictabilityPct); if(lastUnpred.length>20)lastUnpred.shift();
       $("postmatch").classList.add("show");
-      const beams=win?(8+Math.round(summary.difficulty*8)+Math.round(summary.unpredictabilityPct/12)):0;
+      // sunbeams are cosmetic currency (off the combat path) — reward reads here,
+      // never in damage. Out-reading the foe pays in shine, never in force.
+      const beams=win?(8+Math.round(summary.difficulty*8)+Math.round(summary.unpredictabilityPct/12)+matchReads*4):0;
       setSpendEnabled(false);
       // Ascent: a win on the current frontier rung clears it and grants the reward.
       let ascentInfo=null;
@@ -2127,6 +2161,7 @@
   function showResult(win,summary,beams,ascentInfo){
     const tell=summary.tell||"well hidden — no clear tell";
     const streakChip=streak>1?`<div class="chip streak"><b>×${streak}</b><span>win streak</span></div>`:"";
+    const readsChip=matchReads>0?`<div class="chip reads"><b>🎯 ${matchReads}</b><span>${matchReads===1?"read":"reads"} landed</span></div>`:"";
     const extra=win?`<div class="sunbeams">+${beams} ☀ sunbeams</div>`
                    :`<div class="result-tell">best streak <b>${bestStreak}</b> · they read you this time</div>`;
     const reward=ascentInfo&&ascentInfo.reward;
@@ -2152,6 +2187,7 @@
         `<div class="stat-chips">`+
           `<div class="chip"><b>${summary.rounds}</b><span>rounds</span></div>`+
           `<div class="chip"><b>${summary.unpredictabilityPct}%</b><span>unpred</span></div>`+
+          readsChip+
           streakChip+
         `</div>`+extra+
         `<div class="result-tell">your tell: <b>${tell}</b></div>`+
@@ -2209,8 +2245,10 @@
     if(action==="FORESIGHT"&&payload.predict){
       clearForesight();
       foresightNode=payload.predict.pick;
-      nodeEls[foresightNode].classList.add("foresight");
-      showToast("Foresight: foe likely "+STANCES[foresightNode].n);
+      foresightStrike=(payload.counter!=null)?payload.counter:((foresightNode-1+N)%N);
+      nodeEls[foresightNode].classList.add("foresight");           // foe's likely stance
+      nodeEls[foresightStrike].classList.add("calledshot");        // strike here to land the read
+      showToast("Foresight: foe likely "+STANCES[foresightNode].n+" — strike "+STANCES[foresightStrike].n+" ⚔");
     }else if(action==="INSIGHT"){
       aiResolveVisible=true;
       Readout.render(game.state().playerHist,game.state().aiHist,game.state().outcomes,{aiRibbonK:10});
@@ -2218,7 +2256,17 @@
       showToast("Insight: foe ribbon + Resolve revealed");
     }
   }
-  function clearForesight(){ if(foresightNode!=null){nodeEls[foresightNode]&&nodeEls[foresightNode].classList.remove("foresight");foresightNode=null;} }
+  function clearForesight(){
+    if(foresightNode!=null){nodeEls[foresightNode]&&nodeEls[foresightNode].classList.remove("foresight");foresightNode=null;}
+    if(foresightStrike!=null){nodeEls[foresightStrike]&&nodeEls[foresightStrike].classList.remove("calledshot");foresightStrike=null;}
+  }
+  // celebrate a landed called shot; teach the skill the very first time it happens
+  function onReadLanded(){
+    let first=false;
+    try{ first=!localStorage.getItem("sixfold_readhint"); if(first)localStorage.setItem("sixfold_readhint","1"); }catch(e){}
+    showToast(first ? "🎯 READ! That's the skill — predict, counter, win. Reading beats luck."
+                    : "🎯 READ — you called it");
+  }
 
   function ribbonOpts(){
     const charm=Assists.active(Engine.MODES[modeId]);
@@ -2229,7 +2277,7 @@
 
   /* ---- new game ---- */
   function newGame(){
-    over=false;busy=false;aiResolveVisible=false;clearForesight();
+    over=false;busy=false;aiResolveVisible=false;committedForesight=null;matchReads=0;clearForesight();
     const mode=Engine.MODES[modeId];
     const seed = mode.seeded ? dailySeed() : (Math.floor(Math.random()*1e9)>>>0);
     game=Engine.createGame({archetype:foeId,difficulty,mode,seed});

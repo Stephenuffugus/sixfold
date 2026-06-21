@@ -154,6 +154,23 @@ function ok(name, cond, extra) { assert.ok(cond, "FAIL: " + name + (extra ? " ("
   ok("engine match length median ~5 (harness cross-check)", med >= 4 && med <= 6, `median=${med}`);
 }
 
+// ---- FORESIGHT payload exposes an actionable, clean-beating counter ----
+{
+  // drive a readable foe stream into the player's view, then have the AI spend
+  // FORESIGHT to read US. The payload's counter must CLEANLY beat its prediction.
+  const g = E.createGame({ archetype: "ghost", seed: 7, difficulty: 0.5 });
+  // feed a pure-repeat player stream so the predictor commits with confidence
+  for (let i = 0; i < 6 && !g.state().over; i++) g.chooseStance(0);
+  const res = g.spend("A", "FORESIGHT"); // AI reads the player's history
+  ok("FORESIGHT payload has predict + counter", !!(res && res.payload && res.payload.predict && res.payload.counter != null));
+  if (res && res.payload) {
+    const pick = res.payload.predict.pick, ctr = res.payload.counter;
+    // striking `counter` against the predicted `pick` is a CLEAN for the striker
+    const r = E.resolve(ctr, pick);
+    ok("FORESIGHT counter cleanly beats the predicted pick", r.kind === "clean" && r.winner === "P", `counter=${ctr} vs pick=${pick} -> ${r.kind}`);
+  }
+}
+
 // ---- mode registry honors-assists flags ----
 ok("casual/practice/gauntlet honor assists", E.MODES.casual.honorsAssists && E.MODES.practice.honorsAssists && E.MODES.gauntlet.honorsAssists);
 ok("daily/blitz/ghost are competitive (no assists)", !E.MODES.daily.honorsAssists && !E.MODES.blitz.honorsAssists && !E.MODES.ghost.honorsAssists);

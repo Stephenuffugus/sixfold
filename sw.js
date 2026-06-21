@@ -9,7 +9,7 @@
  * no matter how big the roster grows; each skin is cached the first time it's
  * shown and then available offline. Bump CACHE on every deploy.
  */
-const CACHE = "sixfold-v25";
+const CACHE = "sixfold-v26";
 const ASSETS = ["./", "./index.html", "./sixfold.html", "./manifest.webmanifest", "./icon.svg", "./skins/ronin.png"];
 
 self.addEventListener("install", (e) => {
