@@ -204,8 +204,8 @@
   body.reduce .spendbtn.ready{animation:none;box-shadow:0 0 0 1px var(--gold)}
   .aimeter{font-size:10px;color:var(--steel);min-width:54px;text-align:right}
 
-  .controls{width:100%;max-width:460px;display:flex;gap:8px}
-  button.act{flex:1;font-family:var(--ui);font-weight:700;font-size:13.5px;letter-spacing:.02em;padding:12px;border-radius:11px;
+  .controls{width:100%;max-width:460px;display:flex;flex-wrap:wrap;gap:8px}
+  button.act{flex:1 1 calc(50% - 4px);font-family:var(--ui);font-weight:700;font-size:13.5px;letter-spacing:.02em;padding:12px;border-radius:11px;
     border:1px solid #ffffff22;cursor:pointer;color:var(--washi);background:linear-gradient(#2c3658,#202841)}
   button.act:active{transform:translateY(1px)}
   button.primary{background:linear-gradient(#d9694f,var(--seal));border-color:#ffffff33;color:#1a0f0c}
@@ -392,6 +392,18 @@
   .profile .close{margin-top:12px;font-family:var(--ui);font-weight:700;font-size:13px;padding:11px 26px;border-radius:11px;
     border:1px solid #ffffff28;cursor:pointer;color:var(--washi);background:#ffffff12}
 
+  /* ===== DAILY DUEL (reuses .overlay) ===== */
+  .daily{text-align:center;width:100%;max-width:380px}
+  .daily h2{font-family:var(--disp);font-weight:800;font-size:25px;letter-spacing:.16em;margin:0;color:var(--gold)}
+  .daily .prog{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--washi-dim);margin-top:2px}
+  .daily-foe{margin:12px 0 4px;padding:14px;border-radius:13px;border:1px solid #ffffff1c;background:#ffffff0c}
+  .daily-foe .df-name{font-family:var(--disp);font-weight:800;font-size:20px;color:var(--washi)}
+  .daily-foe .df-stars{font-size:12px;color:var(--gold);letter-spacing:2px;margin-top:2px}
+  .daily-foe .df-tell{font-size:11px;color:var(--washi-dim);margin-top:6px;line-height:1.35}
+  .daily-foe .df-arena{font-size:11px;color:var(--washi);margin-top:8px;opacity:.85}
+  .daily .close{margin-top:10px;font-family:var(--ui);font-weight:700;font-size:13px;padding:11px 26px;border-radius:11px;
+    border:1px solid #ffffff28;cursor:pointer;color:var(--washi);background:#ffffff12}
+
   /*__ANIM_CSS__*/
 </style>
 </head>
@@ -469,6 +481,7 @@
   <div class="postmatch" id="postmatch"></div>
 
   <div class="controls">
+    <button class="act primary" id="dailybtn">🗓 Daily Duel</button>
     <button class="act ghost" id="ascentbtn">⛰ Ascent</button>
     <button class="act ghost" id="collbtn">🎴 Roster</button>
     <button class="act ghost" id="profbtn">📊 Profile</button>
@@ -540,6 +553,9 @@
 
   <!-- Player profile / lifetime stats (populated by glue) -->
   <div class="overlay" id="profile" aria-hidden="true" role="dialog" aria-label="Profile"></div>
+
+  <!-- Daily Duel — one seeded challenge per day (populated by glue) -->
+  <div class="overlay" id="dailyscreen" aria-hidden="true" role="dialog" aria-label="Daily Duel"></div>
 
   <!-- First-run / on-demand how-to guide -->
   <div class="overlay" id="howto" aria-hidden="true" role="dialog" aria-label="How to play">
@@ -782,6 +798,7 @@
       const r=Readout.postMatch(game.state().playerHist,{rollingAvg: rollingAvg()});
       lastUnpred.push(r.unpredictabilityPct); if(lastUnpred.length>20)lastUnpred.shift();
       recordMatchStats(win,summary);
+      if(modeId==="daily") recordDaily(win,summary);
       $("postmatch").classList.add("show");
       // sunbeams are cosmetic currency (off the combat path) — reward reads here,
       // never in damage. Out-reading the foe pays in shine, never in force.
@@ -1192,6 +1209,62 @@
     const c=$("profclose"); if(c) c.onclick=closeProfile;
   }
 
+  /* ---- DAILY DUEL: one deterministic seeded challenge per UTC day ---- */
+  function utcKey(off){ const d=new Date(); if(off)d.setUTCDate(d.getUTCDate()+off);
+    return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0"); }
+  function dailyChallenge(){ // foe/diff/arena are a pure function of today's date
+    const seed=dailySeed(), ids=Personalities.ids(), arenas=Object.keys(THEMES);
+    return { foe: ids[seed%ids.length],
+      diff: Math.round((0.4+((Math.floor(seed/7))%11)/10*0.5)*100)/100,   // fair 0.40–0.90 band
+      arena: arenas[Math.floor(seed/3)%arenas.length] };
+  }
+  let dailyState=(function(){try{return JSON.parse(localStorage.getItem("sixfold_daily")||"{}")||{};}catch(e){return{};}})();
+  function saveDaily(){try{localStorage.setItem("sixfold_daily",JSON.stringify(dailyState));}catch(e){}}
+  function recordDaily(win,summary){
+    if(dailyState.date===utcKey(0))return;                                 // only the first attempt of the day counts
+    const streak=(dailyState.date===utcKey(-1))?((dailyState.streak||0)+1):1;
+    dailyState={date:utcKey(0),win:!!win,rounds:summary.rounds,unpred:summary.unpredictabilityPct,streak:streak};
+    saveDaily();
+  }
+  function shareDaily(){
+    const s=dailyState; if(!s.date){showToast("Play today's duel first");return;}
+    const txt="SIXFOLD Daily "+s.date+"\n"+(s.win?"⚔ Victory":"☠ Defeat")+" · "+s.rounds+" rounds · "+s.unpred+"% unread · "+s.streak+"🔥\nstephenuffugus.github.io/sixfold";
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(()=>showToast("Copied — share your duel"),()=>showToast("⚔ "+s.date));
+    else showToast("⚔ Daily "+s.date+" — "+(s.win?"Victory":"Defeat"));
+  }
+  function openDaily(){ renderDaily(); const o=$("dailyscreen"); o.classList.add("show"); o.setAttribute("aria-hidden","false"); }
+  function closeDaily(){ const o=$("dailyscreen"); o.classList.remove("show"); o.setAttribute("aria-hidden","true"); }
+  function renderDaily(){
+    const c=dailyChallenge(), a=Personalities.ARCHES[c.foe], th=THEMES[c.arena];
+    const played=dailyState.date===utcKey(0);
+    const result=played
+      ? `<div class="reward-banner">${dailyState.win?"⚔ Cleared today":"☠ Fell today"}</div>`+
+        `<div class="stat-chips"><div class="chip"><b>${dailyState.rounds}</b><span>rounds</span></div>`+
+        `<div class="chip"><b>${dailyState.unpred}%</b><span>unread</span></div>`+
+        `<div class="chip streak"><b>${dailyState.streak}🔥</b><span>day streak</span></div></div>`+
+        `<div class="result-tell">first attempt counts · new duel at 00:00 UTC</div>`
+      : (dailyState.streak?`<div class="result-tell">streak <b>${dailyState.streak}🔥</b> — keep it alive</div>`:"");
+    const actions=played
+      ? `<button class="primary" id="dailyShare">Share result</button><button id="dailyReplay">Replay</button>`
+      : `<button class="primary" id="dailyBegin">Begin duel</button>`;
+    $("dailyscreen").innerHTML=
+      `<div class="hero daily"><h2>DAILY DUEL</h2><div class="prog">${utcKey(0)} · UTC</div>`+
+      `<div class="daily-foe"><div class="df-name">${a.name}</div>`+
+      `<div class="df-stars">${ascentStars(c.diff)}</div>`+
+      `<div class="df-tell">${a.tell}</div>`+
+      `<div class="df-arena">${th.glyph} ${th.name}</div></div>`+
+      result+`<div class="result-actions">${actions}</div>`+
+      `<button class="close" id="dailyClose">Close</button></div>`;
+    const on=(id,fn)=>{const el=$(id);if(el)el.onclick=fn;};
+    on("dailyClose",closeDaily); on("dailyShare",shareDaily);
+    on("dailyBegin",startDaily); on("dailyReplay",startDaily);
+  }
+  function startDaily(){
+    const c=dailyChallenge();
+    ascentRun=-1; modeId="daily"; foeId=c.foe; difficulty=c.diff;
+    closeDaily(); hideResult(); setArena(c.arena,true); updateFoeBar(); newGame();
+  }
+
   /* ---- foe / mode / difficulty selectors ---- */
   function buildSelectors(){
     const foes=$("foes");
@@ -1199,11 +1272,12 @@
       const a=Personalities.ARCHES[id];
       const o=document.createElement("div");o.className="opt sml"+(id===foeId?" sel":"");
       o.textContent=a.name;o.title=a.tell;
-      o.onclick=()=>{ascentRun=-1;foeId=id;syncSel(foes,o);updateFoeBar();if(FOE_ARENA[id])setArena(FOE_ARENA[id]);};
+      o.onclick=()=>{ascentRun=-1;if(modeId==="daily")modeId="casual";foeId=id;syncSel(foes,o);updateFoeBar();if(FOE_ARENA[id])setArena(FOE_ARENA[id]);};
       foes.appendChild(o);
     });
     const modes=$("modes");
-    [["casual","Casual"],["practice","Practice"],["gauntlet","Gauntlet"],["daily","Daily"]].forEach(([id,lbl])=>{
+    // Daily lives in its own screen (🗓 Daily Duel button), not this picker.
+    [["casual","Casual"],["practice","Practice"],["gauntlet","Gauntlet"]].forEach(([id,lbl])=>{
       const o=document.createElement("div");o.className="opt sml"+(id===modeId?" sel":"");
       o.textContent=lbl;
       o.onclick=()=>{modeId=id;syncSel(modes,o);updateFoeBar();applyCompass();updateCharmUI();};
@@ -1296,6 +1370,7 @@
   $("ascentbtn").onclick=openAscent;
   $("collbtn").onclick=openCollection;
   $("profbtn").onclick=openProfile;
+  $("dailybtn").onclick=openDaily;
   $("insightbtn").onclick=()=>{ if(game)game.spend("P","INSIGHT"); };
   $("foresightbtn").onclick=()=>{ if(game)game.spend("P","FORESIGHT"); };
 
