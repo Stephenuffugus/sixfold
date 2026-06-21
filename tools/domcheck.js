@@ -147,8 +147,11 @@ const finished = () => byId("rematch").style.display === "block" || /VICTORY|DEF
         if (binds >= 1 && matches >= 1) break;
         byId("rematch").dispatch("click"); await drain(); matches++;
       }
-      nodes[guard % 6].dispatch("click");   // cycle ALL 6 stances so a mirror (clash) is reliably hit
-      await drain();
+      // tap-to-aim then tap-to-strike (two taps on the SAME stance commit it);
+      // cycle ALL 6 stances so a mirror (clash) is reliably hit
+      const s = guard % 6;
+      nodes[s].dispatch("click"); await drain();   // aim
+      nodes[s].dispatch("click"); await drain();   // strike
       const bindStage = byId("bindstage");
       if (bindStage._bindbtns && bindStage._bindbtns.length) { binds++; bindStage._bindbtns[binds % 3].dispatch("click"); await drain(); }
       taps++;

@@ -85,7 +85,7 @@ const root = path.join(__dirname, "..");
         if (st.ended && !st.result && !grabbedHold) { await page.screenshot({ path: path.join(root, "render-winpose.png") }); grabbedHold = true; }
         if (st.result) break;
         if (st.bind) await page.evaluate(() => { const b = document.querySelector("#bindstage .bindbtn-lg"); if (b) b.click(); });
-        else await page.evaluate((i) => { const n = document.querySelectorAll(".node"); if (n.length) n[i % 6].click(); }, k);
+        else await page.evaluate((i) => { const n = document.querySelectorAll(".node"); if (n.length) { const s = i % 6; n[s].click(); n[s].click(); } }, k); // aim + strike
         await page.waitForTimeout(1100);
       }
       await page.waitForTimeout(500);
@@ -116,7 +116,7 @@ const root = path.join(__dirname, "..");
         }));
         if (st.result) break;
         if (st.bind) await page.evaluate(() => { const b = document.querySelector("#bindstage .bindbtn-lg"); if (b) b.click(); });
-        else await page.evaluate((i) => { const n = document.querySelectorAll(".node"); if (n.length) n[i % 6].click(); }, k);
+        else await page.evaluate((i) => { const n = document.querySelectorAll(".node"); if (n.length) { const s = i % 6; n[s].click(); n[s].click(); } }, k); // aim + strike
         await page.waitForTimeout(1100);
       }
       await page.waitForTimeout(400);

@@ -159,6 +159,10 @@
   .node:active{transform:scale(.93)}
   @media(hover:hover){.node:hover{border-color:var(--gold);box-shadow:0 0 14px #cda64f44}}
   .node.ppick{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 18px #cda64f88}
+  /* aimed (selected, not yet struck): tap again to commit */
+  .node.aiming{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold),0 0 22px #cda64fcc;transform:scale(1.12);animation:aimpulse .7s infinite alternate}
+  @keyframes aimpulse{to{box-shadow:0 0 0 3px var(--gold),0 0 30px #cda64fff}}
+  body.reduce .node.aiming{animation:none}
   .node.apick{border-color:var(--seal);box-shadow:0 0 0 2px var(--seal),0 0 18px #cf413088}
   .node.both{border-color:#fff;box-shadow:0 0 0 2px #fff,0 0 22px #fff8}
   .node.dim{opacity:.4}
@@ -322,6 +326,19 @@
   .flash.go{animation:flashgo .3s ease-out}
   @keyframes flashgo{0%{opacity:.0}12%{opacity:.6}100%{opacity:0}}
   body.reduce .flash.go{animation:none}
+  /* READ! gets its own gold wash (distinct from the white clean flash) */
+  .flash.read-go{background:radial-gradient(circle at 50% 42%,#ffe6a8,#cda64f 70%,#a8842e);animation:flashreadgo .6s ease-out}
+  @keyframes flashreadgo{0%{opacity:0}14%{opacity:.55}100%{opacity:0}}
+  body.reduce .flash.read-go{animation:none}
+  /* the big centered READ! stamp — the apex moment owns the screen for a beat */
+  .readstamp{position:fixed;left:0;right:0;top:38%;z-index:58;text-align:center;pointer-events:none;
+    font-family:var(--disp);font-weight:800;font-size:64px;letter-spacing:.14em;color:#ffe6a8;opacity:0;
+    text-shadow:0 0 36px #cda64f,0 2px 0 #0008}
+  .readstamp.go{animation:readstamp 1s cubic-bezier(.2,1.3,.5,1)}
+  @keyframes readstamp{0%{opacity:0;transform:scale(.5)}18%{opacity:1;transform:scale(1.12)}55%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
+  body.reduce .readstamp.go{animation:none}
+  .hub.flash-whiff{animation:flashw .45s}
+  @keyframes flashw{0%{box-shadow:inset 0 0 0 3px var(--steel),0 0 22px #6a748055}100%{}}
 
   /* ===== VICTORY / DEFEAT result screen (reuses .overlay) ===== */
   .result{text-align:center;gap:16px}
@@ -617,6 +634,7 @@
 
   <!-- clean-finish screen flash -->
   <div class="flash" id="flash"></div>
+  <div class="readstamp" id="readstamp">READ!</div>
 
   <!-- Clash Bind escalation overlay (populated by stage.js) -->
   <div class="overlay" id="bindstage" aria-hidden="true" role="dialog" aria-label="Break the bind"></div>
@@ -2121,19 +2139,21 @@
 
   // juice helpers (cosmetic only). haptics honor the same setting flag as sound's sibling.
   function buzz(ms){ try{ if(Assists.settings().haptics && typeof navigator!=="undefined" && navigator.vibrate) navigator.vibrate(ms); }catch(e){} }
-  function flash(){ if(reduced())return; const f=$("flash"); if(!f)return; f.classList.remove("go"); void f.offsetWidth; f.classList.add("go"); }
+  function flash(){ if(reduced())return; const f=$("flash"); if(!f)return; f.classList.remove("go","read-go"); void f.offsetWidth; f.classList.add("go"); }
+  function flashRead(){ if(reduced())return; const f=$("flash"); if(!f)return; f.classList.remove("go","read-go"); void f.offsetWidth; f.classList.add("read-go"); }
+  function showReadStamp(){ const el=$("readstamp"); if(!el)return; el.classList.remove("go"); void el.offsetWidth; el.classList.add("go"); }
   function shake(){ if(reduced())return; document.body.classList.add("shake"); setTimeout(()=>document.body.classList.remove("shake"),360); }
   // impact juice (sound + haptics + flash), fired at the strike moment. Cosmetic.
-  function outcomeJuice(o){
+  function outcomeJuice(o,isRead){
     if(o.bind){
       if(o.winner==="P"){Sfx.play("bindwin");buzz(35);flash();shake();}
       else if(o.winner==="A"){Sfx.play("bindlose");buzz([20,30,20]);shake();}
-      else{Sfx.play("whiff");}
+      else{Sfx.play("whiff");buzz(10);}
       return;
     }
-    if(o.kind==="clean"){Sfx.play("clean");buzz(60);flash();shake();}
+    if(o.kind==="clean"){Sfx.play("clean");buzz(60);if(!isRead)flash();shake();}   // read uses its own gold wash
     else if(o.kind==="glance"){Sfx.play("glance");buzz(25);}
-    else{Sfx.play("whiff");}
+    else{Sfx.play("whiff");buzz(10);}                                              // whiff now ticks (was silent)
   }
 
   const STANCES=[{n:"Heaven",g:"↑"},{n:"Tiger",g:"↗"},{n:"River",g:"↘"},{n:"Earth",g:"↓"},{n:"Crane",g:"↙"},{n:"Shadow",g:"↖"}];
@@ -2223,7 +2243,7 @@
       el.className="node";el.style.left=x+"%";el.style.top=y+"%";
       el.setAttribute("aria-label",s.n+" stance");
       el.innerHTML=`<span class="ring"></span><span class="g">${s.g}</span><span class="n">${s.n}</span>`;
-      el.addEventListener("click",()=>commit(i));
+      el.addEventListener("click",()=>onNode(i));
       el.addEventListener("pointerenter",()=>preview(i));
       el.addEventListener("pointerleave",clearPreview);
       el.addEventListener("focus",()=>preview(i));
@@ -2232,9 +2252,25 @@
     });
   }
   function nodeCenter(i){const R=110,ang=(-90+i*60)*Math.PI/180;return{x:150+Math.cos(ang)*R,y:150+Math.sin(ang)*R};}
-  let compassOn=false;
+  let compassOn=false, aimed=null;
+  // Tap a stance to AIM (shows which stances it beats — the core teaching, now
+  // visible on touch); tap the aimed stance again to STRIKE. Re-tap any other to
+  // re-aim. This makes the clockwise rule legible on mobile (was hover-only).
+  function onNode(i){
+    if(busy||over||!game)return;
+    Sfx.unlock(); if(typeof Music!=="undefined")Music.unlock();
+    if(aimed===i){ commit(i); return; }
+    aim(i);
+  }
+  function aim(i){
+    aimed=i; Sfx.play("tap");
+    preview(i);
+    nodeEls.forEach((el,j)=>el.classList.toggle("aiming",j===i));
+    if(Stage.toStance)Stage.toStance("P",i);      // pre-pivot for anticipation
+    $("verdict").textContent="Strike?";
+    $("sub").textContent=STANCES[i].n+" — tap again";
+  }
   function preview(i){
-    if((busy||over)&&!compassOn)return;
     if(busy||over)return;
     nodeEls.forEach((el,j)=>{
       el.classList.remove("r-clean","r-glance","r-safe");
@@ -2242,7 +2278,8 @@
       if(d===1)el.classList.add("r-clean");else if(d===2)el.classList.add("r-glance");else if(d===3)el.classList.add("r-safe");
     });
   }
-  function clearPreview(){ if(compassOn)return; nodeEls.forEach(el=>el.classList.remove("r-clean","r-glance","r-safe")); }
+  // restore the aimed stance's rings when a hover ends (desktop), else clear
+  function clearPreview(){ if(compassOn)return; if(aimed!=null){preview(aimed);return;} nodeEls.forEach(el=>el.classList.remove("r-clean","r-glance","r-safe")); }
   function drawLink(p,a,color){
     const links=$("links");
     if(p===a){const c=nodeCenter(p);links.innerHTML=`<circle cx="${c.x}" cy="${c.y}" r="42" fill="none" stroke="#fff" stroke-width="3" opacity=".8"/>`;return;}
@@ -2258,9 +2295,20 @@
       glance:o.winner==="P"?"a grazing cut":"grazed you",
       whiff:"blades pass — nothing",clash:"stances mirror"}[o.kind];
   }
+  // first-rounds coaching: explain WHY the round resolved, in clockwise terms
+  function teachReason(p,a){
+    if(p===a) return "both "+STANCES[p].n+" · clash → bind";
+    const d=((a-p)%N+N)%N;
+    if(d===3) return STANCES[p].n+" ↔ "+STANCES[a].n+" · opposite · whiff";
+    if(d===1) return STANCES[p].n+" → "+STANCES[a].n+" · 1 clockwise · CLEAN";
+    if(d===2) return STANCES[p].n+" → "+STANCES[a].n+" · 2 clockwise · glance";
+    if(d===4) return STANCES[a].n+" → "+STANCES[p].n+" · 2 clockwise · they glance";
+    return STANCES[a].n+" → "+STANCES[p].n+" · 1 clockwise · they CLEAN";
+  }
 
   function commit(p){
-    if(busy||over||!game)return; busy=true; Sfx.unlock(); Sfx.play("tap"); clearPreview();
+    if(busy||over||!game)return; busy=true; Sfx.unlock(); Sfx.play("tap");
+    aimed=null; nodeEls.forEach(el=>el.classList.remove("aiming")); clearPreview();
     // snapshot the active read so round-revealed can tell if the player called it
     committedForesight = (foresightNode!=null) ? {node:foresightNode, strike:foresightStrike, pick:p} : null;
     clearForesight();
@@ -2303,14 +2351,19 @@
       drawLink(pPick,aPick,outcome.bind?"#fff":colors[outcome.kind]);
       const vEl=$("verdict"); vEl.classList.toggle("read",read);
       vEl.textContent= read ? "READ!" : (outcome.bind && outcome.winner ? "BIND!" : VERDICT[outcome.kind]);
-      $("sub").textContent= read ? "you called it — clean" : (misread ? "they slipped your read" : subText(outcome));
-      const hub=$("hub"); hub.classList.remove("flash-clean","flash-glance","flash-read"); void hub.offsetWidth;
+      const early=game.state().playerHist.length<=3;   // coach the clockwise rule early
+      $("sub").textContent= read ? "you called it — clean" : (misread ? "they slipped your read" : (early?teachReason(pPick,aPick):subText(outcome)));
+      const hub=$("hub"); hub.classList.remove("flash-clean","flash-glance","flash-read","flash-whiff"); void hub.offsetWidth;
       if(read)hub.classList.add("flash-read");
       else if(outcome.winner&&outcome.kind==="clean")hub.classList.add("flash-clean");
       else if(outcome.winner&&outcome.kind==="glance")hub.classList.add("flash-glance");
+      else if(outcome.kind==="whiff")hub.classList.add("flash-whiff");
       if(read){ matchReads++; addLifetimeReads(1); onReadLanded(); }
-      setTimeout(()=>outcomeJuice(outcome), reduced()?0:330); // sync cue to the strike
-      if(read) setTimeout(()=>{ Sfx.play("read"); buzz([0,30,40,30]); }, reduced()?0:430);
+      setTimeout(()=>outcomeJuice(outcome,read), reduced()?0:330); // sync cue to the strike
+      if(read){ // the apex: gold wash + big stamp at impact, dedicated sting just after
+        setTimeout(()=>{ flashRead(); showReadStamp(); }, reduced()?0:330);
+        setTimeout(()=>{ Sfx.play("read"); buzz([0,30,40,30]); }, reduced()?0:430);
+      }
       Stage.playReveal(pPick,aPick,outcome).then(()=>{
         renderHP("P");renderHP("A");
         Readout.render(game.state().playerHist,game.state().aiHist,game.state().outcomes,ribbonOpts());
@@ -2416,16 +2469,16 @@
 
   function endRoundUI(){
     const s=game.state();
+    aimed=null;
     nodeEls.forEach(el=>el.className="node");
     $("links").innerHTML="";
     $("roundlbl").textContent="Round "+s.round;
-    $("verdict").textContent="Choose"; $("sub").textContent="tap a stance";
+    $("verdict").textContent="Choose"; $("sub").textContent="tap to aim";
     if(s.round>ESC)$("esc").classList.add("on");
-    if(compassOn)preview(0),clearPreviewKeepCompass();
+    if(compassOn)preview(0);
     busy=false;
     setSpendEnabled(true);
   }
-  function clearPreviewKeepCompass(){}
 
   /* ---- resolve meter UI ---- */
   function updateMeter(state){
@@ -2492,8 +2545,8 @@
   function onReadLanded(){
     let first=false;
     try{ first=!localStorage.getItem("sixfold_readhint"); if(first)localStorage.setItem("sixfold_readhint","1"); }catch(e){}
-    showToast(first ? "🎯 READ! That's the skill — predict, counter, win. Reading beats luck."
-                    : "🎯 READ — you called it");
+    // the big on-screen READ! stamp carries repeat reads; only the first teaches
+    if(first) showToast("🎯 READ! That's the skill — predict, counter, win. Reading beats luck.");
   }
 
   function ribbonOpts(){
@@ -2505,7 +2558,7 @@
 
   /* ---- new game ---- */
   function newGame(){
-    over=false;busy=false;aiResolveVisible=false;committedForesight=null;matchReads=0;clearForesight();
+    over=false;busy=false;aiResolveVisible=false;committedForesight=null;matchReads=0;aimed=null;clearForesight();
     predictNudge._m=false; const _pb=$("pbar"); if(_pb)_pb.classList.remove("danger");
     const mode=Engine.MODES[modeId];
     const seed = mode.seeded ? dailySeed() : (Math.floor(Math.random()*1e9)>>>0);
