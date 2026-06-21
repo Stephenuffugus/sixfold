@@ -233,6 +233,7 @@
   .opt.sel{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold)}
   .opt.lock{opacity:.42;cursor:default} .opt.lock.sel{box-shadow:none;border-color:#ffffff22}
   .opt.pal{position:relative}
+  .opt.crest{font-family:var(--disp);font-size:19px;font-weight:700}
   input.nm{font-family:var(--ui);font-size:14px;padding:9px 11px;border-radius:9px;border:1px solid #ffffff22;background:#ffffff10;color:var(--washi);width:100%}
   input.nm::placeholder{color:#ffffff55}
   input[type=range]{width:100%}
@@ -538,10 +539,9 @@
     <div class="dh" id="custdh"><span>🎨 Customize your warrior</span><span class="chev">▾</span></div>
     <div class="dbody">
       <div class="row"><label>Name</label><input class="nm" id="cname" maxlength="14" placeholder="name your warrior"></div>
-      <div class="row"><label>Skin</label><div class="opts" id="skins"></div></div>
-      <div class="row"><label>Creature</label><div class="opts" id="faces"></div></div>
-      <div class="row"><label>Armor color</label><div class="opts" id="pals"></div></div>
-      <div class="row"><label>Weapon &amp; banner</label><div class="opts" id="weaps"></div></div>
+      <div class="row"><label>Fighter</label><div class="opts" id="skins"></div></div>
+      <div class="row"><label>Banner color</label><div class="opts" id="pals"></div></div>
+      <div class="row"><label>Banner crest</label><div class="opts" id="crests"></div></div>
     </div>
   </div>
 
@@ -1950,17 +1950,18 @@
 
   const STANCES=[{n:"Heaven",g:"↑"},{n:"Tiger",g:"↗"},{n:"River",g:"↘"},{n:"Earth",g:"↓"},{n:"Crane",g:"↙"},{n:"Shadow",g:"↖"}];
   const N=Engine.N, HP=Engine.HP, ESC=Engine.ESC_ROUND;
-  const FACES=["🦊","🐸","🐱","🐻","🐯","🐰","💀","👹","🐲","🦉"];
+  const FACES=["🦊","🐸","🐱","🐻","🐯","🐰","💀","👹","🐲","🦉"]; // vector-fallback only; never shown on real skins
   const PALS=["#cf4130","#3f6fb0","#5f9173","#8a5bc0","#caa23a","#2b3550","#c96fa0","#46b0a6"];
-  const WEAPS=[{w:"🗡️",b:"家"},{w:"⚔️",b:"武"},{w:"🔱",b:"龍"},{w:"🪓",b:"鬼"},{w:"🏹",b:"風"},{w:"🪭",b:"花"}];
+  // house-banner crests (kanji) — the banner flag is the one cosmetic that shows on real skins
+  const CRESTS=["家","武","龍","鬼","風","花","刀","雷","月","華","虎","忍"];
   const FOE_NAMES=["Ronin","Kage","Hattori","Mukade","Yurei","Tetsu","Onibi","Sora","Raiden"];
   const rid=a=>a[Math.floor(Math.random()*a.length)];
   const getCss=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
   const $=id=>document.getElementById(id);
 
   // persistent cosmetic + selection state
-  let player={name:"You",face:"🦊",pal:"#cf4130",wb:WEAPS[0],skin:"ronin"};
-  let ai={name:"Ronin",face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS),skin:"inkblade"};
+  let player={name:"You",face:"🦊",pal:"#cf4130",crest:"家",skin:"ronin"};
+  let ai={name:"Ronin",face:rid(FACES),pal:rid(PALS),crest:rid(CRESTS),skin:"inkblade"};
   let foeId=rid(Personalities.ids()), difficulty=0.5, modeId="casual";
   let game=null, busy=false, over=false, foresightNode=null, foresightStrike=null, matchWinner=null;
   let committedForesight=null;   // foresight read in play when the current pick was committed
@@ -1987,7 +1988,7 @@
     const real=pool.filter(id=>Skins.get(id).url);
     return rid(real.length?real:(pool.length?pool:[player.skin]));
   }
-  function vectorInner(f,dir){ return bodySVG(f.pal)+`<div class="face">${f.face}</div><div class="weapon ${dir}">${f.wb.w}</div>`; }
+  function vectorInner(f,dir){ return bodySVG(f.pal)+`<div class="face">${f.face}</div>`; }
   function renderFighter(side){
     const f=side==="P"?player:ai, stage=$(side==="P"?"pstage":"astage"), dir=side==="P"?"left":"right";
     const skin=Skins.get(f.skin||"placeholder");
@@ -2008,7 +2009,7 @@
       inner=vectorInner(f,dir);
     }
     stage.innerHTML=
-      `<div class="banner ${dir}" style="background:${f.pal}">${f.wb.b}</div>`+
+      `<div class="banner ${dir}" style="background:${f.pal}">${f.crest}</div>`+
       `<div class="art-wrap ${side==="A"?"opp":""}"><div class="fighter-art" style="${artStyle}">`+inner+`</div></div>`;
     // precompute atlas frame positions so the stage can hard-cut frames cheaply
     const el=artEl(side);
@@ -2283,7 +2284,7 @@
     game=Engine.createGame({archetype:foeId,difficulty,mode,seed});
     matchWinner=null;
     // fresh foe cosmetics + name + skin
-    ai={name:rid(FOE_NAMES),face:rid(FACES),pal:rid(PALS),wb:rid(WEAPS),skin:pickFoeSkin()};
+    ai={name:rid(FOE_NAMES),face:rid(FACES),pal:rid(PALS),crest:rid(CRESTS),skin:pickFoeSkin()};
     // Ascent duels: the foe wears the rung's themed skin and the archetype's name.
     if(ascentRun>=0){ ai.skin=ASCENT[ascentRun].foeSkin; ai.name=Personalities.ARCHES[ASCENT[ascentRun].foe].name; }
     // render BEFORE Stage.init so it captures the live art elements (renderFighter
@@ -2517,14 +2518,12 @@
     });
   }
   function buildCustomizer(){
-    const faces=$("faces"),pals=$("pals"),weaps=$("weaps"),cname=$("cname");
+    const pals=$("pals"),crests=$("crests"),cname=$("cname");
     renderSkinPicker();
-    FACES.forEach(f=>{const o=document.createElement("div");o.className="opt"+(f===player.face?" sel":"");
-      o.textContent=f;o.onclick=()=>{player.face=f;syncSel(faces,o);renderFighter("P");};faces.appendChild(o);});
     PALS.forEach(p=>{const o=document.createElement("div");o.className="opt pal"+(p===player.pal?" sel":"");
       o.style.background=p;o.onclick=()=>{player.pal=p;syncSel(pals,o);renderFighter("P");};pals.appendChild(o);});
-    WEAPS.forEach(w=>{const o=document.createElement("div");o.className="opt"+(w===player.wb?" sel":"");
-      o.textContent=w.w;o.onclick=()=>{player.wb=w;syncSel(weaps,o);renderFighter("P");};weaps.appendChild(o);});
+    CRESTS.forEach(c=>{const o=document.createElement("div");o.className="opt crest"+(c===player.crest?" sel":"");
+      o.textContent=c;o.onclick=()=>{player.crest=c;syncSel(crests,o);renderFighter("P");};crests.appendChild(o);});
     cname.value="";cname.oninput=()=>{player.name=cname.value.trim()||"You";$("pname").textContent=player.name;};
   }
   function syncSel(box,sel){[...box.children].forEach(c=>c.classList.remove("sel"));sel.classList.add("sel");}
