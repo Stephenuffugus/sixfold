@@ -375,6 +375,19 @@
   .collection .close{margin-top:8px;font-family:var(--ui);font-weight:700;font-size:13px;padding:11px 26px;border-radius:11px;
     border:1px solid #ffffff28;cursor:pointer;color:var(--washi);background:#ffffff12}
 
+  /* ===== PROFILE / lifetime stats (reuses .overlay) ===== */
+  .profile{text-align:center;width:100%;max-width:400px}
+  .profile h2{font-family:var(--disp);font-weight:800;font-size:25px;letter-spacing:.16em;margin:0;color:var(--gold)}
+  .profile .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px;width:100%}
+  .pstat{border-radius:11px;border:1px solid #ffffff18;background:#ffffff0c;padding:11px 8px;display:flex;flex-direction:column;gap:2px}
+  .pstat b{font-family:var(--disp);font-size:24px;color:var(--washi);line-height:1}
+  .pstat.gold b{color:var(--gold)}
+  .pstat span{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--washi-dim)}
+  .pstat.wide{grid-column:1 / -1;flex-direction:row;align-items:center;justify-content:center;gap:8px}
+  .pstat.wide b{font-size:22px}
+  .profile .close{margin-top:12px;font-family:var(--ui);font-weight:700;font-size:13px;padding:11px 26px;border-radius:11px;
+    border:1px solid #ffffff28;cursor:pointer;color:var(--washi);background:#ffffff12}
+
   /* SIXFOLD — anim.css  (spec §4)
  * Limited-animation illusion from 2 frames/character + GPU transforms.
  * Transform/opacity ONLY (compositor-friendly -> trivial 60fps for 2 fighters).
@@ -520,6 +533,7 @@
   <div class="controls">
     <button class="act ghost" id="ascentbtn">⛰ Ascent</button>
     <button class="act ghost" id="collbtn">🎴 Roster</button>
+    <button class="act ghost" id="profbtn">📊 Profile</button>
     <button class="act ghost" id="howbtn">How it works</button>
     <button class="act primary" id="rematch" style="display:none">Rematch</button>
   </div>
@@ -585,6 +599,9 @@
 
   <!-- The roster / collection gallery (populated by glue) -->
   <div class="overlay" id="collection" aria-hidden="true" role="dialog" aria-label="Roster"></div>
+
+  <!-- Player profile / lifetime stats (populated by glue) -->
+  <div class="overlay" id="profile" aria-hidden="true" role="dialog" aria-label="Profile"></div>
 
   <!-- First-run / on-demand how-to guide -->
   <div class="overlay" id="howto" aria-hidden="true" role="dialog" aria-label="How to play">
@@ -2191,6 +2208,7 @@
       $("rematch").style.display="block";
       const r=Readout.postMatch(game.state().playerHist,{rollingAvg: rollingAvg()});
       lastUnpred.push(r.unpredictabilityPct); if(lastUnpred.length>20)lastUnpred.shift();
+      recordMatchStats(win,summary);
       $("postmatch").classList.add("show");
       // sunbeams are cosmetic currency (off the combat path) — reward reads here,
       // never in damage. Out-reading the foe pays in shine, never in force.
@@ -2213,6 +2231,18 @@
   let streak=0;
   let bestStreak=(function(){try{return parseInt(localStorage.getItem("sixfold_beststreak")||"0",10)||0;}catch(e){return 0;}})();
   function saveBest(){try{localStorage.setItem("sixfold_beststreak",String(bestStreak));}catch(e){}}
+  // ---- lifetime stats (cosmetic profile only; never touches combat) ----
+  const STATSKEY="sixfold_stats";
+  let stats=(function(){try{return JSON.parse(localStorage.getItem(STATSKEY)||"{}")||{};}catch(e){return {};}})();
+  stats.matches=stats.matches||0; stats.wins=stats.wins||0; stats.bestUnpred=stats.bestUnpred||0;
+  stats.stance=Array.isArray(stats.stance)&&stats.stance.length===6?stats.stance:[0,0,0,0,0,0];
+  function saveStats(){try{localStorage.setItem(STATSKEY,JSON.stringify(stats));}catch(e){}}
+  function recordMatchStats(win,summary){
+    stats.matches++; if(win)stats.wins++;
+    if(summary&&summary.unpredictabilityPct>stats.bestUnpred)stats.bestUnpred=summary.unpredictabilityPct;
+    const h=game?game.state().playerHist:[]; for(const s of h){ if(s>=0&&s<6)stats.stance[s]++; }
+    saveStats();
+  }
   function showResult(win,summary,beams,ascentInfo){
     const tell=summary.tell||"well hidden — no clear tell";
     const streakChip=streak>1?`<div class="chip streak"><b>×${streak}</b><span>win streak</span></div>`:"";
@@ -2546,6 +2576,30 @@
     const c=$("collclose"); if(c) c.onclick=closeCollection;
   }
 
+  /* ---- PROFILE / lifetime stats ---- */
+  function openProfile(){ renderProfile(); const o=$("profile"); o.classList.add("show"); o.setAttribute("aria-hidden","false"); }
+  function closeProfile(){ const o=$("profile"); o.classList.remove("show"); o.setAttribute("aria-hidden","true"); }
+  function renderProfile(){
+    const winRate=stats.matches?Math.round(stats.wins/stats.matches*100):0;
+    const earned=unlockedSkinSet().size, total=collectionEntries().length;
+    let favI=-1,favN=0; stats.stance.forEach((c,i)=>{ if(c>favN){favN=c;favI=i;} });
+    const fav=favI<0?"—":(STANCES[favI].g+" "+STANCES[favI].n);
+    const stat=(v,l,cls)=>`<div class="pstat ${cls||""}"><b>${v}</b><span>${l}</span></div>`;
+    $("profile").innerHTML=
+      `<div class="hero profile"><h2>PROFILE</h2>`+
+      `<div class="pgrid">`+
+        stat(stats.matches,"duels")+
+        stat(winRate+"%","win rate")+
+        stat(bestStreak,"best streak","gold")+
+        stat("🎯 "+lifetimeReads,"reads landed","gold")+
+        stat(stats.bestUnpred+"%","best unpred")+
+        stat(earned+" / "+total,"fighters")+
+        `<div class="pstat wide"><b>${fav}</b><span>favorite stance</span></div>`+
+      `</div>`+
+      `<button class="close" id="profclose">Close</button></div>`;
+    const c=$("profclose"); if(c) c.onclick=closeProfile;
+  }
+
   /* ---- foe / mode / difficulty selectors ---- */
   function buildSelectors(){
     const foes=$("foes");
@@ -2649,6 +2703,7 @@
   $("howtoclose").onclick=closeHowto;
   $("ascentbtn").onclick=openAscent;
   $("collbtn").onclick=openCollection;
+  $("profbtn").onclick=openProfile;
   $("insightbtn").onclick=()=>{ if(game)game.spend("P","INSIGHT"); };
   $("foresightbtn").onclick=()=>{ if(game)game.spend("P","FORESIGHT"); };
 
