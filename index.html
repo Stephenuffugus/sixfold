@@ -442,6 +442,12 @@
   .daily-foe .df-stars{font-size:12px;color:var(--gold);letter-spacing:2px;margin-top:2px}
   .daily-foe .df-tell{font-size:11px;color:var(--washi-dim);margin-top:6px;line-height:1.35}
   .daily-foe .df-arena{font-size:11px;color:var(--washi);margin-top:8px;opacity:.85}
+  .trials{width:100%;margin-top:12px;text-align:left;border-top:1px solid #ffffff14;padding-top:8px}
+  .trials-h{font-size:10px;letter-spacing:.16em;color:var(--washi-dim);text-transform:uppercase;margin-bottom:5px;text-align:center}
+  .trial{display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:9px;background:#ffffff0a;border:1px solid #ffffff14;margin-bottom:5px;font-size:12px}
+  .trial .tk{color:var(--washi-dim);font-weight:800} .trial .tl{flex:1;color:var(--washi)} .trial .tp{color:var(--gold);font-weight:700}
+  .trial .tr{color:var(--gold);font-weight:800;font-size:11px}
+  .trial.done{border-color:#5f917366;background:#5f917318} .trial.done .tk{color:#7fcf9a} .trial.done .tl{color:var(--washi-dim)}
   .daily .close{margin-top:10px;font-family:var(--ui);font-weight:700;font-size:13px;padding:11px 26px;border-radius:11px;
     border:1px solid #ffffff28;cursor:pointer;color:var(--washi);background:#ffffff12}
 
@@ -2196,6 +2202,7 @@
   let game=null, busy=false, over=false, foresightNode=null, foresightStrike=null, matchWinner=null;
   let committedForesight=null;   // foresight read in play when the current pick was committed
   let matchReads=0;              // called shots landed this match (mastery payoff)
+  let matchBindWon=false, matchUsedForesight=false;  // per-match flags for Trials
   let lastUnpred=[];
   let lifetimeReads=(function(){try{return parseInt(localStorage.getItem("sixfold_reads")||"0",10)||0;}catch(e){return 0;}})();
   function addLifetimeReads(n){ lifetimeReads+=n; try{localStorage.setItem("sixfold_reads",String(lifetimeReads));}catch(e){} }
@@ -2388,6 +2395,7 @@
       else if(outcome.winner&&outcome.kind==="glance")hub.classList.add("flash-glance");
       else if(outcome.kind==="whiff")hub.classList.add("flash-whiff");
       if(read){ matchReads++; addLifetimeReads(1); onReadLanded(); }
+      if(outcome.bind && outcome.winner==="P") matchBindWon=true;   // for Trials
       setTimeout(()=>outcomeJuice(outcome,read), reduced()?0:330); // sync cue to the strike
       if(read){ // the apex: gold wash + big stamp at impact, dedicated sting just after
         setTimeout(()=>{ flashRead(); showReadStamp(); }, reduced()?0:330);
@@ -2414,6 +2422,7 @@
       lastUnpred.push(r.unpredictabilityPct); if(lastUnpred.length>20)lastUnpred.shift();
       recordMatchStats(win,summary);
       if(modeId==="daily") recordDaily(win,summary);
+      evaluateTrials({win,unpred:summary.unpredictabilityPct,reads:matchReads,bindWon:matchBindWon,usedForesight:matchUsedForesight,rounds:summary.rounds,streak,foe:foeId});
       $("postmatch").classList.add("show");
       // sunbeams are cosmetic currency (off the combat path) — reward reads here,
       // never in damage. Out-reading the foe pays in shine, never in force.
@@ -2534,6 +2543,7 @@
   }
   function applyReveal(action,payload){
     if(action==="FORESIGHT"&&payload.predict){
+      matchUsedForesight=true;
       clearForesight();
       foresightNode=payload.predict.pick;
       foresightStrike=(payload.counter!=null)?payload.counter:((foresightNode-1+N)%N);
@@ -2588,7 +2598,7 @@
 
   /* ---- new game ---- */
   function newGame(){
-    over=false;busy=false;aiResolveVisible=false;committedForesight=null;matchReads=0;aimed=null;clearForesight();
+    over=false;busy=false;aiResolveVisible=false;committedForesight=null;matchReads=0;aimed=null;matchBindWon=false;matchUsedForesight=false;clearForesight();
     predictNudge._m=false; const _pb=$("pbar"); if(_pb)_pb.classList.remove("danger");
     const mode=Engine.MODES[modeId];
     const seed = mode.seeded ? dailySeed() : (Math.floor(Math.random()*1e9)>>>0);
@@ -2884,6 +2894,48 @@
   }
   let dailyState=(function(){try{return JSON.parse(localStorage.getItem("sixfold_daily")||"{}")||{};}catch(e){return{};}})();
   function saveDaily(){try{localStorage.setItem("sixfold_daily",JSON.stringify(dailyState));}catch(e){}}
+
+  /* ---- TRIALS: rotating skill-pure daily objectives -> sunbeams (pillar-safe) ---- */
+  const TRIALS=[
+    {id:"reads3",  label:"Land 3 reads",                reward:30,target:3,tick:(c)=>c.reads},
+    {id:"win3",    label:"Win 3 duels",                 reward:35,target:3,tick:(c)=>c.win?1:0},
+    {id:"unpred70",label:"Win at ≥70% unpredictable",reward:30,check:(c)=>c.win&&c.unpred>=70},
+    {id:"bindwin", label:"Win a Clash Bind",            reward:20,check:(c)=>c.bindWon},
+    {id:"noFore",  label:"Win without Foresight",       reward:25,check:(c)=>c.win&&!c.usedForesight},
+    {id:"swift",   label:"Win in ≤4 rounds",        reward:25,check:(c)=>c.win&&c.rounds<=4},
+    {id:"streak3", label:"Reach a 3-win streak",        reward:30,check:(c)=>c.streak>=3},
+    {id:"readfoe", label:"Read a Ghost/Echo/Trickster", reward:40,check:(c)=>c.reads>0&&["ghost","echo","trickster"].indexOf(c.foe)>=0},
+  ];
+  let trialsState=(function(){try{return JSON.parse(localStorage.getItem("sixfold_trials")||"{}")||{};}catch(e){return{};}})();
+  function saveTrials(){try{localStorage.setItem("sixfold_trials",JSON.stringify(trialsState));}catch(e){}}
+  function todaysTrialIds(){ // deterministic 3-of-N, stable across the UTC day (bounded: no while-cycle risk)
+    const ids=TRIALS.map(t=>t.id), n=ids.length, seed=(dailySeed())>>>0, out=[];
+    const start=seed%n, stride=1+(seed%(n-1));
+    for(let k=0;k<n && out.length<3;k++){ const v=ids[(start+k*stride)%n]; if(out.indexOf(v)<0)out.push(v); }
+    for(let k=0;k<n && out.length<3;k++){ if(out.indexOf(ids[k])<0)out.push(ids[k]); } // guaranteed fill
+    return out;
+  }
+  function ensureTrialsToday(){ if(trialsState.date!==utcKey(0)){ trialsState={date:utcKey(0),ids:todaysTrialIds(),prog:{},done:{}}; saveTrials(); } return trialsState; }
+  const trialById=(id)=>TRIALS.find(t=>t.id===id);
+  function evaluateTrials(ctx){
+    ensureTrialsToday(); let earned=0,n=0;
+    trialsState.ids.forEach(id=>{
+      if(trialsState.done[id])return; const t=trialById(id); if(!t)return;
+      if(t.target){ trialsState.prog[id]=(trialsState.prog[id]||0)+(t.tick(ctx)||0); if(trialsState.prog[id]>=t.target){trialsState.done[id]=true;earned+=t.reward;n++;} }
+      else if(t.check(ctx)){ trialsState.done[id]=true; earned+=t.reward; n++; }
+    });
+    saveTrials();
+    if(earned){ addSunbeams(earned); setTimeout(()=>showToast("✓ Trial"+(n>1?"s":"")+" complete +☀"+earned), reduced()?0:1700); }
+  }
+  function trialsHTML(){
+    ensureTrialsToday();
+    const rows=trialsState.ids.map(id=>{ const t=trialById(id); if(!t)return "";
+      const done=!!trialsState.done[id];
+      const prog=t.target?` <span class="tp">${Math.min(trialsState.prog[id]||0,t.target)}/${t.target}</span>`:"";
+      return `<div class="trial${done?" done":""}"><span class="tk">${done?"✓":"◦"}</span><span class="tl">${t.label}${prog}</span><span class="tr">☀${t.reward}</span></div>`;
+    }).join("");
+    return `<div class="trials"><div class="trials-h">TODAY'S TRIALS</div>${rows}</div>`;
+  }
   function recordDaily(win,summary){
     if(dailyState.date===utcKey(0))return;                                 // only the first attempt of the day counts
     const last=dailyState.date;
@@ -2924,6 +2976,7 @@
       `<div class="df-tell">${a.tell}</div>`+
       `<div class="df-arena">${th.glyph} ${th.name}</div></div>`+
       result+`<div class="result-actions">${actions}</div>`+
+      trialsHTML()+
       `<button class="close" id="dailyClose">Close</button></div>`;
     const on=(id,fn)=>{const el=$(id);if(el)el.onclick=fn;};
     on("dailyClose",closeDaily); on("dailyShare",shareDaily);
