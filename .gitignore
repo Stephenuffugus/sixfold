@@ -7,3 +7,5 @@ render-*.js
 audit-*.png
 roster_contact.png
 REFERENCE_*.png
+incoming/
+*.zip

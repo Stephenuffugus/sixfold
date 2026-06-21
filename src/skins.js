@@ -101,6 +101,27 @@
     { id: "beetle", name: "Beetle Warrior", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/beetle.png" },
     { id: "tanuki", name: "Tanuki Warrior", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/tanuki.png" },
     { id: "shikigami", name: "Paper Shikigami", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/shikigami.png" },
+    // --- second art drop (2026-06-21): 20 new fighters, soft-matte cut + packed ---
+    { id: "seaserpent", name: "Sea Serpent Ronin", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/seaserpent.png" },
+    { id: "kirin", name: "Kirin", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/kirin.png" },
+    { id: "zato", name: "Zato the Blind", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/zato.png" },
+    { id: "raijin", name: "Raijin", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/raijin.png" },
+    { id: "onnabugeisha", name: "Onna-bugeisha", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/onnabugeisha.png" },
+    { id: "daimyo", name: "Daimyo", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/daimyo.png" },
+    { id: "yukionna", name: "Yuki-onna", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/yukionna.png" },
+    { id: "kabukimono", name: "Kabukimono", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/kabukimono.png" },
+    { id: "baku", name: "Baku", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/baku.png" },
+    { id: "tsukiusagi", name: "Tsuki-usagi", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/tsukiusagi.png" },
+    { id: "fujin", name: "Fujin", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/fujin.png" },
+    { id: "nue", name: "Nue", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/nue.png" },
+    { id: "rikishi", name: "Rikishi", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/rikishi.png" },
+    { id: "kasaobake", name: "Kasa-obake", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/kasaobake.png" },
+    { id: "nekomata", name: "Nekomata", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/nekomata.png" },
+    { id: "hannya", name: "Hannya", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/hannya.png" },
+    { id: "mochiknight", name: "Moon-Rabbit Knight", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/mochiknight.png" },
+    { id: "komainu", name: "Komainu", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/komainu.png" },
+    { id: "kyudoka", name: "Kyudoka", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/kyudoka.png" },
+    { id: "gashadokuro", name: "Gashadokuro", kind: "atlas", cols: 3, rows: 2, frames: GRID.frames, url: "skins/gashadokuro.png" },
   ];
 
   function list() {
