@@ -121,6 +121,12 @@
   .bar.show{opacity:1}
   .bar .bar-fill{height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,var(--jade),var(--gold));transition:width .4s}
   .bar .bar-num{position:absolute;right:-26px;top:-5px;font-size:10px;color:var(--gold);font-weight:700}
+  /* readable warning: low unpredictability = the foe can read you */
+  .bar.danger{border-color:var(--seal);box-shadow:0 0 8px #cf413088;animation:barwarn 1.1s infinite alternate}
+  .bar.danger .bar-fill{background:linear-gradient(90deg,#cf4130,#e0954a)}
+  .bar.danger .bar-num{color:var(--seal)}
+  @keyframes barwarn{to{box-shadow:0 0 13px #cf4130cc}}
+  body.reduce .bar.danger{animation:none}
   .barwrap{display:flex;flex-direction:column;align-items:center;gap:3px}
   .barlbl{font-size:9px;letter-spacing:.08em;color:var(--washi-dim);text-transform:uppercase}
 
@@ -2169,6 +2175,7 @@
       Stage.playReveal(pPick,aPick,outcome).then(()=>{
         renderHP("P");renderHP("A");
         Readout.render(game.state().playerHist,game.state().aiHist,game.state().outcomes,ribbonOpts());
+        predictNudge();
         if(over){ if(matchWinner){Stage.setFrame(matchWinner,"win");Stage.setFrame(matchWinner==="P"?"A":"P","ko");} }
         else endRoundUI();
       });
@@ -2304,6 +2311,26 @@
       showToast("Insight: foe ribbon + Resolve revealed");
     }
   }
+  // Teach the core skill at the moment it matters: when your live unpredictability
+  // sinks (you're forming a pattern the foe can read), warn you. Full teach once
+  // ever; a subtle reminder at most once per match after that. The bar also tints
+  // red whenever you're readable (ambient feedback, never a nag).
+  function predictNudge(){
+    if(!game)return;
+    const h=game.state().playerHist; if(h.length<5)return;
+    const up=Readout.unpredictabilityPct(h), readable=up<25;
+    const pb=$("pbar"); if(pb) pb.classList.toggle("danger",readable);
+    if(!readable)return;
+    let taught=false; try{taught=!!localStorage.getItem("sixfold_predicthint");}catch(e){}
+    if(!taught){
+      try{localStorage.setItem("sixfold_predicthint","1");}catch(e){}
+      predictNudge._m=true;
+      showToast("⚠ They're reading you — your picks are forming a pattern. Mix it up to break the read.");
+    }else if(!predictNudge._m){
+      predictNudge._m=true;
+      showToast("⚠ Getting readable — vary your stances");
+    }
+  }
   function clearForesight(){
     if(foresightNode!=null){nodeEls[foresightNode]&&nodeEls[foresightNode].classList.remove("foresight");foresightNode=null;}
     if(foresightStrike!=null){nodeEls[foresightStrike]&&nodeEls[foresightStrike].classList.remove("calledshot");foresightStrike=null;}
@@ -2326,6 +2353,7 @@
   /* ---- new game ---- */
   function newGame(){
     over=false;busy=false;aiResolveVisible=false;committedForesight=null;matchReads=0;clearForesight();
+    predictNudge._m=false; const _pb=$("pbar"); if(_pb)_pb.classList.remove("danger");
     const mode=Engine.MODES[modeId];
     const seed = mode.seeded ? dailySeed() : (Math.floor(Math.random()*1e9)>>>0);
     game=Engine.createGame({archetype:foeId,difficulty,mode,seed});
