@@ -350,6 +350,25 @@
     border:1px solid #ffffff28;cursor:pointer;color:var(--washi);background:#ffffff12}
   .reward-banner{font-size:13px;font-weight:800;color:var(--gold);letter-spacing:.03em;margin:2px 0}
 
+  /* ===== ROSTER / COLLECTION gallery (reuses .overlay) ===== */
+  .collection{text-align:center;width:100%;max-width:430px;max-height:88vh}
+  .collection h2{font-family:var(--disp);font-weight:800;font-size:25px;letter-spacing:.16em;margin:0;color:var(--gold)}
+  .collection .prog{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--washi-dim);margin-top:2px}
+  .coll-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:8px;overflow-y:auto;max-height:64vh;padding:3px}
+  .ccard{position:relative;border-radius:11px;border:1px solid #ffffff18;background:#ffffff0c;padding:8px 5px 7px;
+    display:flex;flex-direction:column;align-items:center;gap:4px}
+  .ccard.got{border-color:#5f917366;background:#5f917312}
+  .cthumb{width:78px;height:78px;border-radius:9px;overflow:hidden;background:radial-gradient(circle at 50% 38%,#ffffff12,#0003)}
+  .cthumb i{display:block;width:100%;height:100%;background-repeat:no-repeat;background-position:0% 0%;background-size:300% 200%}
+  .ccard.lock .cthumb i{filter:brightness(.05) contrast(.6)}
+  .ccard .lk{position:absolute;top:11px;right:11px;font-size:13px;filter:drop-shadow(0 1px 2px #000)}
+  .ccard .cn{font-family:var(--disp);font-weight:600;font-size:12px;color:var(--washi);line-height:1.05}
+  .ccard.lock .cn{color:var(--washi-dim)}
+  .ccard .cs{font-size:8.5px;letter-spacing:.02em;color:var(--washi-dim);line-height:1.15}
+  .ccard.got .cs{color:#8fae93}
+  .collection .close{margin-top:8px;font-family:var(--ui);font-weight:700;font-size:13px;padding:11px 26px;border-radius:11px;
+    border:1px solid #ffffff28;cursor:pointer;color:var(--washi);background:#ffffff12}
+
   /*__ANIM_CSS__*/
 </style>
 </head>
@@ -428,6 +447,7 @@
 
   <div class="controls">
     <button class="act ghost" id="ascentbtn">⛰ Ascent</button>
+    <button class="act ghost" id="collbtn">🎴 Roster</button>
     <button class="act ghost" id="howbtn">How it works</button>
     <button class="act primary" id="rematch" style="display:none">Rematch</button>
   </div>
@@ -490,6 +510,9 @@
 
   <!-- The Ascent campaign ladder (populated by glue) -->
   <div class="overlay" id="ascent" aria-hidden="true" role="dialog" aria-label="The Ascent"></div>
+
+  <!-- The roster / collection gallery (populated by glue) -->
+  <div class="overlay" id="collection" aria-hidden="true" role="dialog" aria-label="Roster"></div>
 
   <!-- First-run / on-demand how-to guide -->
   <div class="overlay" id="howto" aria-hidden="true" role="dialog" aria-label="How to play">
@@ -1030,6 +1053,36 @@
     closeAscent(); hideResult(); setArena(r.arena,true); updateFoeBar(); newGame();
   }
 
+  /* ---- ROSTER / COLLECTION gallery: showcases the unlockable cast ---- */
+  // ordered: the Ronin starter, then every fighter the Ascent awards, in climb order.
+  function collectionEntries(){
+    const out=[{id:"ronin",rung:-1,foe:null}];
+    ASCENT.forEach((r,i)=>{ if(r.reward.type==="skin") out.push({id:r.reward.id,rung:i,foe:r.foe}); });
+    return out;
+  }
+  function openCollection(){ renderCollection(); const o=$("collection"); o.classList.add("show"); o.setAttribute("aria-hidden","false"); }
+  function closeCollection(){ const o=$("collection"); o.classList.remove("show"); o.setAttribute("aria-hidden","true"); }
+  function renderCollection(){
+    const unlocked=unlockedSkinSet(), entries=collectionEntries();
+    const cards=entries.map(e=>{
+      const skin=Skins.get(e.id), got=unlocked.has(e.id), src=Skins.src(skin,player.pal);
+      const thumb=src?`<i style="background-image:url('${src}')"></i>`:`<i></i>`;
+      let sub;
+      if(e.rung<0) sub="Starter";
+      else if(got) sub="Won · rung "+(e.rung+1);
+      else { const a=Personalities.ARCHES[e.foe]; sub="Rung "+(e.rung+1)+" · beat "+(a?a.name:"?"); }
+      return `<div class="ccard ${got?"got":"lock"}"><div class="cthumb">${thumb}</div>`+
+        (got?"":`<span class="lk">🔒</span>`)+
+        `<div class="cn">${skin.name}</div><div class="cs">${sub}</div></div>`;
+    }).join("");
+    $("collection").innerHTML=
+      `<div class="hero collection"><h2>ROSTER</h2>`+
+      `<div class="prog">${unlocked.size} / ${entries.length} fighters earned</div>`+
+      `<div class="coll-grid">${cards}</div>`+
+      `<button class="close" id="collclose">Close</button></div>`;
+    const c=$("collclose"); if(c) c.onclick=closeCollection;
+  }
+
   /* ---- foe / mode / difficulty selectors ---- */
   function buildSelectors(){
     const foes=$("foes");
@@ -1132,6 +1185,7 @@
   $("howbtn").onclick=openHowto;
   $("howtoclose").onclick=closeHowto;
   $("ascentbtn").onclick=openAscent;
+  $("collbtn").onclick=openCollection;
   $("insightbtn").onclick=()=>{ if(game)game.spend("P","INSIGHT"); };
   $("foresightbtn").onclick=()=>{ if(game)game.spend("P","FORESIGHT"); };
 
