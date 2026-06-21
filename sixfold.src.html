@@ -1055,6 +1055,25 @@
       disc:"radial-gradient(circle at 50% 45%,#ffe3a8,#e08a3a 55%,transparent 60%)",glow:"#ff9a4d55",
       wash1:"#3a2a66",wash2:"#7a2f50",floor1:"#1d1530",floor2:"#0c0814",ridge:ridgeURI("torii","#0e0a18"),bg:"backgrounds/torii.jpg"},
   };
+  // --- second art drop: 12 more painted arenas (lock-until-earned). The painted
+  // bg is the star; the wash pair is only a fallback (hidden under .hasbg). ---
+  const ARENA_BASE={sky:"linear-gradient(#161b2c,#1f2740 55%,#2a3252)",disc:"radial-gradient(circle at 50% 45%,#f6f1e0,#d9d2bb 66%,transparent 70%)",glow:"#cfe0ff33",floor1:"#141826",floor2:"#080b12",ridge:ridgeURI("mountains","#0e1119")};
+  [
+    {id:"cherry",   name:"Cherry Riverbank", glyph:"🌸", wash1:"#b3617f", wash2:"#6a7fae"},
+    {id:"darkdojo", name:"Shadow Dojo",      glyph:"🥷", wash1:"#2a2f4a", wash2:"#4a3a5e"},
+    {id:"frozen",   name:"Frozen Lake",      glyph:"❄️", wash1:"#5b7a9c", wash2:"#acc6d6"},
+    {id:"maple",    name:"Maple Temple",     glyph:"🍁", wash1:"#a23a2a", wash2:"#d9863a"},
+    {id:"market",   name:"Lantern Market",   glyph:"🏮", wash1:"#9c3a2e", wash2:"#caa23a"},
+    {id:"graveyard",name:"Misty Graveyard",  glyph:"🪦", wash1:"#46506a", wash2:"#6a7480"},
+    {id:"ash",      name:"Ash Plain",        glyph:"🌋", wash1:"#7a3a2a", wash2:"#4a4450"},
+    {id:"village",  name:"Burning Village",  glyph:"🔥", wash1:"#b3432a", wash2:"#e0954a"},
+    {id:"coast",    name:"Stormy Coast",     glyph:"🌊", wash1:"#2f5a6a", wash2:"#5b6f9c"},
+    {id:"cloudsea", name:"Cloud Sea",        glyph:"☁️", wash1:"#5b6f9c", wash2:"#c98a6a"},
+    {id:"bloodmtn", name:"Blood Mountains",  glyph:"⛰️", wash1:"#7a2a2a", wash2:"#3a3550"},
+    {id:"palace",   name:"Dragon Palace",    glyph:"🐉", wash1:"#1f7a8c", wash2:"#3f6fb0"},
+  ].forEach(a=>{ THEMES[a.id]=Object.assign({},ARENA_BASE,{name:a.name,glyph:a.glyph,wash1:a.wash1,wash2:a.wash2,bg:"backgrounds/"+a.id+".jpg"}); });
+  // new arenas unlock as you climb (lock-until-earned, like the rest of the game)
+  const NEW_ARENA_AT={cherry:2,darkdojo:5,frozen:11,maple:14,market:21,graveyard:24,ash:26,village:31,coast:34,cloudsea:37,bloodmtn:39,palace:42};
   let arenaId="dojo";
   // each foe has a "home" arena, so picking a foe sets the scene (still overridable)
   const FOE_ARENA={berserker:"sunset",stone:"dojo",drunkard:"torii",mirror:"bamboo",
@@ -1093,46 +1112,46 @@
   // or arena (cosmetic only). Difficulty is the single fair, symmetric knob.
   const ASCENT=[
     {foe:"stone",diff:0.16,arena:"dojo",foeSkin:"komainu",reward:{type:"skin",id:"komainu",name:"Komainu"}},
-    {foe:"drunkard",diff:0.18,arena:"bamboo",foeSkin:"kasaobake",reward:{type:"skin",id:"kasaobake",name:"Kasa-obake"}},
-    {foe:"stone",diff:0.2,arena:"dojo",foeSkin:"tetsu",reward:{type:"skin",id:"tetsu",name:"Iron Monk"}},
-    {foe:"stone",diff:0.22,arena:"bamboo",foeSkin:"kappa",reward:{type:"skin",id:"kappa",name:"Kappa Grappler"}},
-    {foe:"drunkard",diff:0.24,arena:"dojo",foeSkin:"tsukiusagi",reward:{type:"skin",id:"tsukiusagi",name:"Tsuki-usagi"}},
-    {foe:"stone",diff:0.26,arena:"dojo",foeSkin:"mochiknight",reward:{type:"skin",id:"mochiknight",name:"Moon-Rabbit Knight"}},
-    {foe:"metronome",diff:0.28,arena:"bamboo",foeSkin:"onnabugeisha",reward:{type:"skin",id:"onnabugeisha",name:"Onna-bugeisha"}},
-    {foe:"berserker",diff:0.3,arena:"dojo",foeSkin:"rikishi",reward:{type:"skin",id:"rikishi",name:"Rikishi"}},
+    {foe:"drunkard",diff:0.18,arena:"cherry",foeSkin:"kasaobake",reward:{type:"skin",id:"kasaobake",name:"Kasa-obake"}},
+    {foe:"stone",diff:0.2,arena:"darkdojo",foeSkin:"tetsu",reward:{type:"skin",id:"tetsu",name:"Iron Monk"}},
+    {foe:"stone",diff:0.22,arena:"sunset",foeSkin:"kappa",reward:{type:"skin",id:"kappa",name:"Kappa Grappler"}},
+    {foe:"drunkard",diff:0.24,arena:"frozen",foeSkin:"tsukiusagi",reward:{type:"skin",id:"tsukiusagi",name:"Tsuki-usagi"}},
+    {foe:"stone",diff:0.26,arena:"bamboo",foeSkin:"mochiknight",reward:{type:"skin",id:"mochiknight",name:"Moon-Rabbit Knight"}},
+    {foe:"metronome",diff:0.28,arena:"maple",foeSkin:"onnabugeisha",reward:{type:"skin",id:"onnabugeisha",name:"Onna-bugeisha"}},
+    {foe:"berserker",diff:0.3,arena:"market",foeSkin:"rikishi",reward:{type:"skin",id:"rikishi",name:"Rikishi"}},
     {foe:"berserker",diff:0.32,arena:"sunset",foeSkin:"onibi",reward:{type:"arena",id:"sunset",name:"Sunset Cliff"}},
-    {foe:"drunkard",diff:0.34,arena:"bamboo",foeSkin:"mukade",reward:{type:"skin",id:"mukade",name:"Centipede"}},
-    {foe:"berserker",diff:0.36,arena:"sunset",foeSkin:"onibi",reward:{type:"skin",id:"onibi",name:"Ember Oni"}},
-    {foe:"stone",diff:0.38,arena:"sunset",foeSkin:"beetle",reward:{type:"skin",id:"beetle",name:"Beetle Warrior"}},
-    {foe:"mirror",diff:0.4,arena:"sunset",foeSkin:"baku",reward:{type:"skin",id:"baku",name:"Baku"}},
-    {foe:"mirror",diff:0.42,arena:"bamboo",foeSkin:"shikigami",reward:{type:"skin",id:"shikigami",name:"Paper Shikigami"}},
-    {foe:"trickster",diff:0.44,arena:"bamboo",foeSkin:"nekomata",reward:{type:"skin",id:"nekomata",name:"Nekomata"}},
-    {foe:"trickster",diff:0.46,arena:"bamboo",foeSkin:"tanuki",reward:{type:"skin",id:"tanuki",name:"Tanuki Warrior"}},
-    {foe:"drunkard",diff:0.48,arena:"sunset",foeSkin:"seaserpent",reward:{type:"skin",id:"seaserpent",name:"Sea Serpent Ronin"}},
-    {foe:"metronome",diff:0.5,arena:"bamboo",foeSkin:"kyudoka",reward:{type:"skin",id:"kyudoka",name:"Kyudoka"}},
+    {foe:"drunkard",diff:0.34,arena:"torii",foeSkin:"mukade",reward:{type:"skin",id:"mukade",name:"Centipede"}},
+    {foe:"berserker",diff:0.36,arena:"ash",foeSkin:"onibi",reward:{type:"skin",id:"onibi",name:"Ember Oni"}},
+    {foe:"stone",diff:0.38,arena:"village",foeSkin:"beetle",reward:{type:"skin",id:"beetle",name:"Beetle Warrior"}},
+    {foe:"mirror",diff:0.4,arena:"coast",foeSkin:"baku",reward:{type:"skin",id:"baku",name:"Baku"}},
+    {foe:"mirror",diff:0.42,arena:"cloudsea",foeSkin:"shikigami",reward:{type:"skin",id:"shikigami",name:"Paper Shikigami"}},
+    {foe:"trickster",diff:0.44,arena:"bloodmtn",foeSkin:"nekomata",reward:{type:"skin",id:"nekomata",name:"Nekomata"}},
+    {foe:"trickster",diff:0.46,arena:"palace",foeSkin:"tanuki",reward:{type:"skin",id:"tanuki",name:"Tanuki Warrior"}},
+    {foe:"drunkard",diff:0.48,arena:"dojo",foeSkin:"seaserpent",reward:{type:"skin",id:"seaserpent",name:"Sea Serpent Ronin"}},
+    {foe:"metronome",diff:0.5,arena:"cherry",foeSkin:"kyudoka",reward:{type:"skin",id:"kyudoka",name:"Kyudoka"}},
     {foe:"metronome",diff:0.52,arena:"bamboo",foeSkin:"painter",reward:{type:"arena",id:"bamboo",name:"Bamboo Grove"}},
-    {foe:"metronome",diff:0.54,arena:"dojo",foeSkin:"painter",reward:{type:"skin",id:"painter",name:"Brush Duelist"}},
-    {foe:"trickster",diff:0.56,arena:"torii",foeSkin:"kabukimono",reward:{type:"skin",id:"kabukimono",name:"Kabukimono"}},
-    {foe:"berserker",diff:0.58,arena:"sunset",foeSkin:"raijin",reward:{type:"skin",id:"raijin",name:"Raijin"}},
-    {foe:"berserker",diff:0.6,arena:"sunset",foeSkin:"raiden",reward:{type:"skin",id:"raiden",name:"Storm"}},
-    {foe:"metronome",diff:0.62,arena:"sunset",foeSkin:"fujin",reward:{type:"skin",id:"fujin",name:"Fujin"}},
-    {foe:"ghost",diff:0.64,arena:"bamboo",foeSkin:"sora",reward:{type:"skin",id:"sora",name:"Sky Crane"}},
+    {foe:"metronome",diff:0.54,arena:"sunset",foeSkin:"painter",reward:{type:"skin",id:"painter",name:"Brush Duelist"}},
+    {foe:"trickster",diff:0.56,arena:"frozen",foeSkin:"kabukimono",reward:{type:"skin",id:"kabukimono",name:"Kabukimono"}},
+    {foe:"berserker",diff:0.58,arena:"bamboo",foeSkin:"raijin",reward:{type:"skin",id:"raijin",name:"Raijin"}},
+    {foe:"berserker",diff:0.6,arena:"maple",foeSkin:"raiden",reward:{type:"skin",id:"raiden",name:"Storm"}},
+    {foe:"metronome",diff:0.62,arena:"market",foeSkin:"fujin",reward:{type:"skin",id:"fujin",name:"Fujin"}},
+    {foe:"ghost",diff:0.64,arena:"graveyard",foeSkin:"sora",reward:{type:"skin",id:"sora",name:"Sky Crane"}},
     {foe:"ghost",diff:0.66,arena:"torii",foeSkin:"kage",reward:{type:"skin",id:"kage",name:"Shadow"}},
-    {foe:"ghost",diff:0.68,arena:"bamboo",foeSkin:"heron",reward:{type:"skin",id:"heron",name:"Snow Heron"}},
-    {foe:"trickster",diff:0.7,arena:"torii",foeSkin:"jorogumo",reward:{type:"skin",id:"jorogumo",name:"Jorogumo"}},
+    {foe:"ghost",diff:0.68,arena:"ash",foeSkin:"heron",reward:{type:"skin",id:"heron",name:"Snow Heron"}},
+    {foe:"trickster",diff:0.7,arena:"village",foeSkin:"jorogumo",reward:{type:"skin",id:"jorogumo",name:"Jorogumo"}},
     {foe:"ghost",diff:0.72,arena:"torii",foeSkin:"yurei",reward:{type:"arena",id:"torii",name:"Night Torii"}},
-    {foe:"ghost",diff:0.74,arena:"torii",foeSkin:"lantern",reward:{type:"skin",id:"lantern",name:"Lantern Wraith"}},
-    {foe:"trickster",diff:0.76,arena:"torii",foeSkin:"hannya",reward:{type:"skin",id:"hannya",name:"Hannya"}},
-    {foe:"ghost",diff:0.78,arena:"torii",foeSkin:"yukionna",reward:{type:"skin",id:"yukionna",name:"Yuki-onna"}},
-    {foe:"ghost",diff:0.8,arena:"bamboo",foeSkin:"moth",reward:{type:"skin",id:"moth",name:"Moth Priestess"}},
-    {foe:"ghost",diff:0.82,arena:"torii",foeSkin:"honekage",reward:{type:"skin",id:"honekage",name:"Bonedrifter"}},
-    {foe:"echo",diff:0.84,arena:"sunset",foeSkin:"zato",reward:{type:"skin",id:"zato",name:"Zato the Blind"}},
-    {foe:"berserker",diff:0.86,arena:"torii",foeSkin:"gashadokuro",reward:{type:"skin",id:"gashadokuro",name:"Gashadokuro"}},
-    {foe:"ghost",diff:0.88,arena:"torii",foeSkin:"yurei",reward:{type:"skin",id:"yurei",name:"Pale Ghost"}},
-    {foe:"trickster",diff:0.9,arena:"sunset",foeSkin:"kitsune",reward:{type:"skin",id:"kitsune",name:"Kitsune"}},
-    {foe:"ghost",diff:0.92,arena:"torii",foeSkin:"nue",reward:{type:"skin",id:"nue",name:"Nue"}},
-    {foe:"echo",diff:0.94,arena:"torii",foeSkin:"tengu",reward:{type:"skin",id:"tengu",name:"Tengu"}},
-    {foe:"echo",diff:0.96,arena:"sunset",foeSkin:"kirin",reward:{type:"skin",id:"kirin",name:"Kirin"}},
+    {foe:"ghost",diff:0.74,arena:"cloudsea",foeSkin:"lantern",reward:{type:"skin",id:"lantern",name:"Lantern Wraith"}},
+    {foe:"trickster",diff:0.76,arena:"bloodmtn",foeSkin:"hannya",reward:{type:"skin",id:"hannya",name:"Hannya"}},
+    {foe:"ghost",diff:0.78,arena:"palace",foeSkin:"yukionna",reward:{type:"skin",id:"yukionna",name:"Yuki-onna"}},
+    {foe:"ghost",diff:0.8,arena:"dojo",foeSkin:"moth",reward:{type:"skin",id:"moth",name:"Moth Priestess"}},
+    {foe:"ghost",diff:0.82,arena:"cherry",foeSkin:"honekage",reward:{type:"skin",id:"honekage",name:"Bonedrifter"}},
+    {foe:"echo",diff:0.84,arena:"darkdojo",foeSkin:"zato",reward:{type:"skin",id:"zato",name:"Zato the Blind"}},
+    {foe:"berserker",diff:0.86,arena:"sunset",foeSkin:"gashadokuro",reward:{type:"skin",id:"gashadokuro",name:"Gashadokuro"}},
+    {foe:"ghost",diff:0.88,arena:"frozen",foeSkin:"yurei",reward:{type:"skin",id:"yurei",name:"Pale Ghost"}},
+    {foe:"trickster",diff:0.9,arena:"bamboo",foeSkin:"kitsune",reward:{type:"skin",id:"kitsune",name:"Kitsune"}},
+    {foe:"ghost",diff:0.92,arena:"maple",foeSkin:"nue",reward:{type:"skin",id:"nue",name:"Nue"}},
+    {foe:"echo",diff:0.94,arena:"market",foeSkin:"tengu",reward:{type:"skin",id:"tengu",name:"Tengu"}},
+    {foe:"echo",diff:0.96,arena:"graveyard",foeSkin:"kirin",reward:{type:"skin",id:"kirin",name:"Kirin"}},
     {foe:"echo",diff:0.98,arena:"torii",foeSkin:"daimyo",reward:{type:"skin",id:"daimyo",name:"Daimyo"}},
     {foe:"echo",diff:1,arena:"torii",foeSkin:"daimyo",reward:{type:"title",id:"champion",name:"Champion of the Sixfold"}},
   ];
@@ -1147,7 +1166,7 @@
   ];
   // unlocks derive from how far you've climbed (base = Ronin + Dojo)
   function unlockedSkinSet(){ const s=new Set(["ronin"]); for(let i=0;i<ascentCleared;i++){const r=ASCENT[i].reward; if(r.type==="skin")s.add(r.id);} return s; }
-  function unlockedArenaSet(){ const s=new Set(["dojo"]); for(let i=0;i<ascentCleared;i++){const r=ASCENT[i].reward; if(r.type==="arena")s.add(r.id);} return s; }
+  function unlockedArenaSet(){ const s=new Set(["dojo"]); for(let i=0;i<ascentCleared;i++){const r=ASCENT[i].reward; if(r.type==="arena")s.add(r.id);} for(const k in NEW_ARENA_AT){ if(ascentCleared>=NEW_ARENA_AT[k]) s.add(k);} return s; }
   function refreshUnlocks(){ renderSkinPicker(); buildArenaPicker(); }
   let ascentCleared=(function(){try{return Math.min(ASCENT.length,parseInt(localStorage.getItem("sixfold_ascent")||"0",10)||0);}catch(e){return 0;}})();
   let ascentRun=-1; // index of the rung being fought, or -1 for free play
