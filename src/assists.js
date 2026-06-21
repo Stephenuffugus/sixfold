@@ -22,6 +22,7 @@
     reducedMotion: false,   // also auto-detected from prefers-reduced-motion at the UI layer
     largeTapTargets: false,
     haptics: true,          // phone buzz on hits/bind (juice; on by default)
+    music: true,            // ambient background music (juice; on by default)
     slowReveal: false,      // longer reveal beat
     highContrast: false,
     audioCues: true,        // distinct sound per outcome (juice; on by default)
