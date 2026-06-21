@@ -28,7 +28,11 @@
     const start = Math.max(0, Math.min(RESOLVE_MAX, opts.startWith || 0));
     const state = { player: start, ai: start };
 
-    const add = (side, n) => { state[side] = Math.min(RESOLVE_MAX, state[side] + n); };
+    // accept both the meter's native keys ("player"/"ai") and the engine's
+    // side convention ("P"/"A") so callers can't silently miss the meter.
+    const SIDE = { P: "player", A: "ai", player: "player", ai: "ai" };
+    const norm = (s) => SIDE[s] || s;
+    const add = (side, n) => { side = norm(side); state[side] = Math.min(RESOLVE_MAX, state[side] + n); };
     const both = (n) => { add("player", n); add("ai", n); };
 
     function gain(outcome) {
@@ -43,6 +47,7 @@
 
     // returns InfoReveal {side, action, cost} on success, else null. NO damage field.
     function spend(side, action) {
+      side = norm(side);
       const cost = COST[action];
       if (cost == null) return null;
       if (state[side] < cost) return null;
@@ -52,7 +57,7 @@
 
     function canSpend(side, action) {
       const cost = COST[action];
-      return cost != null && state[side] >= cost;
+      return cost != null && state[norm(side)] >= cost;
     }
 
     function reset() { state.player = start; state.ai = start; }

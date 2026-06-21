@@ -710,7 +710,11 @@
       Stage.bindPrompt().then(b=>{ g.submitBind(b); });
     });
     g.bus.on("meter-changed",updateMeter);
-    g.bus.on("info-revealed",({side,action,payload})=>{ if(side==="P") applyReveal(action,payload); });
+    g.bus.on("info-revealed",({side,action,payload})=>{
+      if(side==="P") applyReveal(action,payload);
+      // if you paid Insight to expose the foe's meter, you also catch it spending
+      else if(side==="A" && aiResolveVisible && action==="FORESIGHT") showToast("foe spends Foresight — reading you 👁");
+    });
     g.bus.on("round-revealed",({pPick,aPick,outcome})=>{
       showAiPick(aPick,pPick);
       // a called shot: Foresight was up, you struck its recommended counter, and

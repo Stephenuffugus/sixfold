@@ -137,10 +137,25 @@
       return summary;
     }
 
+    // The AI spends its OWN Resolve per its personality's spendPolicy. This is
+    // pure flavor + information: the AI's read already lives in aiChoose, so a
+    // spend never changes its pick, the RNG, or damage — it only drains the AI
+    // meter (symmetric, pillar-safe) so Insight reveals a LIVING foe meter and
+    // the player can feel the foe building toward / spending a read.
+    function aiMaybeSpend() {
+      const pol = Personalities.spendPolicy(profile, ctx());
+      if (!pol) return;
+      if (meter.spend("A", pol.action)) {
+        bus.emit("meter-changed", meter.state());
+        bus.emit("info-revealed", { side: "A", action: pol.action, payload: {} });
+      }
+    }
+
     // interactive: player commits a stance. If it clashes, we enter the bind and
     // WAIT for submitBind(); otherwise the round resolves immediately.
     function chooseStance(pStance) {
       if (st.over || st.pending) return null;
+      aiMaybeSpend();
       const aStance = Personalities.aiChoose(profile, ctx());
       st.playerHist.push(pStance);
       st.aiHist.push(aStance);

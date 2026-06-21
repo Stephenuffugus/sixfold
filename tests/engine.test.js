@@ -140,6 +140,16 @@ function ok(name, cond, extra) { assert.ok(cond, "FAIL: " + name + (extra ? " ("
   ok("spends don't change round count", a.rounds === b.rounds);
 }
 
+// ---- AI spends its OWN Resolve in interactive play (foe meter is live) ----
+{
+  const g = E.createGame({ archetype: "echo", seed: 5, difficulty: 0.5 });
+  let prevAi = g.meter.state().ai, sawSpend = false;
+  // AI meter can only DROP via a spend (gains only add) — so any drop proves a spend
+  g.bus.on("meter-changed", (m) => { if (m.ai < prevAi) sawSpend = true; prevAi = m.ai; });
+  g.chooseStance(0); // Echo's policy spends Insight whenever it holds >=1 Resolve
+  ok("AI spends its Resolve in interactive play (foe meter not dead)", sawSpend);
+}
+
 // ---- aggregate length sanity (cross-check vs harness ~5 median) ----
 {
   const lens = [];

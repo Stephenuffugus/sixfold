@@ -893,7 +893,11 @@
     const start = Math.max(0, Math.min(RESOLVE_MAX, opts.startWith || 0));
     const state = { player: start, ai: start };
 
-    const add = (side, n) => { state[side] = Math.min(RESOLVE_MAX, state[side] + n); };
+    // accept both the meter's native keys ("player"/"ai") and the engine's
+    // side convention ("P"/"A") so callers can't silently miss the meter.
+    const SIDE = { P: "player", A: "ai", player: "player", ai: "ai" };
+    const norm = (s) => SIDE[s] || s;
+    const add = (side, n) => { side = norm(side); state[side] = Math.min(RESOLVE_MAX, state[side] + n); };
     const both = (n) => { add("player", n); add("ai", n); };
 
     function gain(outcome) {
@@ -908,6 +912,7 @@
 
     // returns InfoReveal {side, action, cost} on success, else null. NO damage field.
     function spend(side, action) {
+      side = norm(side);
       const cost = COST[action];
       if (cost == null) return null;
       if (state[side] < cost) return null;
@@ -917,7 +922,7 @@
 
     function canSpend(side, action) {
       const cost = COST[action];
-      return cost != null && state[side] >= cost;
+      return cost != null && state[norm(side)] >= cost;
     }
 
     function reset() { state.player = start; state.ai = start; }
@@ -1850,10 +1855,25 @@
       return summary;
     }
 
+    // The AI spends its OWN Resolve per its personality's spendPolicy. This is
+    // pure flavor + information: the AI's read already lives in aiChoose, so a
+    // spend never changes its pick, the RNG, or damage — it only drains the AI
+    // meter (symmetric, pillar-safe) so Insight reveals a LIVING foe meter and
+    // the player can feel the foe building toward / spending a read.
+    function aiMaybeSpend() {
+      const pol = Personalities.spendPolicy(profile, ctx());
+      if (!pol) return;
+      if (meter.spend("A", pol.action)) {
+        bus.emit("meter-changed", meter.state());
+        bus.emit("info-revealed", { side: "A", action: pol.action, payload: {} });
+      }
+    }
+
     // interactive: player commits a stance. If it clashes, we enter the bind and
     // WAIT for submitBind(); otherwise the round resolves immediately.
     function chooseStance(pStance) {
       if (st.over || st.pending) return null;
+      aiMaybeSpend();
       const aStance = Personalities.aiChoose(profile, ctx());
       st.playerHist.push(pStance);
       st.aiHist.push(aStance);
@@ -2121,7 +2141,11 @@
       Stage.bindPrompt().then(b=>{ g.submitBind(b); });
     });
     g.bus.on("meter-changed",updateMeter);
-    g.bus.on("info-revealed",({side,action,payload})=>{ if(side==="P") applyReveal(action,payload); });
+    g.bus.on("info-revealed",({side,action,payload})=>{
+      if(side==="P") applyReveal(action,payload);
+      // if you paid Insight to expose the foe's meter, you also catch it spending
+      else if(side==="A" && aiResolveVisible && action==="FORESIGHT") showToast("foe spends Foresight — reading you 👁");
+    });
     g.bus.on("round-revealed",({pPick,aPick,outcome})=>{
       showAiPick(aPick,pPick);
       // a called shot: Foresight was up, you struck its recommended counter, and
