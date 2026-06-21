@@ -343,6 +343,10 @@
   .rung.done{border-color:#5f917366;background:#5f917318}
   .rung.cur{border-color:var(--gold);background:#cda64f22;box-shadow:0 0 0 1px var(--gold)}
   .rung.lock{opacity:.5}
+  .chapter-head{text-align:left;padding:9px 4px 2px;margin-top:4px}
+  .chapter-head:first-child{margin-top:0}
+  .chapter-head .cn{display:block;font-family:var(--disp);font-weight:700;font-size:13px;letter-spacing:.1em;color:var(--gold)}
+  .chapter-head .cd{display:block;font-size:9.5px;letter-spacing:.04em;color:var(--washi-dim);text-transform:uppercase;margin-top:1px}
   .rung .ic{flex:0 0 30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;
     background:#ffffff14;border:1px solid #ffffff22}
   .rung .meta{flex:1;min-width:0}
@@ -2408,6 +2412,14 @@
     Readout.render([],[],[],ribbonOpts());
     $("pbar").classList.remove("show");$("abar").classList.remove("show");
     updateFoeBar();updateMeter(game.meter.state());applyCompass();
+    mirrorTeachOnce();
+  }
+  // Mirror copies your LAST stance — a hard wall if you don't know the trick.
+  // Teach it the first time you ever face one (Ascent or casual).
+  function mirrorTeachOnce(){
+    if(foeId!=="mirror")return;
+    try{ if(localStorage.getItem("sixfold_mirrorhint"))return; localStorage.setItem("sixfold_mirrorhint","1"); }catch(e){}
+    setTimeout(()=>showToast("🪞 This foe copies your LAST stance — beat it by countering your own previous move."), reduced()?0:600);
   }
   function dailySeed(){ const d=new Date(); return (d.getUTCFullYear()*1e4+(d.getUTCMonth()+1)*100+d.getUTCDate())>>>0; }
 
@@ -2485,12 +2497,12 @@
     {foe:"berserker",diff:.18,arena:"sunset",foeSkin:"onibi",   reward:{type:"skin", id:"kage",    name:"Shadow"}},
     {foe:"stone",    diff:.26,arena:"dojo",  foeSkin:"ronin",   reward:{type:"arena",id:"sunset",  name:"Sunset Cliff"}},
     {foe:"drunkard", diff:.34,arena:"torii", foeSkin:"honekage",reward:{type:"skin", id:"tetsu",   name:"Iron Monk"}},
-    {foe:"mirror",   diff:.42,arena:"bamboo",foeSkin:"kage",    reward:{type:"skin", id:"mukade",  name:"Centipede"}},
+    {foe:"berserker",diff:.42,arena:"bamboo",foeSkin:"kage",    reward:{type:"skin", id:"mukade",  name:"Centipede"}},
     {foe:"stone",    diff:.47,arena:"bamboo",foeSkin:"kappa",   reward:{type:"skin", id:"kappa",   name:"Kappa Grappler"}},
     {foe:"drunkard", diff:.50,arena:"dojo",  foeSkin:"tanuki",  reward:{type:"skin", id:"tanuki",  name:"Tanuki Warrior"}},
     {foe:"metronome",diff:.52,arena:"sunset",foeSkin:"raiden",  reward:{type:"arena",id:"bamboo",  name:"Bamboo Grove"}},
     {foe:"trickster",diff:.58,arena:"bamboo",foeSkin:"mukade",  reward:{type:"skin", id:"onibi",   name:"Ember Oni"}},
-    {foe:"stone",    diff:.62,arena:"sunset",foeSkin:"beetle",  reward:{type:"skin", id:"beetle",  name:"Beetle Warrior"}},
+    {foe:"mirror",   diff:.62,arena:"sunset",foeSkin:"beetle",  reward:{type:"skin", id:"beetle",  name:"Beetle Warrior"}},
     {foe:"berserker",diff:.66,arena:"sunset",foeSkin:"onibi",   reward:{type:"skin", id:"raiden",  name:"Storm"}},
     {foe:"trickster",diff:.70,arena:"torii", foeSkin:"jorogumo",reward:{type:"skin", id:"jorogumo",name:"Jorogumo"}},
     {foe:"ghost",    diff:.74,arena:"torii", foeSkin:"yurei",   reward:{type:"arena",id:"torii",   name:"Night Torii"}},
@@ -2505,6 +2517,15 @@
     {foe:"trickster",diff:.95,arena:"torii", foeSkin:"kitsune", reward:{type:"skin", id:"kitsune", name:"Kitsune"}},
     {foe:"ghost",    diff:.98,arena:"bamboo",foeSkin:"tengu",   reward:{type:"skin", id:"tengu",   name:"Tengu"}},
     {foe:"echo",     diff:1,  arena:"torii", foeSkin:"yurei",   reward:{type:"title",id:"champion",name:"Champion of the Sixfold"}},
+  ];
+  // chapters group the climb into a legible curve: habit foes first (learn to
+  // read), then mind-games (Mirror/Trickster turn your habits against you),
+  // then near-unpredictable phantoms, then foes that learn you in real time.
+  const CHAPTERS=[
+    {at:0,  name:"I · The Habit-Readers", sub:"learn to read a pattern"},
+    {at:6,  name:"II · The Mind-Games",   sub:"they turn your habits against you"},
+    {at:12, name:"III · The Phantoms",    sub:"survive on your own unpredictability"},
+    {at:19, name:"IV · The Masters",      sub:"foes that learn you in real time"},
   ];
   // unlocks derive from how far you've climbed (base = Ronin + Dojo)
   function unlockedSkinSet(){ const s=new Set(["ronin"]); for(let i=0;i<ascentCleared;i++){const r=ASCENT[i].reward; if(r.type==="skin")s.add(r.id);} return s; }
@@ -2524,7 +2545,9 @@
       const a=Personalities.ARCHES[r.foe];
       const status=done?"✓":(cur?"▶":"🔒"), cls=done?"done":(cur?"cur":"lock");
       const btn=cur?`<button data-rung="${i}">${ascentCleared===0?"Begin":"Fight"}</button>`:"";
-      return `<div class="rung ${cls}"><div class="ic">${status}</div>`+
+      const ch=CHAPTERS.find(c=>c.at===i);
+      const head=ch?`<div class="chapter-head"><span class="cn">${ch.name}</span><span class="cd">${ch.sub}</span></div>`:"";
+      return head+`<div class="rung ${cls}"><div class="ic">${status}</div>`+
         `<div class="meta"><div class="fn">${i+1}. ${a.name}</div>`+
         `<div class="stars">${ascentStars(r.diff)}</div>`+
         `<div class="rw">${done?"<b>✓ </b>":""}${rewardLabel(r.reward)}</div></div>${btn}</div>`;
