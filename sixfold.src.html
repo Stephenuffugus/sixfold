@@ -87,6 +87,11 @@
   h1::after{content:"";position:absolute;left:0;right:38%;bottom:-4px;height:3px;border-radius:2px;
     background:linear-gradient(90deg,var(--seal),transparent);opacity:.85}
   .tag{font-size:11px;letter-spacing:.12em;color:var(--washi-dim);text-transform:uppercase}
+  .beambal{font-family:var(--ui);font-weight:800;font-size:12.5px;color:var(--gold);background:#cda64f1c;
+    border:1px solid #cda64f44;border-radius:999px;padding:3px 9px;letter-spacing:.02em;white-space:nowrap}
+  .beambal.bump{animation:beambump .5s}
+  @keyframes beambump{0%{transform:scale(1)}40%{transform:scale(1.22)}100%{transform:scale(1)}}
+  body.reduce .beambal.bump{animation:none}
 
   /* foe / mode bar */
   .foebar{width:100%;max-width:460px;display:flex;align-items:center;justify-content:space-between;gap:8px;
@@ -256,6 +261,9 @@
   .opt.lock{opacity:.42;cursor:default} .opt.lock.sel{box-shadow:none;border-color:#ffffff22}
   .opt.pal{position:relative}
   .opt.crest{font-family:var(--disp);font-size:19px;font-weight:700}
+  .opt.buy{position:relative;opacity:.82}
+  .opt.buy .price{position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);font-family:var(--ui);font-weight:800;
+    font-size:8.5px;color:var(--gold);background:#1a2135;border:1px solid #cda64f66;border-radius:6px;padding:0 3px;white-space:nowrap}
   input.nm{font-family:var(--ui);font-size:14px;padding:9px 11px;border-radius:9px;border:1px solid #ffffff22;background:#ffffff10;color:var(--washi);width:100%}
   input.nm::placeholder{color:#ffffff55}
   input[type=range]{width:100%}
@@ -447,6 +455,7 @@
   <header>
     <h1>SIX<span class="dot">·</span>FOLD</h1>
     <span class="tag">stance duel</span>
+    <span class="beambal" id="beambal" title="Sunbeams — cosmetic currency">☀ 0</span>
   </header>
 
   <div class="foebar">
@@ -642,6 +651,12 @@
   const PALS=["#cf4130","#3f6fb0","#5f9173","#8a5bc0","#caa23a","#2b3550","#c96fa0","#46b0a6"];
   // house-banner crests (kanji) — the banner flag is the one cosmetic that shows on real skins
   const CRESTS=["家","武","龍","鬼","風","花","刀","雷","月","華","虎","忍"];
+  // Forge: premium cosmetics bought with sunbeams (cosmetic-only sink; off both the
+  // combat path AND the tower, so the lock-until-earned roster is untouched).
+  const PREMIUM_PALS=[{v:"#e8c878",cost:40},{v:"#13a8a0",cost:40},{v:"#d14a8a",cost:60},{v:"#7ed957",cost:60},{v:"#ff7a3c",cost:80},{v:"#b06bff",cost:80}];
+  const PREMIUM_CRESTS=[{v:"天",cost:30},{v:"侍",cost:30},{v:"心",cost:50},{v:"夢",cost:50},{v:"閃",cost:70},{v:"極",cost:90}];
+  let boughtCosmetics=(function(){try{return new Set(JSON.parse(localStorage.getItem("sixfold_shop")||"[]"));}catch(e){return new Set();}})();
+  function saveShop(){try{localStorage.setItem("sixfold_shop",JSON.stringify([...boughtCosmetics]));}catch(e){}}
   const FOE_NAMES=["Ronin","Kage","Hattori","Mukade","Yurei","Tetsu","Onibi","Sora","Raiden"];
   const rid=a=>a[Math.floor(Math.random()*a.length)];
   const getCss=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -657,6 +672,13 @@
   let lastUnpred=[];
   let lifetimeReads=(function(){try{return parseInt(localStorage.getItem("sixfold_reads")||"0",10)||0;}catch(e){return 0;}})();
   function addLifetimeReads(n){ lifetimeReads+=n; try{localStorage.setItem("sixfold_reads",String(lifetimeReads));}catch(e){} }
+  // ---- sunbeams: cosmetic currency (off the combat path). Earned on wins/trials,
+  // spent in the Forge on cosmetics. Persisted (was a phantom display-only number). ----
+  let sunbeams=(function(){try{return parseInt(localStorage.getItem("sixfold_sunbeams")||"0",10)||0;}catch(e){return 0;}})();
+  function saveSunbeams(){try{localStorage.setItem("sixfold_sunbeams",String(sunbeams));}catch(e){}}
+  function updateSunbeamUI(){ const el=$("beambal"); if(el){ el.textContent="☀ "+sunbeams; el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); } }
+  function addSunbeams(n){ if(!n)return; sunbeams+=n; saveSunbeams(); updateSunbeamUI(); }
+  function spendSunbeams(n){ if(sunbeams<n)return false; sunbeams-=n; saveSunbeams(); updateSunbeamUI(); return true; }
 
   /* ---- fighter rendering (placeholder shapes; art-wrap enables stage transforms) ---- */
   function bodySVG(color){
@@ -869,6 +891,7 @@
       // sunbeams are cosmetic currency (off the combat path) — reward reads here,
       // never in damage. Out-reading the foe pays in shine, never in force.
       const beams=win?(8+Math.round(summary.difficulty*8)+Math.round(summary.unpredictabilityPct/12)+matchReads*4):0;
+      if(beams)addSunbeams(beams);   // persist into the balance (was display-only)
       setSpendEnabled(false);
       // Ascent: a win on the current frontier rung clears it and grants the reward.
       let ascentInfo=null;
@@ -1462,9 +1485,27 @@
     renderSkinPicker();
     PALS.forEach(p=>{const o=document.createElement("div");o.className="opt pal"+(p===player.pal?" sel":"");
       o.style.background=p;o.onclick=()=>{player.pal=p;syncSel(pals,o);renderFighter("P");};pals.appendChild(o);});
+    PREMIUM_PALS.forEach(p=>{ const key="pal:"+p.v, owned=boughtCosmetics.has(key);
+      const o=document.createElement("div");o.className="opt pal"+(p.v===player.pal?" sel":"")+(owned?"":" buy");
+      o.style.background=p.v; if(!owned)o.innerHTML=`<span class="price">☀${p.cost}</span>`;
+      o.onclick=()=>tryBuyOrSelect(key,p.cost,()=>{player.pal=p.v;},pals,o); pals.appendChild(o); });
     CRESTS.forEach(c=>{const o=document.createElement("div");o.className="opt crest"+(c===player.crest?" sel":"");
       o.textContent=c;o.onclick=()=>{player.crest=c;syncSel(crests,o);renderFighter("P");};crests.appendChild(o);});
+    PREMIUM_CRESTS.forEach(c=>{ const key="crest:"+c.v, owned=boughtCosmetics.has(key);
+      const o=document.createElement("div");o.className="opt crest"+(c.v===player.crest?" sel":"")+(owned?"":" buy");
+      o.textContent=c.v; if(!owned){const b=document.createElement("span");b.className="price";b.textContent="☀"+c.cost;o.appendChild(b);}
+      o.onclick=()=>tryBuyOrSelect(key,c.cost,()=>{player.crest=c.v;},crests,o); crests.appendChild(o); });
     cname.value="";cname.oninput=()=>{player.name=cname.value.trim()||"You";$("pname").textContent=player.name;};
+  }
+  // Forge click: if not owned, try to buy with sunbeams; once owned, select it.
+  function tryBuyOrSelect(key,cost,apply,box,o){
+    if(!boughtCosmetics.has(key)){
+      if(!spendSunbeams(cost)){ showToast("Need ☀"+cost+" — win duels & trials to earn sunbeams"); return; }
+      boughtCosmetics.add(key); saveShop();
+      o.classList.remove("buy"); const pr=o.querySelector(".price"); if(pr)pr.remove();
+      showToast("Forged ✦ −☀"+cost);
+    }
+    apply(); syncSel(box,o); renderFighter("P");
   }
   function syncSel(box,sel){[...box.children].forEach(c=>c.classList.remove("sel"));sel.classList.add("sel");}
 
@@ -1491,6 +1532,7 @@
 
   buildWheel();buildSelectors();buildArenaPicker();buildSettings();buildCustomizer();
   applyA11y();setArena("dojo",true);renderFighter("P");renderFighter("A");
+  updateSunbeamUI();
   newGame();
 
   // First-run: show the how-to guide once (remembered per browser).
