@@ -76,7 +76,11 @@
      it in. Portrait art, covers the viewport. */
   #scene .scenebg{position:absolute;inset:0;background-size:cover;background-position:center top;opacity:0;transition:opacity .6s}
   #scene.hasbg .scenebg{opacity:1}
-  #scene.hasbg .glow,#scene.hasbg .disc,#scene.hasbg .ridge,#scene.hasbg .wash,#scene.hasbg .floor{opacity:0}
+  /* PERF: with a painted arena image up, fully REMOVE the procedural sky furniture
+     from the compositing tree (display:none, not opacity:0). The .wash layers blur 34px
+     + screen-blend over half the viewport — leaving them composited (even invisible) is
+     the main cause of mobile jank now that every arena has a full-screen backdrop. */
+  #scene.hasbg .glow,#scene.hasbg .disc,#scene.hasbg .ridge,#scene.hasbg .wash,#scene.hasbg .floor{display:none}
   body.reduce #scene *{transition:none}
 
   header{width:100%;max-width:460px;display:flex;align-items:baseline;justify-content:space-between}
@@ -99,7 +103,7 @@
 
   /* foe / mode bar */
   .foebar{width:100%;max-width:460px;display:flex;align-items:center;justify-content:space-between;gap:8px;
-    background:#1a213acc;-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);
+    background:#1a213af2;
     border:1px solid #ffffff1c;border-radius:11px;padding:8px 12px;font-size:12px;box-shadow:0 4px 18px #0005}
   .foebar .who{display:flex;flex-direction:column;gap:2px;min-width:0}
   .foebar .fn{font-family:var(--disp);font-weight:600;font-size:14px;color:var(--washi)}
@@ -237,7 +241,7 @@
   button.ghost{background:#ffffff10}
 
   .legend{width:100%;max-width:460px;font-size:10.5px;color:var(--washi-dim);display:flex;flex-wrap:wrap;gap:8px 13px;justify-content:center;line-height:1;
-    background:#13182aaa;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);border:1px solid #ffffff12;border-radius:10px;padding:9px 12px}
+    background:#13182af0;border:1px solid #ffffff12;border-radius:10px;padding:9px 12px}
   .legend b{color:var(--washi);font-weight:700}
   .sw{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:-1px;margin-right:4px}
 
@@ -248,7 +252,7 @@
   .postmatch b{color:var(--gold)} .postmatch .dim{color:var(--washi-dim)}
 
   /* drawers */
-  .drawer{width:100%;max-width:460px;background:#1a213acc;-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);
+  .drawer{width:100%;max-width:460px;background:#1a213af2;
     border:1px solid #ffffff1a;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px #0004;
     transition:max-height .3s ease;max-height:46px}
   .drawer.open{max-height:520px}
