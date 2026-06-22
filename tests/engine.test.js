@@ -184,5 +184,49 @@ function ok(name, cond, extra) { assert.ok(cond, "FAIL: " + name + (extra ? " ("
 // ---- mode registry honors-assists flags ----
 ok("casual/practice/gauntlet honor assists", E.MODES.casual.honorsAssists && E.MODES.practice.honorsAssists && E.MODES.gauntlet.honorsAssists);
 ok("daily/blitz/ghost are competitive (no assists)", !E.MODES.daily.honorsAssists && !E.MODES.blitz.honorsAssists && !E.MODES.ghost.honorsAssists);
+ok("pvp is a competitive mode (assists inert)", !!E.MODES.pvp && !E.MODES.pvp.honorsAssists);
+
+// ---- PvP seam: commitRound / commitBind drive the SAME bus + finalize path ----
+{
+  // a non-clash round: pick stances 1 apart -> player CLEAN, foe loses 2 HP
+  const g = E.createGame({ mode: E.MODES.pvp, seed: 1 });
+  const seen = {};
+  ["stance-selected", "round-revealed", "match-over"].forEach((ev) => (seen[ev] = []));
+  Object.keys(seen).forEach((ev) => g.bus.on(ev, (p) => seen[ev].push(p)));
+  const out = g.commitRound(0, 1); // d=1 -> clean for P
+  ok("commitRound resolves a non-clash with both picks supplied", out && out.kind === "clean" && out.winner === "P");
+  ok("commitRound emits stance-selected for BOTH sides", seen["stance-selected"].some((x) => x.side === "P") && seen["stance-selected"].some((x) => x.side === "A"));
+  ok("commitRound emits round-revealed with the injected foe pick", seen["round-revealed"].length === 1 && seen["round-revealed"][0].aPick === 1);
+  ok("damage applied to the foe (clean -2)", g.state().hpA === E.HP - 2 && g.state().hpP === E.HP);
+}
+{
+  // a clash round enters the bind, then commitBind resolves it externally
+  const g = E.createGame({ mode: E.MODES.pvp, seed: 2 });
+  let clashed = false; g.bus.on("clash-bind", () => (clashed = true));
+  const r = g.commitRound(3, 3); // identical stances -> clash
+  ok("commitRound detects a clash and enters the bind", r && r.clash === true && clashed);
+  ok("state is pending a bind", g.state().pending === true);
+  const o = g.commitBind(0, 1); // Drive beats Slip -> player wins the bind (glance)
+  ok("commitBind resolves the pending clash", o && o.bind && o.winner === "P" && g.state().pending === false);
+}
+{
+  // opponentCtx exposes the snapshot an external foe's AI reads (player=me, ai=foe)
+  const g = E.createGame({ mode: E.MODES.pvp, seed: 3 });
+  g.commitRound(0, 2);
+  const c = g.opponentCtx();
+  ok("opponentCtx mirrors engine state for the foe's reader", c.playerHist[0] === 0 && c.aiHist[0] === 2 && c.round >= 1);
+}
+{
+  // a full PvP match reaches match-over via commit* only (no AI calls)
+  const g = E.createGame({ mode: E.MODES.pvp, seed: 9 });
+  let over = null; g.bus.on("match-over", (p) => (over = p));
+  const pr = E.rng32(111), ar = E.rng32(222);
+  let guard = 0;
+  while (!g.state().over && guard++ < 500) {
+    const res = g.commitRound(Math.floor(pr() * 6), Math.floor(ar() * 6));
+    if (res && res.clash) g.commitBind(Math.floor(pr() * 3), Math.floor(ar() * 3));
+  }
+  ok("a full PvP match reaches match-over through commit* only", over && (over.winner === "P" || over.winner === "A"));
+}
 
 console.log("\nENGINE: %d assertions passed", passed);

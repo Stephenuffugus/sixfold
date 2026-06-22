@@ -455,6 +455,51 @@
   .daily .close{margin-top:10px;font-family:var(--ui);font-weight:700;font-size:13px;padding:11px 26px;border-radius:11px;
     border:1px solid #ffffff28;cursor:pointer;color:var(--washi);background:#ffffff12}
 
+  /* ===== Ranked Duel (PvP) screen ===== */
+  .hero.duel h2{margin:0 0 2px}
+  .tiercard{display:flex;flex-direction:column;align-items:center;gap:6px;background:#ffffff0e;border:1px solid #ffffff1c;
+    border-radius:16px;padding:16px 18px;margin:6px 0 4px;width:100%;max-width:340px}
+  .tierbadge{display:flex;align-items:center;gap:10px}
+  .tierbadge .tg{font-size:34px;line-height:1}
+  .tierbadge .tn{font-family:var(--disp);font-weight:800;font-size:22px;letter-spacing:.06em;color:var(--gold)}
+  .tierbadge .tn small{display:block;font-family:var(--ui);font-weight:600;font-size:11px;letter-spacing:.02em;color:var(--washi-dim)}
+  .rankbar{width:100%;height:12px;border-radius:7px;background:#0006;border:1px solid #ffffff22;overflow:hidden;position:relative}
+  .rankbar > i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:7px;
+    background:linear-gradient(90deg,var(--gold),#f0d98a);transition:width .9s cubic-bezier(.2,.8,.2,1)}
+  .rankmeta{display:flex;justify-content:space-between;width:100%;font-size:11px;color:var(--washi-dim)}
+  .rankrec{display:flex;gap:14px;font-size:12px;color:var(--washi);margin-top:2px}
+  .rankrec b{color:var(--gold)}
+  .duel-actions{display:flex;flex-direction:column;gap:9px;width:100%;max-width:340px;margin-top:8px}
+  .duel-actions button{font-family:var(--ui);font-weight:700;font-size:14px;padding:13px 18px;border-radius:12px;cursor:pointer;
+    border:1px solid #ffffff26;color:var(--washi);background:#ffffff12;transition:transform .1s,background .2s}
+  .duel-actions button.primary{background:linear-gradient(180deg,#b98a2e,#8a6420);border-color:#0003;color:#fff;box-shadow:0 4px 14px #0005}
+  .duel-actions button:active{transform:scale(.97)}
+  .duelstatus{min-height:30px;display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;max-width:340px;margin-top:4px}
+  .searchline{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--washi)}
+  .spinner{width:16px;height:16px;border-radius:50%;border:2px solid #ffffff33;border-top-color:var(--gold);animation:spin .8s linear infinite}
+  body.reduce .spinner{animation:none;border-top-color:#ffffff66}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .searchsub{font-size:11px;color:var(--washi-dim)}
+  .sentineloffer{background:#ffffff0e;border:1px solid #ffffff22;border-radius:13px;padding:12px;text-align:center;width:100%;max-width:340px}
+  .sentineloffer .so-t{font-weight:700;font-size:13px;color:var(--washi)}
+  .sentineloffer .so-s{font-size:11px;color:var(--washi-dim);margin:4px 0 9px}
+  .so-btns{display:flex;gap:8px;justify-content:center}
+  .so-btns button{font-family:var(--ui);font-weight:700;font-size:12px;padding:9px 14px;border-radius:10px;cursor:pointer;border:1px solid #ffffff26;color:var(--washi);background:#ffffff14}
+  .so-btns button.primary{background:linear-gradient(180deg,#b98a2e,#8a6420);border-color:#0003;color:#fff}
+  .ladderlist{width:100%;max-width:340px;margin-top:6px;border-top:1px solid #ffffff14;padding-top:8px}
+  .ladderlist .ll-h{font-size:10px;letter-spacing:.12em;color:var(--washi-dim);text-transform:uppercase;margin-bottom:5px;text-align:center}
+  .ll-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:3px 4px;border-radius:7px}
+  .ll-row.me{background:#cda64f22;border:1px solid #cda64f44}
+  .ll-row .ll-n{display:flex;align-items:center;gap:7px}
+  .ll-row .ll-r{color:var(--washi-dim);font-variant-numeric:tabular-nums}
+  .ll-note{font-size:10px;color:var(--washi-dim);text-align:center;margin-top:6px;font-style:italic}
+  .modetag.ranked{background:linear-gradient(180deg,#b98a2e,#8a6420);color:#fff;border-color:#0003}
+  /* PvP result extras (rendered inside #resultscreen) */
+  .pvp-rank{display:flex;flex-direction:column;align-items:center;gap:7px;margin:6px 0;width:100%;max-width:320px}
+  .pvp-delta{font-family:var(--disp);font-weight:800;font-size:26px}
+  .pvp-delta.up{color:#7ed957}.pvp-delta.down{color:var(--seal)}
+  .promo-banner{font-weight:800;font-size:14px;color:var(--gold);letter-spacing:.04em;padding:6px 12px;border:1px solid #cda64f55;border-radius:10px;background:#cda64f18}
+
   /* SIXFOLD — anim.css  (spec §4)
  * Limited-animation illusion from 2 frames/character + GPU transforms.
  * Transform/opacity ONLY (compositor-friendly -> trivial 60fps for 2 fighters).
@@ -605,6 +650,7 @@
   <div class="postmatch" id="postmatch"></div>
 
   <div class="controls">
+    <button class="act primary" id="duelbtn">⚔ Ranked Duel</button>
     <button class="act primary" id="dailybtn">🗓 Daily Duel</button>
     <button class="act ghost" id="ascentbtn">⛰ Ascent</button>
     <button class="act ghost" id="collbtn">🎴 Roster</button>
@@ -682,6 +728,9 @@
 
   <!-- Daily Duel — one seeded challenge per day (populated by glue) -->
   <div class="overlay" id="dailyscreen" aria-hidden="true" role="dialog" aria-label="Daily Duel"></div>
+
+  <!-- Ranked Duel — live head-to-head matchmaking + tier ladder (populated by glue) -->
+  <div class="overlay" id="duelscreen" aria-hidden="true" role="dialog" aria-label="Ranked Duel"></div>
 
   <!-- First-run / on-demand how-to guide -->
   <div class="overlay" id="howto" aria-hidden="true" role="dialog" aria-label="How to play">
@@ -1481,6 +1530,532 @@
 })(typeof globalThis !== "undefined" ? globalThis : this);
 
 
+/* ============================ rank.js ============================ */
+/* SIXFOLD — rank.js  (ranked-duel ladder)
+ *
+ * The competitive progression layer for live head-to-head duels. PURE math +
+ * a tiny serializable ladder object; no DOM, no localStorage (the glue owns
+ * persistence). Two ideas only:
+ *
+ *   1) a hidden Elo RATING (the matchmaking signal), and
+ *   2) a visible TIER ladder derived from that rating (the feeling of climbing).
+ *
+ * Fairness pillar: rank rewards OUTCOMES of symmetric duels — it never touches
+ * the combat math (no stat, no odds). A duel against a Sentinel (the no-opponent
+ * fallback) moves rating at REDUCED stakes so it can't be farmed.
+ *
+ * The serialized shape is deliberately cloud-ready: {playerId,name,rating,wins,
+ * losses,streak,peak,updatedAt,pending[]} drops straight into Firebase later
+ * (pending[] = unsynced results to replay on first sync).
+ */
+(function (root) {
+  "use strict";
+
+  // visible tiers, ascending. `min` = inclusive rating floor. Gaps widen near the
+  // top so the last climbs are the hardest (classic ladder shape).
+  // glyphs are kanji "seal" marks, not emoji — they keep the sumi-e/yokai tone
+  // (石 stone · 銅 bronze · 鉄 iron · 翠 jade · 玄 onyx · 王 master/king).
+  const TIERS = [
+    { key: "stone",  name: "Stone",  glyph: "石", min: 0 },
+    { key: "bronze", name: "Bronze", glyph: "銅", min: 1000 },
+    { key: "iron",   name: "Iron",   glyph: "鉄", min: 1250 },
+    { key: "jade",   name: "Jade",   glyph: "翠", min: 1500 },
+    { key: "onyx",   name: "Onyx",   glyph: "玄", min: 1800 },
+    { key: "master", name: "Master", glyph: "王", min: 2150 },
+  ];
+  const START_RATING = 1000;   // new players enter at the Bronze floor (Stone is below = demotion room)
+  const RATING_FLOOR = 200;    // never sink below this
+  const K_BASE = 32;           // Elo K-factor for a live duel
+  const SENTINEL_STAKES = 0.4; // fraction of K applied to Sentinel (bot) duels
+  const PROVISIONAL_GAMES = 10;// your first N ranked matches are "placements"...
+  const PROVISIONAL_K_MULT = 2;// ...with boosted K so you sort into your tier fast
+  // soft span used only to render a progress bar inside the top (open-ended) tier
+  const MASTER_SPAN = 600;
+
+  const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+
+  // tier index for a rating (highest tier whose floor it clears)
+  function tierIndexFor(rating) {
+    let idx = 0;
+    for (let i = 0; i < TIERS.length; i++) if (rating >= TIERS[i].min) idx = i;
+    return idx;
+  }
+
+  // full tier descriptor + progress toward the next tier (0..1) + rating-to-next.
+  function tierFor(rating) {
+    rating = Math.round(rating);
+    const i = tierIndexFor(rating);
+    const t = TIERS[i];
+    const isTop = i === TIERS.length - 1;
+    const floor = t.min;
+    const ceil = isTop ? t.min + MASTER_SPAN : TIERS[i + 1].min;
+    const progress = clamp((rating - floor) / (ceil - floor), 0, 1);
+    const toNext = isTop ? 0 : Math.max(0, ceil - rating);
+    return {
+      index: i, key: t.key, name: t.name, glyph: t.glyph,
+      rating, floor, ceil, isTop, progress,
+      toNext, next: isTop ? null : TIERS[i + 1].name,
+    };
+  }
+
+  // standard Elo expected score for `myRating` vs `oppRating`
+  function expected(myRating, oppRating) {
+    return 1 / (1 + Math.pow(10, (oppRating - myRating) / 400));
+  }
+
+  // rating change for one result. won=true|false. kind="live"|"sentinel".
+  // kMult scales K (provisional placements pass >1). Returns a signed integer
+  // delta (never zero on a decided result, so the bar always visibly moves ±1).
+  function ratingDelta(myRating, oppRating, won, kind, kMult) {
+    const k = K_BASE * (kind === "sentinel" ? SENTINEL_STAKES : 1) * (kMult || 1);
+    const score = won ? 1 : 0;
+    const raw = k * (score - expected(myRating, oppRating));
+    let d = Math.round(raw);
+    if (d === 0) d = won ? 1 : -1;           // guarantee a visible nudge
+    // never let the floor make a loss a no-op either; floor is applied by caller
+    return d;
+  }
+
+  // ---- ladder: a small stateful holder the glue persists verbatim ----
+  function createLadder(saved) {
+    saved = saved || {};
+    const st = {
+      v: 1,
+      playerId: saved.playerId || genId(),
+      name: saved.name || "You",
+      rating: clampRating(saved.rating != null ? saved.rating : START_RATING),
+      wins: saved.wins | 0,
+      losses: saved.losses | 0,
+      streak: saved.streak | 0,                 // current win streak (resets on loss)
+      bestStreak: saved.bestStreak | 0,
+      peak: saved.peak != null ? saved.peak : (saved.rating != null ? saved.rating : START_RATING),
+      placements: saved.placements != null ? (saved.placements | 0) : 0, // ranked matches played
+      updatedAt: saved.updatedAt || 0,
+      pending: Array.isArray(saved.pending) ? saved.pending.slice() : [],
+    };
+
+    function clampRating(r) { return Math.max(RATING_FLOOR, Math.round(r)); }
+
+    // apply one decided duel. opp = {rating,kind,name?,id?}. when = caller's clock.
+    // returns {before,after,delta,promoted,demoted,tierBefore,tierAfter}.
+    function applyResult(won, opp, when) {
+      const before = st.rating;
+      const oppRating = (opp && opp.rating != null) ? opp.rating : before;
+      const kind = (opp && opp.kind === "sentinel") ? "sentinel" : "live";
+      const tBefore = tierFor(before);
+      const inPlacements = st.placements < PROVISIONAL_GAMES;
+      const kMult = inPlacements ? PROVISIONAL_K_MULT : 1;  // placement boost (fast sort)
+      const delta = ratingDelta(before, oppRating, won, kind, kMult);
+      // Placement protection: during your first N games you can climb fast but
+      // never demote BELOW your starting tier — a new player can't be dumped to the
+      // bottom on a single early loss (the friendliest, still-honest placement model).
+      const lowerFloor = inPlacements ? Math.max(RATING_FLOOR, START_RATING) : RATING_FLOOR;
+      st.rating = Math.max(lowerFloor, Math.round(before + delta));
+      const realDelta = st.rating - before;          // after floor clamp
+      st.placementProtected = inPlacements && (before + delta) < lowerFloor;  // surfaced to UI
+      if (won) { st.wins++; st.streak++; if (st.streak > st.bestStreak) st.bestStreak = st.streak; }
+      else { st.losses++; st.streak = 0; }
+      if (st.rating > st.peak) st.peak = st.rating;
+      st.placements++;
+      st.updatedAt = when || st.updatedAt;
+      const tAfter = tierFor(st.rating);
+      // record for later cloud replay (bounded so storage can't grow without limit)
+      st.pending.push({ won: !!won, delta: realDelta, oppId: opp && opp.id, oppRating, kind, at: st.updatedAt });
+      if (st.pending.length > 200) st.pending.splice(0, st.pending.length - 200);
+      return {
+        before, after: st.rating, delta: realDelta,
+        tierBefore: tBefore, tierAfter: tAfter,
+        promoted: tAfter.index > tBefore.index,
+        demoted: tAfter.index < tBefore.index,
+        protected: !!st.placementProtected,   // a placement loss was floored at the entry tier
+        inPlacements,
+        kind,
+      };
+    }
+
+    function tier() { return tierFor(st.rating); }
+    function winRate() { const n = st.wins + st.losses; return n ? Math.round((st.wins / n) * 100) : 0; }
+    function toJSON() { return JSON.parse(JSON.stringify(st)); }
+    function setName(n) { st.name = String(n || "You").slice(0, 14) || "You"; }
+    // mark pending results as synced (Phase 2 cloud hook)
+    function clearPending() { const p = st.pending.slice(); st.pending = []; return p; }
+
+    return {
+      get rating() { return st.rating; },
+      get wins() { return st.wins; },
+      get losses() { return st.losses; },
+      get streak() { return st.streak; },
+      get bestStreak() { return st.bestStreak; },
+      get peak() { return st.peak; },
+      get placements() { return st.placements; },
+      get playerId() { return st.playerId; },
+      get name() { return st.name; },
+      applyResult, tier, winRate, toJSON, setName, clearPending,
+      inPlacements() { return st.placements < PROVISIONAL_GAMES; },
+      placementsLeft() { return Math.max(0, PROVISIONAL_GAMES - st.placements); },
+    };
+  }
+
+  // small, dependency-free id (good enough as a stable local player key; Phase 2
+  // can replace with the auth uid). Avoids Math.random reliance for determinism in
+  // tests by mixing a passed seed when given.
+  function genId(seed) {
+    const base = (seed != null) ? seed : (idCounter++ ^ 0x9e3779b9);
+    let x = (base >>> 0) || 1, out = "p_";
+    for (let i = 0; i < 8; i++) { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; x >>>= 0; out += (x % 36).toString(36); }
+    return out;
+  }
+  let idCounter = 1;
+
+  const api = {
+    TIERS, START_RATING, RATING_FLOOR, K_BASE, SENTINEL_STAKES, PROVISIONAL_GAMES, PROVISIONAL_K_MULT,
+    tierFor, tierIndexFor, expected, ratingDelta, createLadder, genId,
+  };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.Rank = api;
+})(typeof globalThis !== "undefined" ? globalThis : this);
+
+
+/* ============================ matchmaker.js ============================ */
+/* SIXFOLD — matchmaker.js  (rank-banded pairing + Sentinel fallback)
+ *
+ * PURE policy, no I/O, no timers. Given a candidate pool (whoever the transport
+ * says is online + waiting) and how long we've been searching, decide who to
+ * pair with — and when to stop waiting and offer a Sentinel instead.
+ *
+ * Two rulings from the design council live here:
+ *  - rank-banded: prefer an opponent close in rating; WIDEN the band the longer
+ *    you wait (so a quiet ladder still finds *someone* eventually).
+ *  - honest fallback: after SEARCH_TIMEOUT with no human, offer a Sentinel — a
+ *    fair AI tuned to the player's rank — clearly labelled, at reduced stakes.
+ *
+ * Difficulty is the ONLY knob the Sentinel uses (the fairness pillar): rating
+ * maps to a difficulty band, never to an odds advantage.
+ */
+(function (root) {
+  "use strict";
+  const req = (typeof require !== "undefined");
+  const Personalities = req ? require("./personalities.js") : root.Personalities;
+  const Rank = req ? require("./rank.js") : root.Rank;
+
+  // widening rating-band schedule (half-width). The longer we search, the looser.
+  const BANDS = [
+    { until: 4000,  half: 75 },     // 0–4s : near-mirror rivals
+    { until: 9000,  half: 200 },    // 4–9s : same neighbourhood
+    { until: 15000, half: 500 },    // 9–15s: anyone roughly comparable
+    { until: Infinity, half: Infinity }, // >15s: anyone online at all
+  ];
+  const SEARCH_TIMEOUT_MS = 13000;  // after this, with no human, offer a Sentinel
+
+  const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+
+  // half-width of the acceptable rating band at a given search elapsed (ms)
+  function bandFor(elapsedMs) {
+    for (const b of BANDS) if (elapsedMs < b.until) return b.half;
+    return Infinity;
+  }
+
+  // choose the best opponent in `pool` within the current band, or null.
+  // pool entries: {id,name,rating,...}. opts.selfId excludes yourself; opts.busy
+  // is a Set/array of ids already in a match; opts.tieIndex breaks ties stably.
+  function pickOpponent(pool, myRating, elapsedMs, opts) {
+    opts = opts || {};
+    const half = bandFor(elapsedMs);
+    const busy = toSet(opts.busy);
+    let best = null, bestGap = Infinity;
+    const list = pool || [];
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i];
+      if (!c || c.id == null) continue;
+      if (opts.selfId != null && c.id === opts.selfId) continue;
+      if (busy.has(c.id)) continue;
+      if (c.online === false) continue;
+      const gap = Math.abs((c.rating || 0) - myRating);
+      if (gap > half) continue;
+      // closest rating wins; deterministic tiebreak by id so it's reproducible
+      if (gap < bestGap || (gap === bestGap && best && String(c.id) < String(best.id))) {
+        best = c; bestGap = gap;
+      }
+    }
+    return best;
+  }
+
+  // what should the search UI do right now?
+  //   "matched"        -> a human pairing exists (caller passes it in)
+  //   "searching"      -> keep waiting, show the widening band
+  //   "offer-sentinel" -> waited long enough with no human; offer the bot fallback
+  function fallbackDecision(elapsedMs, hasHumanMatch) {
+    if (hasHumanMatch) return "matched";
+    if (elapsedMs >= SEARCH_TIMEOUT_MS) return "offer-sentinel";
+    return "searching";
+  }
+
+  // map a rating to a fair difficulty in [0.12, 1.0]. Anchored so the start
+  // rating sits low-mid and Master tops out near 1.0 (pillar: difficulty only).
+  function ratingToDifficulty(rating) {
+    const lo = Rank ? Rank.RATING_FLOOR : 200;
+    const hi = (Rank && Rank.TIERS.length) ? Rank.TIERS[Rank.TIERS.length - 1].min + 250 : 2400;
+    const t = clamp((rating - lo) / (hi - lo), 0, 1);
+    return Math.round((0.12 + t * 0.88) * 100) / 100;
+  }
+
+  // archetypes grouped by star rating, so a Sentinel's "style" scales with rank.
+  function archetypesByDifficulty(diff) {
+    if (!Personalities) return ["ghost"];
+    const ids = Personalities.ids();
+    // target star tier 1..5 from difficulty
+    const targetStars = clamp(Math.round(diff * 4) + 1, 1, 5);
+    const byStars = ids.filter((id) => {
+      const a = Personalities.ARCHES[id];
+      return a && Math.abs((a.stars || 3) - targetStars) <= 1;
+    });
+    return byStars.length ? byStars : ids;
+  }
+
+  // build a Sentinel opponent descriptor for a player at `rating`.
+  // rngFloat()->[0,1) optional (deterministic in tests); idx varies the name.
+  function sentinelFor(rating, rngFloat, idx) {
+    const difficulty = ratingToDifficulty(rating);
+    const pool = archetypesByDifficulty(difficulty);
+    const r = (typeof rngFloat === "function") ? rngFloat() : 0.5;
+    const archetype = pool[Math.min(pool.length - 1, Math.floor(r * pool.length))];
+    const tier = Rank ? Rank.tierFor(rating) : { name: "" };
+    const name = sentinelName(tier.name, idx == null ? Math.floor(r * SENTINEL_NAMES.length) : idx);
+    return {
+      id: "sentinel:" + archetype + ":" + Math.round(rating),
+      name, kind: "sentinel",
+      rating: Math.round(rating),     // matched to the player so stakes are fair-but-reduced
+      archetype, difficulty,
+      tierName: tier.name,
+    };
+  }
+
+  const SENTINEL_NAMES = ["Echoing Sentinel", "Hollow Rival", "Drifting Shade", "Phantom Aspirant",
+    "Silent Understudy", "Mirror Sentinel", "Wandering Shadow", "Quiet Challenger"];
+  function sentinelName(tierName, idx) {
+    const base = SENTINEL_NAMES[((idx | 0) % SENTINEL_NAMES.length + SENTINEL_NAMES.length) % SENTINEL_NAMES.length];
+    return tierName ? (base) : base;
+  }
+
+  function toSet(x) {
+    if (!x) return new Set();
+    if (x instanceof Set) return x;
+    return new Set(x);
+  }
+
+  const api = {
+    BANDS, SEARCH_TIMEOUT_MS,
+    bandFor, pickOpponent, fallbackDecision,
+    ratingToDifficulty, archetypesByDifficulty, sentinelFor,
+  };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.Matchmaker = api;
+})(typeof globalThis !== "undefined" ? globalThis : this);
+
+
+/* ============================ net.js ============================ */
+/* SIXFOLD — net.js  (multiplayer transport SEAM)
+ *
+ * One interface, two backends. Phase 1 ships the LocalMock (no server, fully
+ * offline-testable). Phase 2 swaps in a Firebase backend with the SAME shape —
+ * Net.configure(FirebaseBackend) and nothing above this layer changes.
+ *
+ * A backend provides:
+ *   findMatch({rating,name,tier,rng,clock}) -> Search
+ *   Search:  onState(cb), acceptSentinel(), keepSearching(), cancel()
+ *            states: {state:"searching",elapsedMs,half}
+ *                    {state:"matched", opponent, session}
+ *                    {state:"sentinel-offer", opponent}
+ *   Session: meta, exchangeStance(round,myPick,oppCtx)->Promise<{oppPick}>
+ *            exchangeBind(round,myBind,oppCtx)->Promise<{oppBind}>
+ *            onDisconnect(cb), close(), simulateDisconnect()
+ *
+ * THE INTEGRITY RULE (commit-reveal): neither side may learn the other's pick
+ * before both have committed. exchangeStance/exchangeBind enforce it — the
+ * opponent's pick is decided WITHOUT reference to myPick. (In the mock the foe
+ * is an AI that reads only history; over a real wire it's a hash-then-reveal
+ * handshake. Either way myPick can't leak.) This is what keeps a live duel as
+ * symmetric and unexploitable as the single-player game — the fairness pillar.
+ */
+(function (root) {
+  "use strict";
+  const req = (typeof require !== "undefined");
+  const Personalities = req ? require("./personalities.js") : root.Personalities;
+  const Matchmaker = req ? require("./matchmaker.js") : root.Matchmaker;
+
+  // tiny non-crypto hash, only to model a real commit blob (djb2)
+  function hash(s) { let h = 5381; s = String(s); for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0; return h.toString(36); }
+  // mulberry32 — deterministic rng from a seed (independent foe randomness)
+  function rng32(seed) {
+    let a = (seed >>> 0) || 1;
+    return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+  function defaultClock() {
+    const g = root;
+    return {
+      setTimeout: (fn, ms) => (g.setTimeout ? g.setTimeout(fn, ms) : (fn(), 0)),
+      clearTimeout: (id) => { if (g.clearTimeout) g.clearTimeout(id); },
+    };
+  }
+
+  /* ---------------- LocalMock backend ---------------- */
+  // No server. The "online pool" is empty by default — which is the HONEST Phase-1
+  // state (there is no backend, so there are no live rivals). That means findMatch
+  // always falls through to the Sentinel offer, exactly what the player is told.
+  // Tests/Phase-2 can inject a pool to exercise the full human-match pipeline.
+  function LocalMock() {
+    let pool = [];                 // [{id,name,rating,online}]
+    const busy = new Set();
+    const cfg = { latencyMs: 220, tickMs: 600, noPoolMs: 2600 };
+
+    function setPool(p) { pool = Array.isArray(p) ? p.slice() : []; }
+    function setLatency(ms) { cfg.latencyMs = Math.max(0, ms | 0); }
+
+    function findMatch(opts) {
+      opts = opts || {};
+      const clock = opts.clock || defaultClock();
+      const rng = opts.rng || rng32(((opts.rating || 1000) * 2654435761) >>> 0);
+      const myRating = opts.rating || 1000;
+      let elapsed = 0, cancelled = false, settled = false;
+      const subs = [];
+      let nameIdx = 0;
+      const emit = (s) => { if (!cancelled) subs.forEach((f) => { try { f(s); } catch (e) {} }); };
+
+      function makeSentinel() {
+        return Matchmaker.sentinelFor(myRating, rng, (nameIdx++));
+      }
+      function openSession(opponent) {
+        settled = true;
+        return makeSession(opponent, { clock, latencyMs: cfg.latencyMs, seed: ((myRating ^ hashNum(opponent.id)) >>> 0) });
+      }
+      function tick() {
+        if (cancelled || settled) return;
+        elapsed += cfg.tickMs;
+        const cand = Matchmaker.pickOpponent(pool, myRating, elapsed, { selfId: opts.selfId, busy });
+        const decision = Matchmaker.fallbackDecision(elapsed, !!cand);
+        if (decision === "matched") {
+          busy.add(cand.id);
+          emit({ state: "matched", opponent: normalizeHuman(cand), session: openSession(normalizeHuman(cand)) });
+          return;
+        }
+        // "Is anyone online at all?" is band-INDEPENDENT (Infinity band). A non-empty
+        // pool whose rivals are merely out of the CURRENT (narrow) band must keep
+        // widening to the full timeout — only a genuinely EMPTY pool short-circuits
+        // to the Sentinel quickly (the honest "no rivals online" path).
+        const anyoneOnline = Matchmaker.pickOpponent(pool, myRating, Infinity, { selfId: opts.selfId, busy });
+        const effectiveTimeout = anyoneOnline ? Matchmaker.SEARCH_TIMEOUT_MS : Math.min(Matchmaker.SEARCH_TIMEOUT_MS, cfg.noPoolMs);
+        if (elapsed >= effectiveTimeout) {
+          settled = true;
+          emit({ state: "sentinel-offer", opponent: makeSentinel() });
+          return;
+        }
+        emit({ state: "searching", elapsedMs: elapsed, half: Matchmaker.bandFor(elapsed) });
+        clock.setTimeout(tick, cfg.tickMs);
+      }
+      // kick off
+      clock.setTimeout(() => { emit({ state: "searching", elapsedMs: 0, half: Matchmaker.bandFor(0) }); tick(); }, 0);
+
+      const handle = {
+        onState(cb) { if (typeof cb === "function") subs.push(cb); return handle; },
+        acceptSentinel() {
+          if (cancelled) return null;
+          const opp = makeSentinel();
+          const session = openSession(opp);
+          emit({ state: "matched", opponent: opp, session });
+          return session;
+        },
+        keepSearching() { if (!cancelled) { settled = false; elapsed = 0; clock.setTimeout(tick, cfg.tickMs); } return handle; },
+        cancel() { cancelled = true; },
+      };
+      return handle;
+    }
+
+    return { name: "local-mock", findMatch, setPool, setLatency, _pool: () => pool };
+  }
+
+  function hashNum(s) { let h = 2166136261 >>> 0; s = String(s); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; }
+  function normalizeHuman(c) {
+    return { id: c.id, name: c.name || "Rival", kind: "human", rating: c.rating || 1000,
+      // a mock "human" is AI-backed locally; difficulty derives from THEIR rating
+      difficulty: Matchmaker.ratingToDifficulty(c.rating || 1000),
+      archetype: c.archetype || "ghost", tierName: c.tierName };
+  }
+
+  /* ---------------- Session (the duel channel) ---------------- */
+  // Both human-mock and Sentinel use the same AI-backed local opponent. The ONLY
+  // observable difference is meta.kind (-> labelling + rank stakes). The opponent's
+  // pick is computed from history+its own rng — never from the local player's pick.
+  function makeSession(opponent, o) {
+    o = o || {};
+    const clock = o.clock || defaultClock();
+    const latency = o.latencyMs == null ? 220 : o.latencyMs;
+    const oppRng = rng32((o.seed || 1) >>> 0);
+    const oppDiff = opponent.difficulty == null ? 0.5 : opponent.difficulty;
+    const oppProfile = Personalities ? Personalities.create(opponent.archetype || "ghost", oppRng) : null;
+    let dead = false; const discSubs = []; let lastIndependent = false;
+
+    // build the foe's view of the world: it reads the LOCAL player via playerHist,
+    // plays from aiHist; override difficulty+rng with the foe's own.
+    function foeCtx(oppCtx) { return Object.assign({}, oppCtx, { difficulty: oppDiff, rng: oppRng }); }
+
+    function decideStance(oppCtx) {
+      if (!oppProfile) return Math.floor(oppRng() * 6);
+      return Personalities.aiChoose(oppProfile, foeCtx(oppCtx));
+    }
+    function decideBind(oppCtx) {
+      if (!oppProfile) return Math.floor(oppRng() * 3);
+      return Personalities.bindChoose(oppProfile, foeCtx(oppCtx));
+    }
+
+    // commit-reveal stance exchange. myPick is committed (hashed) first; the foe's
+    // pick is decided WITHOUT it; then both reveal. Resolves to the foe's pick.
+    function exchangeStance(round, myPick, oppCtx) {
+      return new Promise((resolve, reject) => {
+        if (dead) return reject(new Error("disconnected"));
+        const myCommit = hash(round + ":" + myPick + ":" + (o.seed || 0));   // model the commit blob
+        const oppPick = decideStance(oppCtx || {});                          // independent of myPick
+        lastIndependent = true;
+        clock.setTimeout(() => {
+          if (dead) return reject(new Error("disconnected"));
+          resolve({ oppPick, myCommit, round });
+        }, latency);
+      });
+    }
+    function exchangeBind(round, myBind, oppCtx) {
+      return new Promise((resolve, reject) => {
+        if (dead) return reject(new Error("disconnected"));
+        const oppBind = decideBind(oppCtx || {});
+        clock.setTimeout(() => { if (dead) return reject(new Error("disconnected")); resolve({ oppBind, round }); }, latency);
+      });
+    }
+
+    function onDisconnect(cb) { if (typeof cb === "function") discSubs.push(cb); }
+    function fireDisconnect(reason) { if (dead) return; dead = true; discSubs.forEach((f) => { try { f({ reason: reason || "left" }); } catch (e) {} }); }
+
+    return {
+      meta: opponent,
+      exchangeStance, exchangeBind,
+      onDisconnect, close: () => { dead = true; },
+      simulateDisconnect: (reason) => fireDisconnect(reason),
+      _decidedIndependently: () => lastIndependent,
+    };
+  }
+
+  /* ---------------- public Net facade ---------------- */
+  let backend = LocalMock();
+  const Net = {
+    configure(b) { if (b) backend = b; return Net; },
+    backend() { return backend; },
+    findMatch(opts) { return backend.findMatch(opts); },
+    // expose for tests / Phase-1 demos
+    LocalMock, makeSession, _hash: hash, _rng32: rng32,
+  };
+
+  if (typeof module !== "undefined" && module.exports) module.exports = Net;
+  else root.Net = Net;
+})(typeof globalThis !== "undefined" ? globalThis : this);
+
+
 /* ============================ skins.js ============================ */
 /* SIXFOLD — skins.js  (cosmetic art layer)
  *
@@ -1990,6 +2565,7 @@
     daily:    { id: "daily",    honorsAssists: false, timed: false, seeded: true  },
     blitz:    { id: "blitz",    honorsAssists: false, timed: true,  seeded: false },
     ghost:    { id: "ghost",    honorsAssists: false, timed: false, seeded: false }, // async PvP replay
+    pvp:      { id: "pvp",      honorsAssists: false, timed: false, seeded: false }, // live head-to-head (opponent picks injected)
   };
 
   // ---- tiny event bus ----
@@ -2128,6 +2704,43 @@
       return finalize(outcome);
     }
 
+    // ---- PvP / external-opponent path ----
+    // In live head-to-head the opponent's stance is NOT computed by the AI — it
+    // arrives over the wire (or from a Sentinel). commitRound takes BOTH already-
+    // resolved picks and runs the identical resolve/finalize/bus flow as PvE, so
+    // every animation, the Resolve meter, the readout and match-over reuse unchanged.
+    // The caller is responsible for the commit-reveal handshake (engine never sees
+    // a pick before the other side has committed — see net.js).
+    function commitRound(pStance, aStance) {
+      if (st.over || st.pending) return null;
+      st.playerHist.push(pStance);
+      st.aiHist.push(aStance);
+      bus.emit("stance-selected", { side: "P", stance: pStance });
+      const r = resolve(pStance, aStance);
+      if (r.kind === "clash") {
+        meter.onBindEntered();
+        bus.emit("meter-changed", meter.state());
+        st.pending = { pStance, aStance };
+        bus.emit("clash-bind", { round: st.round });
+        return { clash: true };
+      }
+      bus.emit("stance-selected", { side: "A", stance: aStance });
+      return finalize({ kind: r.kind, winner: r.winner });
+    }
+    // resolve a pending clash with both bind picks supplied externally.
+    function commitBind(pBind, aBind) {
+      if (!st.pending) return null;
+      st.bindHistP.push(pBind);
+      st.bindHistA.push(aBind);
+      const b = resolveBind3(pBind, aBind);
+      const pending = st.pending; st.pending = null;
+      bus.emit("stance-selected", { side: "A", stance: pending.aStance });
+      let outcome;
+      if (b.winner === null) outcome = { kind: "clash", winner: null, bind: { p: pBind, a: aBind } };
+      else outcome = { kind: "glance", winner: b.winner, bind: { p: pBind, a: aBind } };
+      return finalize(outcome);
+    }
+
     // spend Resolve to buy INFORMATION. Computes the revealed payload and emits
     // 'info-revealed'. Never alters damage/HP (Resolve.spend has no damage path).
     function spend(side, action) {
@@ -2173,7 +2786,11 @@
 
     const api = {
       bus, mode, difficulty, profile, meter,
-      chooseStance, submitBind, spend, runMatch,
+      chooseStance, submitBind, commitRound, commitBind, spend, runMatch,
+      // ctx snapshot for an EXTERNAL opponent's AI to read this player (Sentinel /
+      // local mock). playerHist = this player's picks (the thing the foe reads),
+      // aiHist = the opponent's own picks. rng is the match rng.
+      opponentCtx: () => ctx(),
       state: () => ({ hpP: st.hpP, hpA: st.hpA, round: st.round, over: st.over,
         playerHist: st.playerHist.slice(), aiHist: st.aiHist.slice(),
         outcomes: st.outcomes.slice(), pending: !!st.pending }),
@@ -2195,7 +2812,8 @@
   const Engine = globalThis.Engine, Personalities = globalThis.Personalities,
     Resolve = globalThis.Resolve, Readout = globalThis.Readout,
     Stage = globalThis.Stage, Assists = globalThis.Assists, Predictor = globalThis.Predictor,
-    Sfx = globalThis.Sfx;
+    Sfx = globalThis.Sfx,
+    Rank = globalThis.Rank, Matchmaker = globalThis.Matchmaker, Net = globalThis.Net;
 
   // juice helpers (cosmetic only). haptics honor the same setting flag as sound's sibling.
   function buzz(ms){ try{ if(Assists.settings().haptics && typeof navigator!=="undefined" && navigator.vibrate) navigator.vibrate(ms); }catch(e){} }
@@ -2238,6 +2856,11 @@
   let ai={name:"Ronin",face:rid(FACES),pal:rid(PALS),crest:rid(CRESTS),skin:"inkblade"};
   let foeId=rid(Personalities.ids()), difficulty=0.5, modeId="casual";
   let game=null, busy=false, over=false, foresightNode=null, foresightStrike=null, matchWinner=null;
+  // ---- ranked duel (PvP) state ----
+  function loadPvp(){ try{ return JSON.parse(localStorage.getItem("sixfold_pvp")||"{}")||{}; }catch(e){ return {}; } }
+  function savePvp(){ try{ localStorage.setItem("sixfold_pvp",JSON.stringify(ladder.toJSON())); }catch(e){} }
+  let ladder=Rank.createLadder(loadPvp());
+  let isPvP=false, pvpSession=null, pvpOpp=null, pvpSearch=null, pvpResolved=false, offerCount=0;
   let committedForesight=null;   // foresight read in play when the current pick was committed
   let matchReads=0;              // called shots landed this match (mastery payoff)
   let matchBindWon=false, matchUsedForesight=false;  // per-match flags for Trials
@@ -2388,8 +3011,19 @@
     clearForesight();
     nodeEls.forEach(el=>el.classList.add("dim"));
     nodeEls[p].classList.remove("dim"); nodeEls[p].classList.add("ppick");
-    $("verdict").textContent="…"; $("sub").textContent="reading you";
+    $("verdict").textContent="…"; $("sub").textContent= isPvP?"rival is choosing…":"reading you";
+    if(isPvP){ pvpCommit(p); return; }
     game.chooseStance(p);   // engine emits events; handlers below drive the rest
+  }
+  // PvP: commit my stance, exchange with the opponent (commit-reveal), then resolve
+  // the round through the engine's external-opponent path (same bus -> same juice).
+  function pvpCommit(p){
+    if(!pvpSession){ busy=false; return; }
+    const round=game.state().round, oppCtx=game.opponentCtx();
+    pvpSession.exchangeStance(round,p,oppCtx).then(({oppPick})=>{
+      if(over||!isPvP)return;
+      game.commitRound(p,oppPick);   // emits stance-selected + (clash-bind | round-revealed)
+    }).catch(()=>handlePvpDisconnect());
   }
 
   function showAiPick(a, p){
@@ -2405,7 +3039,19 @@
       Stage.lockBlades();
       Sfx.play("bind"); buzz([18,40,18]);
       if(!reduced()){document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),360);}
-      Stage.bindPrompt().then(b=>{ g.submitBind(b); });
+      if(isPvP){
+        // PvP clash: player picks a bind, then exchange with the opponent and resolve
+        Stage.bindPrompt().then(pBind=>{
+          if(over||!isPvP)return;
+          const round=game.state().round, oppCtx=game.opponentCtx();
+          pvpSession.exchangeBind(round,pBind,oppCtx).then(({oppBind})=>{
+            if(over||!isPvP)return;
+            game.commitBind(pBind,oppBind);
+          }).catch(()=>handlePvpDisconnect());
+        });
+      }else{
+        Stage.bindPrompt().then(b=>{ g.submitBind(b); });
+      }
     });
     g.bus.on("meter-changed",updateMeter);
     g.bus.on("info-revealed",({side,action,payload})=>{
@@ -2450,11 +3096,12 @@
     g.bus.on("match-over",({winner,summary})=>{
       over=true;busy=true;matchWinner=winner;
       const win=winner==="P";
-      if(win){streak++; if(streak>bestStreak){bestStreak=streak;saveBest();}} else streak=0;
       $("roundlbl").textContent="Match over";
       $("verdict").textContent=win?"VICTORY":"DEFEAT";
       $("verdict").style.color=win?getCss("--gold"):getCss("--seal");
       $("sub").textContent=win?"the duel is yours":"struck down";
+      if(isPvP){ pvpMatchOver(win,summary); return; }
+      if(win){streak++; if(streak>bestStreak){bestStreak=streak;saveBest();}} else streak=0;
       $("rematch").style.display="block";
       const r=Readout.postMatch(game.state().playerHist,{rollingAvg: rollingAvg()});
       lastUnpred.push(r.unpredictabilityPct); if(lastUnpred.length>20)lastUnpred.shift();
@@ -2636,8 +3283,13 @@
 
   /* ---- new game ---- */
   function newGame(){
+    // leaving a LIVE, unresolved ranked duel for any new match = a loss (anti-dodge)
+    if(isPvP && pvpSession && game && !over && !pvpResolved){ abandonPvp(); }
     over=false;busy=false;aiResolveVisible=false;committedForesight=null;matchReads=0;aimed=null;matchBindWon=false;matchUsedForesight=false;clearForesight();
     predictNudge._m=false; const _pb=$("pbar"); if(_pb)_pb.classList.remove("danger");
+    isPvP=(modeId==="pvp"); pvpResolved=false;
+    // leaving a ranked duel for any other mode: tear down the live session
+    if(!isPvP && pvpSession){ try{pvpSession.close();}catch(e){} pvpSession=null; pvpOpp=null; }
     const mode=Engine.MODES[modeId];
     const seed = mode.seeded ? dailySeed() : (Math.floor(Math.random()*1e9)>>>0);
     game=Engine.createGame({archetype:foeId,difficulty,mode,seed});
@@ -2646,6 +3298,8 @@
     ai={name:rid(FOE_NAMES),face:rid(FACES),pal:rid(PALS),crest:rid(CRESTS),skin:pickFoeSkin()};
     // Ascent duels: the foe wears the rung's themed skin and the archetype's name.
     if(ascentRun>=0){ ai.skin=ASCENT[ascentRun].foeSkin; ai.name=Personalities.ARCHES[ASCENT[ascentRun].foe].name; }
+    // Ranked duels: the foe is the matched rival / Sentinel (name from matchmaking).
+    if(isPvP && pvpOpp){ ai.name=pvpOpp.name; }
     // render BEFORE Stage.init so it captures the live art elements (renderFighter
     // rebuilds the DOM; init must run after, never before).
     renderFighter("P");renderFighter("A");
@@ -2667,7 +3321,7 @@
   // Mirror copies your LAST stance — a hard wall if you don't know the trick.
   // Teach it the first time you ever face one (Ascent or casual).
   function mirrorTeachOnce(){
-    if(foeId!=="mirror")return;
+    if(isPvP||foeId!=="mirror")return;
     try{ if(localStorage.getItem("sixfold_mirrorhint"))return; localStorage.setItem("sixfold_mirrorhint","1"); }catch(e){}
     setTimeout(()=>showToast("🪞 This foe copies your LAST stance — beat it by countering your own previous move."), reduced()?0:600);
   }
@@ -2675,11 +3329,25 @@
 
   function updateFoeBar(){
     const a=Personalities.ARCHES[foeId];
+    const mt=$("modetag");
+    if(isPvP && pvpOpp){
+      // ranked: show the rival/Sentinel identity, not the internal archetype
+      $("foename").textContent=pvpOpp.name;
+      const t=Rank.tierFor(pvpOpp.rating);
+      $("foestars").textContent=t.glyph+" "+t.name;
+      $("foetell").textContent= pvpOpp.kind==="sentinel"
+        ? "Sentinel · practice bot at your "+t.name+" rank · reduced rank stakes"
+        : "Live rival · "+t.name+" tier · charms rest, pure wheel";
+      mt.textContent="Ranked"; mt.classList.add("comp","ranked");
+      $("compbanner").classList.toggle("show",false);
+      return;
+    }
+    mt.classList.remove("ranked");
     $("foename").textContent=a.name;
     $("foestars").textContent="★".repeat(a.stars)+"☆".repeat(5-a.stars);
     $("foetell").textContent=a.tell;
     const mode=Engine.MODES[modeId];
-    const mt=$("modetag"); mt.textContent=mode.id[0].toUpperCase()+mode.id.slice(1);
+    mt.textContent=mode.id[0].toUpperCase()+mode.id.slice(1);
     mt.classList.toggle("comp",!mode.honorsAssists);
     $("compbanner").classList.toggle("show",!mode.honorsAssists && !!Assists.current());
   }
@@ -2939,6 +3607,8 @@
         stat(stats.matches,"duels")+
         stat(winRate+"%","win rate")+
         stat(bestStreak,"best streak","gold")+
+        stat(ladder.tier().glyph+" "+ladder.tier().name,"ranked tier","gold")+
+        stat(ladder.wins+"–"+ladder.losses,"ranked W–L")+
         stat("🎯 "+lifetimeReads,"reads landed","gold")+
         stat(stats.bestUnpred+"%","best unpred")+
         stat(earned+" / "+total,"fighters")+
@@ -3062,6 +3732,195 @@
     el.onclick=openDaily;
   }
 
+  /* ---- RANKED DUEL (PvP): live head-to-head + Tier ladder ----
+     Transport-agnostic: matchmaking + the duel channel go through Net (LocalMock
+     today, Firebase later). Rank rewards OUTCOMES of symmetric duels only — never
+     the combat math. A Sentinel (no-opponent fallback) is a fair AI at the player's
+     rank, clearly labelled, at reduced rank stakes (can't be farmed). */
+  const nowMs=()=>{ try{ return Date.now(); }catch(e){ return 0; } };
+  function openDuel(){ renderDuel(); const o=$("duelscreen"); o.classList.add("show"); o.setAttribute("aria-hidden","false"); }
+  function closeDuel(){ if(pvpSearch){pvpSearch.cancel();pvpSearch=null;} const o=$("duelscreen"); o.classList.remove("show"); o.setAttribute("aria-hidden","true"); }
+  // honest "your standing" panel — REAL earned data only (peak / current / record /
+  // placement). No invented rivals: the global leaderboard arrives with cloud play.
+  function standingRows(){
+    const t=ladder.tier(), peakT=Rank.tierFor(ladder.peak);
+    const row=(label,val)=>`<div class="ll-row"><span class="ll-n">${label}</span><span class="ll-r">${val}</span></div>`;
+    return row("Current",`${t.glyph} ${t.name} · ${ladder.rating}`)+
+      row("Peak",`${peakT.glyph} ${peakT.name} · ${ladder.peak}`)+
+      row("Record",`${ladder.wins}–${ladder.losses} · ${ladder.winRate()}% win`)+
+      row("Best streak",`${ladder.bestStreak}🔥`);
+  }
+  function renderDuel(){
+    const t=ladder.tier();
+    const recHTML=`<div class="rankrec"><span><b>${ladder.wins}</b> W</span><span><b>${ladder.losses}</b> L</span>`+
+      `<span><b>${ladder.winRate()}%</b> win</span><span><b>${ladder.streak}</b>🔥</span></div>`;
+    const next = ladder.inPlacements() ? `Placement ${Rank.PROVISIONAL_GAMES-ladder.placementsLeft()+1}/${Rank.PROVISIONAL_GAMES} · sets your rank · no demotion yet`
+      : (t.isTop ? `Peak rank` : `${t.toNext} to ${t.next}`);
+    $("duelscreen").innerHTML=
+      `<div class="hero duel"><h2>RANKED DUEL</h2>`+
+      `<div class="ll-note" style="margin:-2px 0 4px">Live rivals arrive with cloud play — sharpen up against Sentinels (practice bots at your rank) now.</div>`+
+      `<div class="tiercard">`+
+        `<div class="tierbadge"><span class="tg">${t.glyph}</span><span class="tn">${t.name}<small>${ladder.rating} rating · ${next}</small></span></div>`+
+        `<div class="rankbar"><i style="width:${Math.round(t.progress*100)}%"></i></div>`+
+        `<div class="rankmeta"><span>${t.name}</span><span>${t.isTop?"":t.next}</span></div>`+
+        recHTML+
+      `</div>`+
+      `<div class="duelstatus" id="duelstatus"></div>`+
+      `<div class="duel-actions" id="duelactions"></div>`+
+      `<div class="ladderlist"><div class="ll-h">Your standing</div>${standingRows()}`+
+        `<div class="ll-note">Global leaderboard & live rivals arrive with cloud play. No fake opponents here.</div></div>`+
+      `<button class="close" id="duelclose">Close</button></div>`;
+    $("duelclose").onclick=closeDuel;
+    setDuelControls("idle");
+  }
+  function setDuelStatus(html){ const el=$("duelstatus"); if(el) el.innerHTML=html||""; }
+  function setDuelControls(state){
+    const box=$("duelactions"); if(!box)return;
+    if(state==="idle"){
+      box.innerHTML=`<button class="primary" id="findbtn">Find a rival ⚔</button>`;
+      $("findbtn").onclick=startSearch;
+    }else if(state==="searching"){
+      box.innerHTML=`<button id="cancelbtn">Cancel search</button>`;
+      $("cancelbtn").onclick=()=>{ if(pvpSearch){pvpSearch.cancel();pvpSearch=null;} setDuelStatus(""); setDuelControls("idle"); };
+    }
+  }
+  function startSearch(){
+    if(pvpSearch)pvpSearch.cancel();
+    pvpResolved=false; offerCount=0;
+    setDuelControls("searching");
+    const t=ladder.tier();
+    setDuelStatus(`<div class="searchline"><span class="spinner"></span><span>Searching for a ${t.name} rival…</span></div>`);
+    pvpSearch=Net.findMatch({rating:ladder.rating, name:ladder.name, selfId:ladder.playerId, tier:t.name});
+    pvpSearch.onState(onSearchState);
+  }
+  function onSearchState(s){
+    if(s.state==="searching"){
+      const widen = s.half===Infinity ? "anyone online" : ("±"+s.half+" rating");
+      setDuelStatus(`<div class="searchline"><span class="spinner"></span><span>Searching… (${widen})</span></div>`+
+        `<div class="searchsub">${Math.round(s.elapsedMs/1000)}s — widening the net</div>`);
+    }else if(s.state==="matched"){
+      acceptMatch(s.opponent, s.session);
+    }else if(s.state==="sentinel-offer"){
+      setDuelControls("searching");
+      offerCount++;
+      const honest = offerCount>1
+        ? `No human players are online yet — that's coming with cloud play. A <b>Sentinel</b> (a practice bot at your ${ladder.tier().name} rank) is your opponent for now. You still climb, with less rank at risk.`
+        : `Face a <b>Sentinel</b> — a practice bot tuned to your ${s.opponent.tierName||ladder.tier().name} rank. You still climb, but you risk less rank than against a human.`;
+      setDuelStatus(`<div class="sentineloffer"><div class="so-t">No live rivals online right now</div>`+
+        `<div class="so-s">${honest}</div>`+
+        `<div class="so-btns"><button class="primary" id="sokeep">Face Sentinel</button>`+
+        (offerCount>1?"":`<button id="sowait">Keep searching</button>`)+`</div></div>`);
+      $("sokeep").onclick=()=>{ if(pvpSearch)pvpSearch.acceptSentinel(); };
+      const sw=$("sowait"); if(sw) sw.onclick=()=>{ setDuelStatus(`<div class="searchline"><span class="spinner"></span><span>Re-checking for a human rival…</span></div>`); if(pvpSearch)pvpSearch.keepSearching(); };
+    }
+  }
+  function acceptMatch(opponent, session){
+    pvpSearch=null;
+    startPvpMatch(opponent, session);
+  }
+  function startPvpMatch(opponent, session){
+    pvpOpp=opponent; pvpSession=session; pvpResolved=false;
+    if(session && session.onDisconnect) session.onDisconnect(()=>handlePvpDisconnect());
+    ascentRun=-1; modeId="pvp"; foeId=opponent.archetype||"ghost"; difficulty=opponent.difficulty==null?0.5:opponent.difficulty;
+    const arenas=[...unlockedArenaSet()]; setArena(arenas.length?rid(arenas):"dojo",true);
+    closeDuel(); hideResult();
+    newGame();
+    // teach the pillar ONCE, proudly: ranked is pure — only your own reads help.
+    let taughtPillar=false; try{ taughtPillar=!!localStorage.getItem("sixfold_rankedpillar"); }catch(e){}
+    if(!taughtPillar){
+      try{localStorage.setItem("sixfold_rankedpillar","1");}catch(e){}
+      setTimeout(()=>showToast("⚔ Ranked is pure — assist charms rest. Only your own reads (Insight · Foresight) help here."), reduced()?0:500);
+    }else{
+      setTimeout(()=>showToast(opponent.kind==="sentinel"
+        ? "👻 Sentinel engaged — "+opponent.name+" · reduced stakes"
+        : "⚔ Rival found — "+opponent.name), reduced()?0:500);
+    }
+  }
+  // Abandoning a LIVE, in-progress ranked duel counts as a loss — no free dodge.
+  // (Closes the "navigate away while losing -> eat no rating" exploit.)
+  function abandonPvp(){
+    if(pvpResolved)return; pvpResolved=true;
+    const opp=pvpOpp||{rating:ladder.rating,kind:"live",id:null};
+    ladder.applyResult(false,{rating:opp.rating,kind:opp.kind,id:opp.id},nowMs());
+    savePvp();
+    if(pvpSession){ try{pvpSession.close();}catch(e){} }
+    showToast("Ranked duel abandoned — counted as a loss");
+  }
+  function leavePvp(){
+    if(pvpSession){ try{pvpSession.close();}catch(e){} }
+    pvpSession=null; pvpOpp=null; isPvP=false;
+    ascentRun=-1; modeId="casual"; foeId=rid(Personalities.ids()); difficulty=0.5;
+    if(FOE_ARENA[foeId])setArena(FOE_ARENA[foeId],true);
+    updateFoeBar(); newGame();
+  }
+  function pvpMatchOver(win,summary,opts){
+    if(pvpResolved)return; pvpResolved=true;
+    opts=opts||{};
+    $("rematch").style.display="none";
+    recordMatchStats(win,summary);                 // ranked duels count toward lifetime stats too
+    const opp = pvpOpp || {rating:ladder.rating, kind:"live", id:null};
+    // stakesKind lets a disconnect-award resolve at REDUCED stakes (can't be farmed)
+    const stakesKind = opts.stakesKind || opp.kind;
+    const res = ladder.applyResult(win, {rating:opp.rating, kind:stakesKind, id:opp.id}, nowMs());
+    savePvp();
+    // modest cosmetic sunbeams on a ranked win (off the combat path). Sentinel wins
+    // pay reduced beams (×stakes) so the bot can't be farmed for the Forge either.
+    const beamBase = 6+Math.round((opp.difficulty||0.5)*6);
+    const beams = win ? Math.max(1,Math.round(beamBase*(stakesKind==="sentinel"?Rank.SENTINEL_STAKES:1))) : 0;
+    if(beams)addSunbeams(beams);
+    if(pvpSession){ try{pvpSession.close();}catch(e){} }
+    setTimeout(()=>{ Sfx.play(win?"victory":"defeat"); buzz(win?[0,45,45,45]:130); }, reduced()?0:950);
+    setTimeout(()=>{ showPvpResult(win,summary,res,beams); }, reduced()?0:2000);
+  }
+  function showPvpResult(win,summary,res,beams){
+    const tA=res.tierAfter, span=(tA.ceil-tA.floor)||1;
+    const startPct=Math.max(0,Math.min(100,(res.before-tA.floor)/span*100));
+    const endPct=Math.round(tA.progress*100);
+    const deltaTxt=(res.delta>=0?"+":"")+res.delta;
+    const banner = res.protected ? `<div class="promo-banner">🛡 Placement — rank protected (you can't fall below ${Rank.tierFor(Rank.START_RATING).name} yet)</div>`
+      : res.promoted ? `<div class="promo-banner">▲ PROMOTED to ${tA.name}</div>`
+      : res.demoted ? `<div class="promo-banner" style="color:var(--seal);border-color:#cf413055;background:#cf413018">▼ Demoted to ${tA.name}</div>` : "";
+    const oppRating = pvpOpp?pvpOpp.rating:res.before;
+    const oppLabel = (pvpOpp&&pvpOpp.kind==="sentinel") ? `Sentinel · practice bot · ${oppRating} (reduced stakes)` : `${(pvpOpp?pvpOpp.name:"Rival")} · ${oppRating}`;
+    const beamLine = (win&&beams)?`<div class="sunbeams">+${beams} ☀ sunbeams</div>`:"";
+    $("resultscreen").innerHTML=
+      `<div class="hero result ${win?"win":"lose"}">`+
+        `<div class="result-word">${win?"VICTORY":"DEFEAT"}</div>`+
+        `<div class="result-flavor">vs ${oppLabel}</div>`+
+        banner+
+        `<div class="pvp-rank">`+
+          `<div class="pvp-delta ${res.delta>=0?"up":"down"}">${deltaTxt}</div>`+
+          `<div class="tierbadge"><span class="tg">${tA.glyph}</span><span class="tn">${tA.name}<small>${res.after} rating</small></span></div>`+
+          `<div class="rankbar"><i id="pvpbar" style="width:${Math.round(startPct)}%"></i></div>`+
+        `</div>`+
+        `<div class="stat-chips">`+
+          `<div class="chip"><b>${summary.rounds}</b><span>rounds</span></div>`+
+          `<div class="chip"><b>${summary.unpredictabilityPct}%</b><span>unpred</span></div>`+
+          `<div class="chip"><b>${ladder.wins}–${ladder.losses}</b><span>record</span></div>`+
+          `<div class="chip streak"><b>×${ladder.streak}</b><span>streak</span></div>`+
+        `</div>`+beamLine+
+        `<div class="result-actions"><button class="primary" id="pvpNext">Find next rival ⚔</button><button id="pvpDone">Done</button></div>`+
+      `</div>`;
+    const rs=$("resultscreen"); rs.setAttribute("aria-hidden","false"); if(rs.offsetWidth!==undefined) void rs.offsetWidth; rs.classList.add("show");
+    // animate the rank bar from before -> after
+    setTimeout(()=>{ const b=$("pvpbar"); if(b)b.style.width=endPct+"%"; }, reduced()?0:80);
+    const on=(id,fn)=>{const el=$(id); if(el) el.onclick=fn;};
+    on("pvpNext",()=>{ hideResult(); openDuel(); startSearch(); });
+    on("pvpDone",()=>{ hideResult(); leavePvp(); });
+  }
+  function handlePvpDisconnect(){
+    if(over||pvpResolved||!isPvP)return;
+    showToast("⚠ Rival disconnected — duel awarded to you");
+    over=true; busy=true; matchWinner="P";
+    $("roundlbl").textContent="Match over"; $("verdict").textContent="VICTORY"; $("verdict").style.color=getCss("--gold"); $("sub").textContent="rival fled the duel";
+    const st=game?game.state():{round:1,playerHist:[]};
+    const summary={winner:"P",rounds:st.round,unpredictabilityPct:Readout.unpredictabilityPct(st.playerHist||[]),difficulty,worstRound:0,tell:""};
+    // a local drop can't be authoritative (the bus dying mid-duel decides nothing
+    // real until Phase 2 makes results server-authoritative w/ a reconnect grace),
+    // so award the win at REDUCED stakes — discourages rage-quit-to-feed-wins.
+    pvpMatchOver(true,summary,{stakesKind:"sentinel"});
+  }
+
   /* ---- foe / mode / difficulty selectors ---- */
   function buildSelectors(){
     const foes=$("foes");
@@ -3183,6 +4042,7 @@
     try{localStorage.setItem("sixfold_seen","1");}catch(e){}}
   $("howbtn").onclick=openHowto;
   $("howtoclose").onclick=closeHowto;
+  $("duelbtn").onclick=openDuel;
   $("ascentbtn").onclick=openAscent;
   $("collbtn").onclick=openCollection;
   $("profbtn").onclick=openProfile;

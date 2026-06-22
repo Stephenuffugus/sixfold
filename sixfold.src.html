@@ -455,6 +455,51 @@
   .daily .close{margin-top:10px;font-family:var(--ui);font-weight:700;font-size:13px;padding:11px 26px;border-radius:11px;
     border:1px solid #ffffff28;cursor:pointer;color:var(--washi);background:#ffffff12}
 
+  /* ===== Ranked Duel (PvP) screen ===== */
+  .hero.duel h2{margin:0 0 2px}
+  .tiercard{display:flex;flex-direction:column;align-items:center;gap:6px;background:#ffffff0e;border:1px solid #ffffff1c;
+    border-radius:16px;padding:16px 18px;margin:6px 0 4px;width:100%;max-width:340px}
+  .tierbadge{display:flex;align-items:center;gap:10px}
+  .tierbadge .tg{font-size:34px;line-height:1}
+  .tierbadge .tn{font-family:var(--disp);font-weight:800;font-size:22px;letter-spacing:.06em;color:var(--gold)}
+  .tierbadge .tn small{display:block;font-family:var(--ui);font-weight:600;font-size:11px;letter-spacing:.02em;color:var(--washi-dim)}
+  .rankbar{width:100%;height:12px;border-radius:7px;background:#0006;border:1px solid #ffffff22;overflow:hidden;position:relative}
+  .rankbar > i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:7px;
+    background:linear-gradient(90deg,var(--gold),#f0d98a);transition:width .9s cubic-bezier(.2,.8,.2,1)}
+  .rankmeta{display:flex;justify-content:space-between;width:100%;font-size:11px;color:var(--washi-dim)}
+  .rankrec{display:flex;gap:14px;font-size:12px;color:var(--washi);margin-top:2px}
+  .rankrec b{color:var(--gold)}
+  .duel-actions{display:flex;flex-direction:column;gap:9px;width:100%;max-width:340px;margin-top:8px}
+  .duel-actions button{font-family:var(--ui);font-weight:700;font-size:14px;padding:13px 18px;border-radius:12px;cursor:pointer;
+    border:1px solid #ffffff26;color:var(--washi);background:#ffffff12;transition:transform .1s,background .2s}
+  .duel-actions button.primary{background:linear-gradient(180deg,#b98a2e,#8a6420);border-color:#0003;color:#fff;box-shadow:0 4px 14px #0005}
+  .duel-actions button:active{transform:scale(.97)}
+  .duelstatus{min-height:30px;display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;max-width:340px;margin-top:4px}
+  .searchline{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--washi)}
+  .spinner{width:16px;height:16px;border-radius:50%;border:2px solid #ffffff33;border-top-color:var(--gold);animation:spin .8s linear infinite}
+  body.reduce .spinner{animation:none;border-top-color:#ffffff66}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .searchsub{font-size:11px;color:var(--washi-dim)}
+  .sentineloffer{background:#ffffff0e;border:1px solid #ffffff22;border-radius:13px;padding:12px;text-align:center;width:100%;max-width:340px}
+  .sentineloffer .so-t{font-weight:700;font-size:13px;color:var(--washi)}
+  .sentineloffer .so-s{font-size:11px;color:var(--washi-dim);margin:4px 0 9px}
+  .so-btns{display:flex;gap:8px;justify-content:center}
+  .so-btns button{font-family:var(--ui);font-weight:700;font-size:12px;padding:9px 14px;border-radius:10px;cursor:pointer;border:1px solid #ffffff26;color:var(--washi);background:#ffffff14}
+  .so-btns button.primary{background:linear-gradient(180deg,#b98a2e,#8a6420);border-color:#0003;color:#fff}
+  .ladderlist{width:100%;max-width:340px;margin-top:6px;border-top:1px solid #ffffff14;padding-top:8px}
+  .ladderlist .ll-h{font-size:10px;letter-spacing:.12em;color:var(--washi-dim);text-transform:uppercase;margin-bottom:5px;text-align:center}
+  .ll-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:3px 4px;border-radius:7px}
+  .ll-row.me{background:#cda64f22;border:1px solid #cda64f44}
+  .ll-row .ll-n{display:flex;align-items:center;gap:7px}
+  .ll-row .ll-r{color:var(--washi-dim);font-variant-numeric:tabular-nums}
+  .ll-note{font-size:10px;color:var(--washi-dim);text-align:center;margin-top:6px;font-style:italic}
+  .modetag.ranked{background:linear-gradient(180deg,#b98a2e,#8a6420);color:#fff;border-color:#0003}
+  /* PvP result extras (rendered inside #resultscreen) */
+  .pvp-rank{display:flex;flex-direction:column;align-items:center;gap:7px;margin:6px 0;width:100%;max-width:320px}
+  .pvp-delta{font-family:var(--disp);font-weight:800;font-size:26px}
+  .pvp-delta.up{color:#7ed957}.pvp-delta.down{color:var(--seal)}
+  .promo-banner{font-weight:800;font-size:14px;color:var(--gold);letter-spacing:.04em;padding:6px 12px;border:1px solid #cda64f55;border-radius:10px;background:#cda64f18}
+
   /*__ANIM_CSS__*/
 </style>
 </head>
@@ -536,6 +581,7 @@
   <div class="postmatch" id="postmatch"></div>
 
   <div class="controls">
+    <button class="act primary" id="duelbtn">⚔ Ranked Duel</button>
     <button class="act primary" id="dailybtn">🗓 Daily Duel</button>
     <button class="act ghost" id="ascentbtn">⛰ Ascent</button>
     <button class="act ghost" id="collbtn">🎴 Roster</button>
@@ -614,6 +660,9 @@
   <!-- Daily Duel — one seeded challenge per day (populated by glue) -->
   <div class="overlay" id="dailyscreen" aria-hidden="true" role="dialog" aria-label="Daily Duel"></div>
 
+  <!-- Ranked Duel — live head-to-head matchmaking + tier ladder (populated by glue) -->
+  <div class="overlay" id="duelscreen" aria-hidden="true" role="dialog" aria-label="Ranked Duel"></div>
+
   <!-- First-run / on-demand how-to guide -->
   <div class="overlay" id="howto" aria-hidden="true" role="dialog" aria-label="How to play">
     <div class="hero howto">
@@ -641,7 +690,8 @@
   const Engine = globalThis.Engine, Personalities = globalThis.Personalities,
     Resolve = globalThis.Resolve, Readout = globalThis.Readout,
     Stage = globalThis.Stage, Assists = globalThis.Assists, Predictor = globalThis.Predictor,
-    Sfx = globalThis.Sfx;
+    Sfx = globalThis.Sfx,
+    Rank = globalThis.Rank, Matchmaker = globalThis.Matchmaker, Net = globalThis.Net;
 
   // juice helpers (cosmetic only). haptics honor the same setting flag as sound's sibling.
   function buzz(ms){ try{ if(Assists.settings().haptics && typeof navigator!=="undefined" && navigator.vibrate) navigator.vibrate(ms); }catch(e){} }
@@ -684,6 +734,11 @@
   let ai={name:"Ronin",face:rid(FACES),pal:rid(PALS),crest:rid(CRESTS),skin:"inkblade"};
   let foeId=rid(Personalities.ids()), difficulty=0.5, modeId="casual";
   let game=null, busy=false, over=false, foresightNode=null, foresightStrike=null, matchWinner=null;
+  // ---- ranked duel (PvP) state ----
+  function loadPvp(){ try{ return JSON.parse(localStorage.getItem("sixfold_pvp")||"{}")||{}; }catch(e){ return {}; } }
+  function savePvp(){ try{ localStorage.setItem("sixfold_pvp",JSON.stringify(ladder.toJSON())); }catch(e){} }
+  let ladder=Rank.createLadder(loadPvp());
+  let isPvP=false, pvpSession=null, pvpOpp=null, pvpSearch=null, pvpResolved=false, offerCount=0;
   let committedForesight=null;   // foresight read in play when the current pick was committed
   let matchReads=0;              // called shots landed this match (mastery payoff)
   let matchBindWon=false, matchUsedForesight=false;  // per-match flags for Trials
@@ -834,8 +889,19 @@
     clearForesight();
     nodeEls.forEach(el=>el.classList.add("dim"));
     nodeEls[p].classList.remove("dim"); nodeEls[p].classList.add("ppick");
-    $("verdict").textContent="…"; $("sub").textContent="reading you";
+    $("verdict").textContent="…"; $("sub").textContent= isPvP?"rival is choosing…":"reading you";
+    if(isPvP){ pvpCommit(p); return; }
     game.chooseStance(p);   // engine emits events; handlers below drive the rest
+  }
+  // PvP: commit my stance, exchange with the opponent (commit-reveal), then resolve
+  // the round through the engine's external-opponent path (same bus -> same juice).
+  function pvpCommit(p){
+    if(!pvpSession){ busy=false; return; }
+    const round=game.state().round, oppCtx=game.opponentCtx();
+    pvpSession.exchangeStance(round,p,oppCtx).then(({oppPick})=>{
+      if(over||!isPvP)return;
+      game.commitRound(p,oppPick);   // emits stance-selected + (clash-bind | round-revealed)
+    }).catch(()=>handlePvpDisconnect());
   }
 
   function showAiPick(a, p){
@@ -851,7 +917,19 @@
       Stage.lockBlades();
       Sfx.play("bind"); buzz([18,40,18]);
       if(!reduced()){document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),360);}
-      Stage.bindPrompt().then(b=>{ g.submitBind(b); });
+      if(isPvP){
+        // PvP clash: player picks a bind, then exchange with the opponent and resolve
+        Stage.bindPrompt().then(pBind=>{
+          if(over||!isPvP)return;
+          const round=game.state().round, oppCtx=game.opponentCtx();
+          pvpSession.exchangeBind(round,pBind,oppCtx).then(({oppBind})=>{
+            if(over||!isPvP)return;
+            game.commitBind(pBind,oppBind);
+          }).catch(()=>handlePvpDisconnect());
+        });
+      }else{
+        Stage.bindPrompt().then(b=>{ g.submitBind(b); });
+      }
     });
     g.bus.on("meter-changed",updateMeter);
     g.bus.on("info-revealed",({side,action,payload})=>{
@@ -896,11 +974,12 @@
     g.bus.on("match-over",({winner,summary})=>{
       over=true;busy=true;matchWinner=winner;
       const win=winner==="P";
-      if(win){streak++; if(streak>bestStreak){bestStreak=streak;saveBest();}} else streak=0;
       $("roundlbl").textContent="Match over";
       $("verdict").textContent=win?"VICTORY":"DEFEAT";
       $("verdict").style.color=win?getCss("--gold"):getCss("--seal");
       $("sub").textContent=win?"the duel is yours":"struck down";
+      if(isPvP){ pvpMatchOver(win,summary); return; }
+      if(win){streak++; if(streak>bestStreak){bestStreak=streak;saveBest();}} else streak=0;
       $("rematch").style.display="block";
       const r=Readout.postMatch(game.state().playerHist,{rollingAvg: rollingAvg()});
       lastUnpred.push(r.unpredictabilityPct); if(lastUnpred.length>20)lastUnpred.shift();
@@ -1082,8 +1161,13 @@
 
   /* ---- new game ---- */
   function newGame(){
+    // leaving a LIVE, unresolved ranked duel for any new match = a loss (anti-dodge)
+    if(isPvP && pvpSession && game && !over && !pvpResolved){ abandonPvp(); }
     over=false;busy=false;aiResolveVisible=false;committedForesight=null;matchReads=0;aimed=null;matchBindWon=false;matchUsedForesight=false;clearForesight();
     predictNudge._m=false; const _pb=$("pbar"); if(_pb)_pb.classList.remove("danger");
+    isPvP=(modeId==="pvp"); pvpResolved=false;
+    // leaving a ranked duel for any other mode: tear down the live session
+    if(!isPvP && pvpSession){ try{pvpSession.close();}catch(e){} pvpSession=null; pvpOpp=null; }
     const mode=Engine.MODES[modeId];
     const seed = mode.seeded ? dailySeed() : (Math.floor(Math.random()*1e9)>>>0);
     game=Engine.createGame({archetype:foeId,difficulty,mode,seed});
@@ -1092,6 +1176,8 @@
     ai={name:rid(FOE_NAMES),face:rid(FACES),pal:rid(PALS),crest:rid(CRESTS),skin:pickFoeSkin()};
     // Ascent duels: the foe wears the rung's themed skin and the archetype's name.
     if(ascentRun>=0){ ai.skin=ASCENT[ascentRun].foeSkin; ai.name=Personalities.ARCHES[ASCENT[ascentRun].foe].name; }
+    // Ranked duels: the foe is the matched rival / Sentinel (name from matchmaking).
+    if(isPvP && pvpOpp){ ai.name=pvpOpp.name; }
     // render BEFORE Stage.init so it captures the live art elements (renderFighter
     // rebuilds the DOM; init must run after, never before).
     renderFighter("P");renderFighter("A");
@@ -1113,7 +1199,7 @@
   // Mirror copies your LAST stance — a hard wall if you don't know the trick.
   // Teach it the first time you ever face one (Ascent or casual).
   function mirrorTeachOnce(){
-    if(foeId!=="mirror")return;
+    if(isPvP||foeId!=="mirror")return;
     try{ if(localStorage.getItem("sixfold_mirrorhint"))return; localStorage.setItem("sixfold_mirrorhint","1"); }catch(e){}
     setTimeout(()=>showToast("🪞 This foe copies your LAST stance — beat it by countering your own previous move."), reduced()?0:600);
   }
@@ -1121,11 +1207,25 @@
 
   function updateFoeBar(){
     const a=Personalities.ARCHES[foeId];
+    const mt=$("modetag");
+    if(isPvP && pvpOpp){
+      // ranked: show the rival/Sentinel identity, not the internal archetype
+      $("foename").textContent=pvpOpp.name;
+      const t=Rank.tierFor(pvpOpp.rating);
+      $("foestars").textContent=t.glyph+" "+t.name;
+      $("foetell").textContent= pvpOpp.kind==="sentinel"
+        ? "Sentinel · practice bot at your "+t.name+" rank · reduced rank stakes"
+        : "Live rival · "+t.name+" tier · charms rest, pure wheel";
+      mt.textContent="Ranked"; mt.classList.add("comp","ranked");
+      $("compbanner").classList.toggle("show",false);
+      return;
+    }
+    mt.classList.remove("ranked");
     $("foename").textContent=a.name;
     $("foestars").textContent="★".repeat(a.stars)+"☆".repeat(5-a.stars);
     $("foetell").textContent=a.tell;
     const mode=Engine.MODES[modeId];
-    const mt=$("modetag"); mt.textContent=mode.id[0].toUpperCase()+mode.id.slice(1);
+    mt.textContent=mode.id[0].toUpperCase()+mode.id.slice(1);
     mt.classList.toggle("comp",!mode.honorsAssists);
     $("compbanner").classList.toggle("show",!mode.honorsAssists && !!Assists.current());
   }
@@ -1385,6 +1485,8 @@
         stat(stats.matches,"duels")+
         stat(winRate+"%","win rate")+
         stat(bestStreak,"best streak","gold")+
+        stat(ladder.tier().glyph+" "+ladder.tier().name,"ranked tier","gold")+
+        stat(ladder.wins+"–"+ladder.losses,"ranked W–L")+
         stat("🎯 "+lifetimeReads,"reads landed","gold")+
         stat(stats.bestUnpred+"%","best unpred")+
         stat(earned+" / "+total,"fighters")+
@@ -1508,6 +1610,195 @@
     el.onclick=openDaily;
   }
 
+  /* ---- RANKED DUEL (PvP): live head-to-head + Tier ladder ----
+     Transport-agnostic: matchmaking + the duel channel go through Net (LocalMock
+     today, Firebase later). Rank rewards OUTCOMES of symmetric duels only — never
+     the combat math. A Sentinel (no-opponent fallback) is a fair AI at the player's
+     rank, clearly labelled, at reduced rank stakes (can't be farmed). */
+  const nowMs=()=>{ try{ return Date.now(); }catch(e){ return 0; } };
+  function openDuel(){ renderDuel(); const o=$("duelscreen"); o.classList.add("show"); o.setAttribute("aria-hidden","false"); }
+  function closeDuel(){ if(pvpSearch){pvpSearch.cancel();pvpSearch=null;} const o=$("duelscreen"); o.classList.remove("show"); o.setAttribute("aria-hidden","true"); }
+  // honest "your standing" panel — REAL earned data only (peak / current / record /
+  // placement). No invented rivals: the global leaderboard arrives with cloud play.
+  function standingRows(){
+    const t=ladder.tier(), peakT=Rank.tierFor(ladder.peak);
+    const row=(label,val)=>`<div class="ll-row"><span class="ll-n">${label}</span><span class="ll-r">${val}</span></div>`;
+    return row("Current",`${t.glyph} ${t.name} · ${ladder.rating}`)+
+      row("Peak",`${peakT.glyph} ${peakT.name} · ${ladder.peak}`)+
+      row("Record",`${ladder.wins}–${ladder.losses} · ${ladder.winRate()}% win`)+
+      row("Best streak",`${ladder.bestStreak}🔥`);
+  }
+  function renderDuel(){
+    const t=ladder.tier();
+    const recHTML=`<div class="rankrec"><span><b>${ladder.wins}</b> W</span><span><b>${ladder.losses}</b> L</span>`+
+      `<span><b>${ladder.winRate()}%</b> win</span><span><b>${ladder.streak}</b>🔥</span></div>`;
+    const next = ladder.inPlacements() ? `Placement ${Rank.PROVISIONAL_GAMES-ladder.placementsLeft()+1}/${Rank.PROVISIONAL_GAMES} · sets your rank · no demotion yet`
+      : (t.isTop ? `Peak rank` : `${t.toNext} to ${t.next}`);
+    $("duelscreen").innerHTML=
+      `<div class="hero duel"><h2>RANKED DUEL</h2>`+
+      `<div class="ll-note" style="margin:-2px 0 4px">Live rivals arrive with cloud play — sharpen up against Sentinels (practice bots at your rank) now.</div>`+
+      `<div class="tiercard">`+
+        `<div class="tierbadge"><span class="tg">${t.glyph}</span><span class="tn">${t.name}<small>${ladder.rating} rating · ${next}</small></span></div>`+
+        `<div class="rankbar"><i style="width:${Math.round(t.progress*100)}%"></i></div>`+
+        `<div class="rankmeta"><span>${t.name}</span><span>${t.isTop?"":t.next}</span></div>`+
+        recHTML+
+      `</div>`+
+      `<div class="duelstatus" id="duelstatus"></div>`+
+      `<div class="duel-actions" id="duelactions"></div>`+
+      `<div class="ladderlist"><div class="ll-h">Your standing</div>${standingRows()}`+
+        `<div class="ll-note">Global leaderboard & live rivals arrive with cloud play. No fake opponents here.</div></div>`+
+      `<button class="close" id="duelclose">Close</button></div>`;
+    $("duelclose").onclick=closeDuel;
+    setDuelControls("idle");
+  }
+  function setDuelStatus(html){ const el=$("duelstatus"); if(el) el.innerHTML=html||""; }
+  function setDuelControls(state){
+    const box=$("duelactions"); if(!box)return;
+    if(state==="idle"){
+      box.innerHTML=`<button class="primary" id="findbtn">Find a rival ⚔</button>`;
+      $("findbtn").onclick=startSearch;
+    }else if(state==="searching"){
+      box.innerHTML=`<button id="cancelbtn">Cancel search</button>`;
+      $("cancelbtn").onclick=()=>{ if(pvpSearch){pvpSearch.cancel();pvpSearch=null;} setDuelStatus(""); setDuelControls("idle"); };
+    }
+  }
+  function startSearch(){
+    if(pvpSearch)pvpSearch.cancel();
+    pvpResolved=false; offerCount=0;
+    setDuelControls("searching");
+    const t=ladder.tier();
+    setDuelStatus(`<div class="searchline"><span class="spinner"></span><span>Searching for a ${t.name} rival…</span></div>`);
+    pvpSearch=Net.findMatch({rating:ladder.rating, name:ladder.name, selfId:ladder.playerId, tier:t.name});
+    pvpSearch.onState(onSearchState);
+  }
+  function onSearchState(s){
+    if(s.state==="searching"){
+      const widen = s.half===Infinity ? "anyone online" : ("±"+s.half+" rating");
+      setDuelStatus(`<div class="searchline"><span class="spinner"></span><span>Searching… (${widen})</span></div>`+
+        `<div class="searchsub">${Math.round(s.elapsedMs/1000)}s — widening the net</div>`);
+    }else if(s.state==="matched"){
+      acceptMatch(s.opponent, s.session);
+    }else if(s.state==="sentinel-offer"){
+      setDuelControls("searching");
+      offerCount++;
+      const honest = offerCount>1
+        ? `No human players are online yet — that's coming with cloud play. A <b>Sentinel</b> (a practice bot at your ${ladder.tier().name} rank) is your opponent for now. You still climb, with less rank at risk.`
+        : `Face a <b>Sentinel</b> — a practice bot tuned to your ${s.opponent.tierName||ladder.tier().name} rank. You still climb, but you risk less rank than against a human.`;
+      setDuelStatus(`<div class="sentineloffer"><div class="so-t">No live rivals online right now</div>`+
+        `<div class="so-s">${honest}</div>`+
+        `<div class="so-btns"><button class="primary" id="sokeep">Face Sentinel</button>`+
+        (offerCount>1?"":`<button id="sowait">Keep searching</button>`)+`</div></div>`);
+      $("sokeep").onclick=()=>{ if(pvpSearch)pvpSearch.acceptSentinel(); };
+      const sw=$("sowait"); if(sw) sw.onclick=()=>{ setDuelStatus(`<div class="searchline"><span class="spinner"></span><span>Re-checking for a human rival…</span></div>`); if(pvpSearch)pvpSearch.keepSearching(); };
+    }
+  }
+  function acceptMatch(opponent, session){
+    pvpSearch=null;
+    startPvpMatch(opponent, session);
+  }
+  function startPvpMatch(opponent, session){
+    pvpOpp=opponent; pvpSession=session; pvpResolved=false;
+    if(session && session.onDisconnect) session.onDisconnect(()=>handlePvpDisconnect());
+    ascentRun=-1; modeId="pvp"; foeId=opponent.archetype||"ghost"; difficulty=opponent.difficulty==null?0.5:opponent.difficulty;
+    const arenas=[...unlockedArenaSet()]; setArena(arenas.length?rid(arenas):"dojo",true);
+    closeDuel(); hideResult();
+    newGame();
+    // teach the pillar ONCE, proudly: ranked is pure — only your own reads help.
+    let taughtPillar=false; try{ taughtPillar=!!localStorage.getItem("sixfold_rankedpillar"); }catch(e){}
+    if(!taughtPillar){
+      try{localStorage.setItem("sixfold_rankedpillar","1");}catch(e){}
+      setTimeout(()=>showToast("⚔ Ranked is pure — assist charms rest. Only your own reads (Insight · Foresight) help here."), reduced()?0:500);
+    }else{
+      setTimeout(()=>showToast(opponent.kind==="sentinel"
+        ? "👻 Sentinel engaged — "+opponent.name+" · reduced stakes"
+        : "⚔ Rival found — "+opponent.name), reduced()?0:500);
+    }
+  }
+  // Abandoning a LIVE, in-progress ranked duel counts as a loss — no free dodge.
+  // (Closes the "navigate away while losing -> eat no rating" exploit.)
+  function abandonPvp(){
+    if(pvpResolved)return; pvpResolved=true;
+    const opp=pvpOpp||{rating:ladder.rating,kind:"live",id:null};
+    ladder.applyResult(false,{rating:opp.rating,kind:opp.kind,id:opp.id},nowMs());
+    savePvp();
+    if(pvpSession){ try{pvpSession.close();}catch(e){} }
+    showToast("Ranked duel abandoned — counted as a loss");
+  }
+  function leavePvp(){
+    if(pvpSession){ try{pvpSession.close();}catch(e){} }
+    pvpSession=null; pvpOpp=null; isPvP=false;
+    ascentRun=-1; modeId="casual"; foeId=rid(Personalities.ids()); difficulty=0.5;
+    if(FOE_ARENA[foeId])setArena(FOE_ARENA[foeId],true);
+    updateFoeBar(); newGame();
+  }
+  function pvpMatchOver(win,summary,opts){
+    if(pvpResolved)return; pvpResolved=true;
+    opts=opts||{};
+    $("rematch").style.display="none";
+    recordMatchStats(win,summary);                 // ranked duels count toward lifetime stats too
+    const opp = pvpOpp || {rating:ladder.rating, kind:"live", id:null};
+    // stakesKind lets a disconnect-award resolve at REDUCED stakes (can't be farmed)
+    const stakesKind = opts.stakesKind || opp.kind;
+    const res = ladder.applyResult(win, {rating:opp.rating, kind:stakesKind, id:opp.id}, nowMs());
+    savePvp();
+    // modest cosmetic sunbeams on a ranked win (off the combat path). Sentinel wins
+    // pay reduced beams (×stakes) so the bot can't be farmed for the Forge either.
+    const beamBase = 6+Math.round((opp.difficulty||0.5)*6);
+    const beams = win ? Math.max(1,Math.round(beamBase*(stakesKind==="sentinel"?Rank.SENTINEL_STAKES:1))) : 0;
+    if(beams)addSunbeams(beams);
+    if(pvpSession){ try{pvpSession.close();}catch(e){} }
+    setTimeout(()=>{ Sfx.play(win?"victory":"defeat"); buzz(win?[0,45,45,45]:130); }, reduced()?0:950);
+    setTimeout(()=>{ showPvpResult(win,summary,res,beams); }, reduced()?0:2000);
+  }
+  function showPvpResult(win,summary,res,beams){
+    const tA=res.tierAfter, span=(tA.ceil-tA.floor)||1;
+    const startPct=Math.max(0,Math.min(100,(res.before-tA.floor)/span*100));
+    const endPct=Math.round(tA.progress*100);
+    const deltaTxt=(res.delta>=0?"+":"")+res.delta;
+    const banner = res.protected ? `<div class="promo-banner">🛡 Placement — rank protected (you can't fall below ${Rank.tierFor(Rank.START_RATING).name} yet)</div>`
+      : res.promoted ? `<div class="promo-banner">▲ PROMOTED to ${tA.name}</div>`
+      : res.demoted ? `<div class="promo-banner" style="color:var(--seal);border-color:#cf413055;background:#cf413018">▼ Demoted to ${tA.name}</div>` : "";
+    const oppRating = pvpOpp?pvpOpp.rating:res.before;
+    const oppLabel = (pvpOpp&&pvpOpp.kind==="sentinel") ? `Sentinel · practice bot · ${oppRating} (reduced stakes)` : `${(pvpOpp?pvpOpp.name:"Rival")} · ${oppRating}`;
+    const beamLine = (win&&beams)?`<div class="sunbeams">+${beams} ☀ sunbeams</div>`:"";
+    $("resultscreen").innerHTML=
+      `<div class="hero result ${win?"win":"lose"}">`+
+        `<div class="result-word">${win?"VICTORY":"DEFEAT"}</div>`+
+        `<div class="result-flavor">vs ${oppLabel}</div>`+
+        banner+
+        `<div class="pvp-rank">`+
+          `<div class="pvp-delta ${res.delta>=0?"up":"down"}">${deltaTxt}</div>`+
+          `<div class="tierbadge"><span class="tg">${tA.glyph}</span><span class="tn">${tA.name}<small>${res.after} rating</small></span></div>`+
+          `<div class="rankbar"><i id="pvpbar" style="width:${Math.round(startPct)}%"></i></div>`+
+        `</div>`+
+        `<div class="stat-chips">`+
+          `<div class="chip"><b>${summary.rounds}</b><span>rounds</span></div>`+
+          `<div class="chip"><b>${summary.unpredictabilityPct}%</b><span>unpred</span></div>`+
+          `<div class="chip"><b>${ladder.wins}–${ladder.losses}</b><span>record</span></div>`+
+          `<div class="chip streak"><b>×${ladder.streak}</b><span>streak</span></div>`+
+        `</div>`+beamLine+
+        `<div class="result-actions"><button class="primary" id="pvpNext">Find next rival ⚔</button><button id="pvpDone">Done</button></div>`+
+      `</div>`;
+    const rs=$("resultscreen"); rs.setAttribute("aria-hidden","false"); if(rs.offsetWidth!==undefined) void rs.offsetWidth; rs.classList.add("show");
+    // animate the rank bar from before -> after
+    setTimeout(()=>{ const b=$("pvpbar"); if(b)b.style.width=endPct+"%"; }, reduced()?0:80);
+    const on=(id,fn)=>{const el=$(id); if(el) el.onclick=fn;};
+    on("pvpNext",()=>{ hideResult(); openDuel(); startSearch(); });
+    on("pvpDone",()=>{ hideResult(); leavePvp(); });
+  }
+  function handlePvpDisconnect(){
+    if(over||pvpResolved||!isPvP)return;
+    showToast("⚠ Rival disconnected — duel awarded to you");
+    over=true; busy=true; matchWinner="P";
+    $("roundlbl").textContent="Match over"; $("verdict").textContent="VICTORY"; $("verdict").style.color=getCss("--gold"); $("sub").textContent="rival fled the duel";
+    const st=game?game.state():{round:1,playerHist:[]};
+    const summary={winner:"P",rounds:st.round,unpredictabilityPct:Readout.unpredictabilityPct(st.playerHist||[]),difficulty,worstRound:0,tell:""};
+    // a local drop can't be authoritative (the bus dying mid-duel decides nothing
+    // real until Phase 2 makes results server-authoritative w/ a reconnect grace),
+    // so award the win at REDUCED stakes — discourages rage-quit-to-feed-wins.
+    pvpMatchOver(true,summary,{stakesKind:"sentinel"});
+  }
+
   /* ---- foe / mode / difficulty selectors ---- */
   function buildSelectors(){
     const foes=$("foes");
@@ -1629,6 +1920,7 @@
     try{localStorage.setItem("sixfold_seen","1");}catch(e){}}
   $("howbtn").onclick=openHowto;
   $("howtoclose").onclick=closeHowto;
+  $("duelbtn").onclick=openDuel;
   $("ascentbtn").onclick=openAscent;
   $("collbtn").onclick=openCollection;
   $("profbtn").onclick=openProfile;

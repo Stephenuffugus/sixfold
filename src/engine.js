@@ -49,6 +49,7 @@
     daily:    { id: "daily",    honorsAssists: false, timed: false, seeded: true  },
     blitz:    { id: "blitz",    honorsAssists: false, timed: true,  seeded: false },
     ghost:    { id: "ghost",    honorsAssists: false, timed: false, seeded: false }, // async PvP replay
+    pvp:      { id: "pvp",      honorsAssists: false, timed: false, seeded: false }, // live head-to-head (opponent picks injected)
   };
 
   // ---- tiny event bus ----
@@ -187,6 +188,43 @@
       return finalize(outcome);
     }
 
+    // ---- PvP / external-opponent path ----
+    // In live head-to-head the opponent's stance is NOT computed by the AI — it
+    // arrives over the wire (or from a Sentinel). commitRound takes BOTH already-
+    // resolved picks and runs the identical resolve/finalize/bus flow as PvE, so
+    // every animation, the Resolve meter, the readout and match-over reuse unchanged.
+    // The caller is responsible for the commit-reveal handshake (engine never sees
+    // a pick before the other side has committed — see net.js).
+    function commitRound(pStance, aStance) {
+      if (st.over || st.pending) return null;
+      st.playerHist.push(pStance);
+      st.aiHist.push(aStance);
+      bus.emit("stance-selected", { side: "P", stance: pStance });
+      const r = resolve(pStance, aStance);
+      if (r.kind === "clash") {
+        meter.onBindEntered();
+        bus.emit("meter-changed", meter.state());
+        st.pending = { pStance, aStance };
+        bus.emit("clash-bind", { round: st.round });
+        return { clash: true };
+      }
+      bus.emit("stance-selected", { side: "A", stance: aStance });
+      return finalize({ kind: r.kind, winner: r.winner });
+    }
+    // resolve a pending clash with both bind picks supplied externally.
+    function commitBind(pBind, aBind) {
+      if (!st.pending) return null;
+      st.bindHistP.push(pBind);
+      st.bindHistA.push(aBind);
+      const b = resolveBind3(pBind, aBind);
+      const pending = st.pending; st.pending = null;
+      bus.emit("stance-selected", { side: "A", stance: pending.aStance });
+      let outcome;
+      if (b.winner === null) outcome = { kind: "clash", winner: null, bind: { p: pBind, a: aBind } };
+      else outcome = { kind: "glance", winner: b.winner, bind: { p: pBind, a: aBind } };
+      return finalize(outcome);
+    }
+
     // spend Resolve to buy INFORMATION. Computes the revealed payload and emits
     // 'info-revealed'. Never alters damage/HP (Resolve.spend has no damage path).
     function spend(side, action) {
@@ -232,7 +270,11 @@
 
     const api = {
       bus, mode, difficulty, profile, meter,
-      chooseStance, submitBind, spend, runMatch,
+      chooseStance, submitBind, commitRound, commitBind, spend, runMatch,
+      // ctx snapshot for an EXTERNAL opponent's AI to read this player (Sentinel /
+      // local mock). playerHist = this player's picks (the thing the foe reads),
+      // aiHist = the opponent's own picks. rng is the match rng.
+      opponentCtx: () => ctx(),
       state: () => ({ hpP: st.hpP, hpA: st.hpA, round: st.round, over: st.over,
         playerHist: st.playerHist.slice(), aiHist: st.aiHist.slice(),
         outcomes: st.outcomes.slice(), pending: !!st.pending }),

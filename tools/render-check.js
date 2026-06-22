@@ -121,6 +121,41 @@ const root = path.join(__dirname, "..");
       }
       await page.waitForTimeout(400);
       await page.screenshot({ path: path.join(root, "render-ascent-result.png") });
+
+      // ===== RANKED DUEL (PvP): matchmaking -> Sentinel fallback -> full duel =====
+      await page.evaluate(() => { ["resultscreen", "ascent"].forEach((id) => { const e = document.getElementById(id); if (e) { e.classList.remove("show"); e.setAttribute("aria-hidden", "true"); } }); });
+      await page.evaluate(() => document.getElementById("duelbtn").click());
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: path.join(root, "render-duel.png") });
+      const tierShown = await page.evaluate(() => { const e = document.querySelector("#duelscreen .tierbadge .tn"); return e ? e.textContent.trim() : null; });
+      await page.evaluate(() => { const b = document.getElementById("findbtn"); if (b) b.click(); });
+      // empty pool -> Sentinel offer appears (~3s of widening search)
+      let sawOffer = false;
+      for (let k = 0; k < 12 && !sawOffer; k++) {
+        await page.waitForTimeout(600);
+        sawOffer = await page.evaluate(() => !!document.getElementById("sokeep"));
+      }
+      await page.screenshot({ path: path.join(root, "render-duel-search.png") });
+      await page.evaluate(() => { const b = document.getElementById("sokeep"); if (b) b.click(); });
+      await page.waitForTimeout(700);
+      const inPvp = await page.evaluate(() => { const t = document.getElementById("modetag"); return t ? t.textContent.trim() : null; });
+      // play the ranked duel to its result screen
+      let pvpResult = false;
+      for (let k = 0; k < 60 && !pvpResult; k++) {
+        const st = await page.evaluate(() => ({
+          result: document.getElementById("resultscreen").classList.contains("show"),
+          bind: document.getElementById("bindstage").classList.contains("show"),
+        }));
+        if (st.result) { pvpResult = true; break; }
+        if (st.bind) await page.evaluate(() => { const b = document.querySelector("#bindstage .bindbtn-lg"); if (b) b.click(); });
+        else await page.evaluate((i) => { const n = document.querySelectorAll(".node"); if (n.length) { const s = i % 6; n[s].click(); n[s].click(); } }, k);
+        await page.waitForTimeout(900);
+      }
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: path.join(root, "render-duel-result.png") });
+      const pvpResultOk = await page.evaluate(() => !!document.querySelector("#resultscreen .pvp-rank"));
+      console.log("PVP:", { tierShown, sawSentinelOffer: sawOffer, modeTag: inPvp, reachedResult: pvpResult, rankResultShown: pvpResultOk });
+      if (!(tierShown && sawOffer && inPvp === "Ranked" && pvpResult && pvpResultOk)) { anyFail = true; console.log("  FAIL ranked-duel flow incomplete"); }
     }
     await page.close();
   }
