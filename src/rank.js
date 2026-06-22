@@ -20,13 +20,15 @@
 
   // visible tiers, ascending. `min` = inclusive rating floor. Gaps widen near the
   // top so the last climbs are the hardest (classic ladder shape).
+  // glyphs are kanji "seal" marks, not emoji — they keep the sumi-e/yokai tone
+  // (石 stone · 銅 bronze · 鉄 iron · 翠 jade · 玄 onyx · 王 master/king).
   const TIERS = [
-    { key: "stone",  name: "Stone",  glyph: "🪨", min: 0 },
-    { key: "bronze", name: "Bronze", glyph: "🥉", min: 1000 },
-    { key: "iron",   name: "Iron",   glyph: "⚔", min: 1250 },
-    { key: "jade",   name: "Jade",   glyph: "🟢", min: 1500 },
-    { key: "onyx",   name: "Onyx",   glyph: "🟣", min: 1800 },
-    { key: "master", name: "Master", glyph: "👑", min: 2150 },
+    { key: "stone",  name: "Stone",  glyph: "石", min: 0 },
+    { key: "bronze", name: "Bronze", glyph: "銅", min: 1000 },
+    { key: "iron",   name: "Iron",   glyph: "鉄", min: 1250 },
+    { key: "jade",   name: "Jade",   glyph: "翠", min: 1500 },
+    { key: "onyx",   name: "Onyx",   glyph: "玄", min: 1800 },
+    { key: "master", name: "Master", glyph: "王", min: 2150 },
   ];
   const START_RATING = 1000;   // new players enter at the Bronze floor (Stone is below = demotion room)
   const RATING_FLOOR = 200;    // never sink below this
@@ -108,10 +110,16 @@
       const oppRating = (opp && opp.rating != null) ? opp.rating : before;
       const kind = (opp && opp.kind === "sentinel") ? "sentinel" : "live";
       const tBefore = tierFor(before);
-      const kMult = st.placements < PROVISIONAL_GAMES ? PROVISIONAL_K_MULT : 1;  // placement boost
+      const inPlacements = st.placements < PROVISIONAL_GAMES;
+      const kMult = inPlacements ? PROVISIONAL_K_MULT : 1;  // placement boost (fast sort)
       const delta = ratingDelta(before, oppRating, won, kind, kMult);
-      st.rating = clampRating(before + delta);
+      // Placement protection: during your first N games you can climb fast but
+      // never demote BELOW your starting tier — a new player can't be dumped to the
+      // bottom on a single early loss (the friendliest, still-honest placement model).
+      const lowerFloor = inPlacements ? Math.max(RATING_FLOOR, START_RATING) : RATING_FLOOR;
+      st.rating = Math.max(lowerFloor, Math.round(before + delta));
       const realDelta = st.rating - before;          // after floor clamp
+      st.placementProtected = inPlacements && (before + delta) < lowerFloor;  // surfaced to UI
       if (won) { st.wins++; st.streak++; if (st.streak > st.bestStreak) st.bestStreak = st.streak; }
       else { st.losses++; st.streak = 0; }
       if (st.rating > st.peak) st.peak = st.rating;
@@ -126,6 +134,8 @@
         tierBefore: tBefore, tierAfter: tAfter,
         promoted: tAfter.index > tBefore.index,
         demoted: tAfter.index < tBefore.index,
+        protected: !!st.placementProtected,   // a placement loss was floored at the entry tier
+        inPlacements,
         kind,
       };
     }

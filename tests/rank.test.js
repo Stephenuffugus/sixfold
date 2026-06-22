@@ -67,6 +67,31 @@ function ok(name, cond, extra) { assert.ok(cond, "FAIL: " + name + (extra ? " ("
   ok("demotion detected when dropping below a tier floor", res2.demoted === true);
 }
 
+// ---- provisional placements + placement protection ----
+{
+  const L = R.createLadder({ rating: R.START_RATING });
+  const res = L.applyResult(false, { rating: 3000, kind: "live" }, 1);
+  ok("placement loss can't fall below the entry tier", L.rating >= R.START_RATING && res.protected === true);
+  ok("protected placement loss shows no demotion", res.demoted === false);
+  ok("result flags inPlacements during the tryout", res.inPlacements === true);
+}
+{
+  // provisional games move rating faster than settled games (2x K early)
+  const A = R.createLadder({ rating: 1000 });
+  const dProv = A.applyResult(true, { rating: 1000, kind: "live" }, 1).delta;   // placement -> 2x
+  const B = R.createLadder({ rating: 1000 });
+  for (let i = 0; i < R.PROVISIONAL_GAMES; i++) B.applyResult(true, { rating: 5, kind: "sentinel" }, i); // burn placements
+  const dSettled = B.applyResult(true, { rating: 1000, kind: "live" }, 99).delta; // settled -> 1x
+  ok("provisional placements move rating faster than settled games", dProv > dSettled, `prov=${dProv} settled=${dSettled}`);
+}
+{
+  // after placements, protection lifts and demotion below the entry tier is possible
+  const L = R.createLadder({ rating: R.START_RATING });
+  for (let i = 0; i < R.PROVISIONAL_GAMES; i++) L.applyResult(true, { rating: 5, kind: "sentinel" }, i);
+  for (let i = 0; i < 60; i++) L.applyResult(false, { rating: 3000, kind: "live" }, i);
+  ok("after placements, a sustained skid can demote below the entry tier", L.rating < R.START_RATING && L.tier().key === "stone");
+}
+
 // ---- serialization is cloud-shaped + round-trips ----
 {
   const L = R.createLadder({ rating: 1000, name: "Sten" });
