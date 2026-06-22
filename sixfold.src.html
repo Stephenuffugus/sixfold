@@ -501,6 +501,51 @@
   .pvp-delta.up{color:#7ed957}.pvp-delta.down{color:var(--seal)}
   .promo-banner{font-weight:800;font-size:14px;color:var(--gold);letter-spacing:.04em;padding:6px 12px;border:1px solid #cda64f55;border-radius:10px;background:#cda64f18}
 
+  /* ===== TITLE / HOME screen — the cinematic front door ===== */
+  #title{position:fixed;inset:0;z-index:70;display:none;flex-direction:column;align-items:center;justify-content:flex-start;
+    padding:calc(20px + env(safe-area-inset-top)) 20px 24px;overflow:hidden;opacity:0;transition:opacity .45s ease}
+  #title.show{display:flex;opacity:1}
+  #title .tbg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center top;transform:scale(1.08);
+    filter:saturate(1.06) contrast(1.02);animation:titledrift 26s ease-in-out infinite alternate}
+  @keyframes titledrift{from{transform:scale(1.08) translateY(0)}to{transform:scale(1.14) translateY(-12px)}}
+  #title .tscrim{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,#0a0d18f0 0%,#0a0d1855 20%,#0a0d1838 42%,#0a0d18cc 72%,#0a0d18 100%)}
+  #title .tvig{position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(120% 78% at 50% 30%,transparent 44%,#06080fe0 100%)}
+  #title .tinner{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;width:100%;max-width:430px;gap:12px;
+    transform:translateY(14px);opacity:0;transition:transform .55s cubic-bezier(.18,1.2,.4,1) .08s,opacity .55s .08s}
+  #title.show .tinner{transform:translateY(0);opacity:1}
+  #title .ttop{width:100%;display:flex;justify-content:space-between;align-items:center;min-height:26px}
+  #title .tbeam{font-family:var(--ui);font-weight:800;font-size:12.5px;color:var(--gold);background:#cda64f1c;border:1px solid #cda64f44;border-radius:999px;padding:3px 10px}
+  #title .trank{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--washi);background:#0007;border:1px solid #ffffff20;border-radius:999px;padding:3px 10px}
+  #title .trank .tg{font-family:var(--disp);font-size:15px;color:var(--gold);line-height:1}
+  #title .tmark{font-family:var(--disp);font-weight:800;letter-spacing:.2em;font-size:48px;line-height:1;color:var(--washi);
+    text-shadow:0 2px 0 #0009,0 0 46px #cda64f3a;margin:8px 0 0;position:relative}
+  #title .tmark .dot{color:var(--seal)}
+  #title .tmark::after{content:"";position:absolute;left:7%;right:28%;bottom:-8px;height:4px;border-radius:3px;
+    background:linear-gradient(90deg,var(--seal),#cda64f99,transparent)}
+  #title .ttag{font-size:11px;letter-spacing:.46em;text-transform:uppercase;color:var(--washi-dim);margin-top:11px;padding-left:.46em}
+  #title .thero{position:relative;width:230px;height:230px;margin:4px 0 0;flex:0 0 auto}
+  #title .thero .sprite{position:absolute;inset:0;background-repeat:no-repeat;background-position:0 0;
+    filter:drop-shadow(0 12px 20px #000b);animation:idle-breathe 3.6s ease-in-out infinite}
+  #title .thero::after{content:"";position:absolute;left:50%;bottom:16px;width:132px;height:24px;margin-left:-66px;border-radius:50%;
+    background:radial-gradient(closest-side,#000c,transparent);filter:blur(6px);z-index:-1}
+  #title .tmenu{display:flex;flex-direction:column;gap:9px;width:100%;max-width:328px;margin-top:2px}
+  #title .tbtn{font-family:var(--ui);font-weight:800;font-size:15px;letter-spacing:.02em;padding:14px 18px;border-radius:13px;cursor:pointer;
+    border:1px solid #ffffff24;color:var(--washi);background:#ffffff12;display:flex;align-items:center;justify-content:center;gap:9px;
+    transition:transform .1s,box-shadow .2s,background .2s}
+  #title .tbtn.primary{background:linear-gradient(180deg,#c63b2c,#8f2418);border-color:#0004;color:#fff;box-shadow:0 8px 24px #c63b2c44}
+  #title .tbtn.gold{background:linear-gradient(180deg,#b98a2e,#8a6420);border-color:#0004;color:#fff;box-shadow:0 8px 24px #cda64f44}
+  #title .tbtn:active{transform:scale(.97)}
+  @media(hover:hover){#title .tbtn:hover{transform:translateY(-1px)}}
+  #title .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:328px}
+  #title .tchip{font-family:var(--ui);font-weight:700;font-size:12.5px;padding:11px 8px;border-radius:11px;cursor:pointer;
+    border:1px solid #ffffff1c;color:var(--washi);background:#ffffff0d;display:flex;align-items:center;justify-content:center;gap:6px;transition:transform .1s}
+  #title .tchip:active{transform:scale(.96)}
+  #title .tfoot{display:flex;gap:18px;margin-top:7px}
+  #title .tfoot button{background:none;border:none;color:var(--washi-dim);font-family:var(--ui);font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+  body.reduce #title,body.reduce #title .tinner{transition:none} body.reduce #title .tbg{animation:none}
+  /* the wordmark in the header becomes a HOME button back to the title */
+  h1{cursor:pointer}
+
   /*__ANIM_CSS__*/
 </style>
 </head>
@@ -663,6 +708,9 @@
 
   <!-- Ranked Duel — live head-to-head matchmaking + tier ladder (populated by glue) -->
   <div class="overlay" id="duelscreen" aria-hidden="true" role="dialog" aria-label="Ranked Duel"></div>
+
+  <!-- Title / home screen — the cinematic front door (populated by glue) -->
+  <div id="title" aria-hidden="true" role="dialog" aria-label="SIXFOLD — title"></div>
 
   <!-- First-run / on-demand how-to guide -->
   <div class="overlay" id="howto" aria-hidden="true" role="dialog" aria-label="How to play">
@@ -1909,6 +1957,67 @@
 
   function showToast(t){const el=$("toast");el.textContent=t;el.classList.add("show");clearTimeout(showToast._t);showToast._t=setTimeout(()=>el.classList.remove("show"),2600);}
 
+  /* ---- TITLE / HOME screen: the cinematic front door + mode hub ---- */
+  // Menu track. The owner's standout/hero track drops in HERE when provided —
+  // swap MENU_MUSIC for its id and it becomes the title/Champion accent.
+  const MENU_MUSIC="lastbreath1";
+  function menuMusic(){ return "music/"+MENU_MUSIC+".mp3"; }
+  let titlePending=false;
+  function renderTitle(){
+    const t=ladder.tier();
+    // hero = the player's current fighter, idle frame, rendered large + breathing
+    const skin=Skins.get(player.skin||"ronin");
+    let heroHTML="";
+    if(skin && skin.kind==="atlas"){
+      const src=Skins.src(skin,player.pal), pos=(Skins.atlasPos?Skins.atlasPos(skin,"idle"):"0% 0%");
+      heroHTML=`<div class="sprite" style="background-image:url('${src}');background-size:${skin.cols*100}% ${skin.rows*100}%;background-position:${pos}"></div>`;
+    }
+    const bg=(THEMES[arenaId]&&THEMES[arenaId].bg)||"backgrounds/dojo.jpg";
+    $("title").innerHTML=
+      `<div class="tbg" style="background-image:url('${bg}')"></div><div class="tscrim"></div><div class="tvig"></div>`+
+      `<div class="tinner">`+
+        `<div class="ttop"><span class="trank"><span class="tg">${t.glyph}</span>${t.name}</span><span class="tbeam">☀ ${sunbeams}</span></div>`+
+        `<div class="tmark">SIX<span class="dot">·</span>FOLD</div>`+
+        `<div class="ttag">read · strike · ascend</div>`+
+        `<div class="thero">${heroHTML}</div>`+
+        `<div class="tmenu">`+
+          `<button class="tbtn primary" id="tDuel">⚔ Ranked Duel</button>`+
+          `<button class="tbtn gold" id="tFree">▶ Free Duel</button>`+
+        `</div>`+
+        `<div class="tgrid">`+
+          `<button class="tchip" id="tDaily">🗓 Daily</button>`+
+          `<button class="tchip" id="tAscent">⛰ Ascent</button>`+
+          `<button class="tchip" id="tRoster">🎴 Roster</button>`+
+          `<button class="tchip" id="tProfile">📊 Profile</button>`+
+        `</div>`+
+        `<div class="tfoot"><button id="tSettings">⚙ Settings</button><button id="tHow">How to play</button></div>`+
+      `</div>`;
+    const on=(id,fn)=>{const el=$(id); if(el) el.onclick=fn;};
+    on("tDuel",()=>{ closeTitle(); openDuel(); });
+    on("tFree",quickDuel);
+    on("tDaily",()=>{ closeTitle(); openDaily(); });
+    on("tAscent",()=>{ closeTitle(); openAscent(); });
+    on("tRoster",()=>{ closeTitle(); openCollection(); });
+    on("tProfile",()=>{ closeTitle(); openProfile(); });
+    on("tSettings",()=>{ closeTitle(); $("setdrawer").classList.add("open"); $("setdrawer").scrollIntoView({behavior:"smooth",block:"nearest"}); });
+    on("tHow",()=>{ closeTitle(); openHowto(); });
+  }
+  function openTitle(){
+    renderTitle();
+    const o=$("title"); o.classList.add("show"); o.setAttribute("aria-hidden","false");
+    Sfx.unlock(); if(typeof Music!=="undefined"){ Music.unlock(); Music.play(menuMusic()); }
+  }
+  function closeTitle(){
+    const o=$("title"); o.classList.remove("show"); o.setAttribute("aria-hidden","true");
+    if(typeof Music!=="undefined") Music.play(musicFor(arenaId));   // restore biome track
+  }
+  // Free Duel: jump straight into a casual match vs a fresh random foe.
+  function quickDuel(){
+    ascentRun=-1; modeId="casual"; foeId=rid(Personalities.ids()); difficulty=0.5;
+    if(FOE_ARENA[foeId]) setArena(FOE_ARENA[foeId],true);
+    closeTitle(); hideResult(); updateFoeBar(); newGame();
+  }
+
   /* ---- wire up ---- */
   function toggleDrawer(id){$(id).classList.toggle("open");}
   $("foedh").onclick=()=>toggleDrawer("foedrawer");
@@ -1918,9 +2027,13 @@
   $("rematch").onclick=()=>newGame();
   function openHowto(){$("howto").classList.add("show");$("howto").setAttribute("aria-hidden","false");}
   function closeHowto(){$("howto").classList.remove("show");$("howto").setAttribute("aria-hidden","true");
-    try{localStorage.setItem("sixfold_seen","1");}catch(e){}}
+    try{localStorage.setItem("sixfold_seen","1");}catch(e){}
+    if(titlePending){ titlePending=false; openTitle(); }   // first-run: guide -> title
+  }
   $("howbtn").onclick=openHowto;
   $("howtoclose").onclick=closeHowto;
+  // the wordmark is a HOME button back to the title hub
+  { const h=(document.querySelector?document.querySelector("header h1"):null); if(h) h.onclick=openTitle; }
   $("duelbtn").onclick=openDuel;
   $("ascentbtn").onclick=openAscent;
   $("collbtn").onclick=openCollection;
@@ -1934,8 +2047,10 @@
   updateSunbeamUI();
   newGame();
 
-  // First-run: show the how-to guide once (remembered per browser).
-  try{ if(!localStorage.getItem("sixfold_seen")) openHowto(); }catch(e){}
+  // Front door: first-run shows the how-to guide, then the title; returning
+  // players land straight on the title hub. (The duel board is built behind it.)
+  let firstRun=false; try{ firstRun=!localStorage.getItem("sixfold_seen"); }catch(e){}
+  if(firstRun){ titlePending=true; openHowto(); } else { openTitle(); }
 
   // Prime the audio context on the very first user gesture (browser autoplay rule).
   if(typeof window!=="undefined" && window.addEventListener) window.addEventListener("pointerdown",()=>{Sfx.unlock(); if(typeof Music!=="undefined")Music.unlock();},{passive:true});

@@ -23,6 +23,9 @@ const root = path.join(__dirname, "..");
     page.on("pageerror", (e) => errors.push("PAGEERROR: " + e.message));
     await page.goto("http://localhost:8080/index.html", { waitUntil: "networkidle" });
     await page.waitForTimeout(600);
+    // dismiss the title hub so the duel board is measurable/clickable
+    await page.evaluate(() => { const t = document.getElementById("title"); if (t) { t.classList.remove("show"); t.setAttribute("aria-hidden", "true"); } });
+    await page.waitForTimeout(150);
 
     const data = await page.evaluate(() => {
       const ww = document.querySelector(".wheelwrap");
