@@ -117,10 +117,11 @@
   .arena{width:100%;max-width:460px;display:flex;justify-content:space-between;gap:10px}
   .fighter{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px}
   .fighter .nm{font-family:var(--disp);font-size:14px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .stage{position:relative;width:104px;height:118px}
-  /* soft watercolor ground shadow at the art's foot anchor (~88% down) */
-  .stage::after{content:"";position:absolute;left:50%;bottom:8px;width:64px;height:15px;margin-left:-32px;border-radius:50%;
-    background:radial-gradient(closest-side,#0009,transparent);filter:blur(2px);z-index:1}
+  .stage{position:relative;width:132px;height:150px}
+  /* soft watercolor ground shadow at the art's foot anchor (~88% down) — wider +
+     darker to ground the larger fighters so they sit IN the arena, not float. */
+  .stage::after{content:"";position:absolute;left:50%;bottom:9px;width:88px;height:18px;margin-left:-44px;border-radius:50%;
+    background:radial-gradient(closest-side,#000b,transparent);filter:blur(3px);z-index:1}
   .banner{position:absolute;top:-2px;width:30px;height:62px;border-radius:2px 2px 0 0;box-shadow:0 2px 6px #0007;z-index:1;
     display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff8;transform-origin:top center}
   .banner.left{left:6px;transform:rotate(-7deg)} .banner.right{right:6px;transform:rotate(7deg)}
@@ -779,7 +780,7 @@
     if(skin.kind==="atlas"){
       const src=Skins.src(skin,f.pal);
       atlas=true;
-      artStyle=`position:relative;width:100px;height:100px`;
+      artStyle=`position:relative;width:128px;height:128px`;
       inner=`<div class="sprite" style="background-image:url('${src}');background-size:${skin.cols*100}% ${skin.rows*100}%"></div>`;
       // De-risk real PNG sheets: if the file fails to load (missing/blocked/malformed),
       // hot-swap that fighter to the vector stand-in so a bad art drop never breaks play.

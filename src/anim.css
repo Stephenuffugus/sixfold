@@ -27,7 +27,16 @@
   position: absolute; left: 0; top: 0; width: 100%; height: 100%;
   background-repeat: no-repeat; background-position: 0% 0%;
   pointer-events: none;
+  /* gentle idle "breathing" — lives on the sprite (translateY) so it never fights
+     the JS-driven pose/lunge transforms on .fighter-art. GPU-only, ~imperceptible
+     but makes the scene feel alive instead of static. */
+  animation: idle-breathe 3.6s ease-in-out infinite;
 }
+/* the two fighters breathe out of phase so it never looks mechanical */
+.art-wrap.opp .sprite { animation-delay: -1.8s; }
+/* freeze the breath the instant a fighter acts (strike / locked bind) */
+.fighter-art.striking .sprite, .fighter-art.locked .sprite { animation: none; }
+@keyframes idle-breathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.006); } }
 
 /* held strike frame (when PNG frames exist) */
 .fighter-art.striking .frame-idle { opacity: 0; }
@@ -65,5 +74,7 @@
 @media (prefers-reduced-motion: reduce) {
   .fighter-art { transition: none !important; }
   .spark, .fighter-art.flinch, .fighter-art.knock, .hub.finish { animation: none !important; }
+  .fighter-art .sprite { animation: none !important; }
   .frame-idle, .frame-strike { transition: none !important; }
 }
+body.reduce .fighter-art .sprite { animation: none !important; }
