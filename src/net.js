@@ -60,7 +60,7 @@
       const clock = opts.clock || defaultClock();
       const rng = opts.rng || rng32(((opts.rating || 1000) * 2654435761) >>> 0);
       const myRating = opts.rating || 1000;
-      let elapsed = 0, cancelled = false, settled = false, sawCandidate = false;
+      let elapsed = 0, cancelled = false, settled = false;
       const subs = [];
       let nameIdx = 0;
       const emit = (s) => { if (!cancelled) subs.forEach((f) => { try { f(s); } catch (e) {} }); };
@@ -76,16 +76,18 @@
         if (cancelled || settled) return;
         elapsed += cfg.tickMs;
         const cand = Matchmaker.pickOpponent(pool, myRating, elapsed, { selfId: opts.selfId, busy });
-        if (cand) sawCandidate = true;
         const decision = Matchmaker.fallbackDecision(elapsed, !!cand);
         if (decision === "matched") {
           busy.add(cand.id);
           emit({ state: "matched", opponent: normalizeHuman(cand), session: openSession(normalizeHuman(cand)) });
           return;
         }
-        // empty-pool: don't make the player wait the full timeout to be told the
-        // truth — we know immediately there's no one, so offer the Sentinel sooner.
-        const effectiveTimeout = sawCandidate ? Matchmaker.SEARCH_TIMEOUT_MS : Math.min(Matchmaker.SEARCH_TIMEOUT_MS, cfg.noPoolMs);
+        // "Is anyone online at all?" is band-INDEPENDENT (Infinity band). A non-empty
+        // pool whose rivals are merely out of the CURRENT (narrow) band must keep
+        // widening to the full timeout — only a genuinely EMPTY pool short-circuits
+        // to the Sentinel quickly (the honest "no rivals online" path).
+        const anyoneOnline = Matchmaker.pickOpponent(pool, myRating, Infinity, { selfId: opts.selfId, busy });
+        const effectiveTimeout = anyoneOnline ? Matchmaker.SEARCH_TIMEOUT_MS : Math.min(Matchmaker.SEARCH_TIMEOUT_MS, cfg.noPoolMs);
         if (elapsed >= effectiveTimeout) {
           settled = true;
           emit({ state: "sentinel-offer", opponent: makeSentinel() });

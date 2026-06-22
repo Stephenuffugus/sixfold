@@ -32,6 +32,8 @@
   const RATING_FLOOR = 200;    // never sink below this
   const K_BASE = 32;           // Elo K-factor for a live duel
   const SENTINEL_STAKES = 0.4; // fraction of K applied to Sentinel (bot) duels
+  const PROVISIONAL_GAMES = 10;// your first N ranked matches are "placements"...
+  const PROVISIONAL_K_MULT = 2;// ...with boosted K so you sort into your tier fast
   // soft span used only to render a progress bar inside the top (open-ended) tier
   const MASTER_SPAN = 600;
 
@@ -67,10 +69,10 @@
   }
 
   // rating change for one result. won=true|false. kind="live"|"sentinel".
-  // Returns a signed integer delta (never zero on a decided result, so the bar
-  // always visibly moves — min ±1).
-  function ratingDelta(myRating, oppRating, won, kind) {
-    const k = K_BASE * (kind === "sentinel" ? SENTINEL_STAKES : 1);
+  // kMult scales K (provisional placements pass >1). Returns a signed integer
+  // delta (never zero on a decided result, so the bar always visibly moves ±1).
+  function ratingDelta(myRating, oppRating, won, kind, kMult) {
+    const k = K_BASE * (kind === "sentinel" ? SENTINEL_STAKES : 1) * (kMult || 1);
     const score = won ? 1 : 0;
     const raw = k * (score - expected(myRating, oppRating));
     let d = Math.round(raw);
@@ -106,7 +108,8 @@
       const oppRating = (opp && opp.rating != null) ? opp.rating : before;
       const kind = (opp && opp.kind === "sentinel") ? "sentinel" : "live";
       const tBefore = tierFor(before);
-      const delta = ratingDelta(before, oppRating, won, kind);
+      const kMult = st.placements < PROVISIONAL_GAMES ? PROVISIONAL_K_MULT : 1;  // placement boost
+      const delta = ratingDelta(before, oppRating, won, kind, kMult);
       st.rating = clampRating(before + delta);
       const realDelta = st.rating - before;          // after floor clamp
       if (won) { st.wins++; st.streak++; if (st.streak > st.bestStreak) st.bestStreak = st.streak; }
@@ -145,6 +148,8 @@
       get playerId() { return st.playerId; },
       get name() { return st.name; },
       applyResult, tier, winRate, toJSON, setName, clearPending,
+      inPlacements() { return st.placements < PROVISIONAL_GAMES; },
+      placementsLeft() { return Math.max(0, PROVISIONAL_GAMES - st.placements); },
     };
   }
 
@@ -160,7 +165,7 @@
   let idCounter = 1;
 
   const api = {
-    TIERS, START_RATING, RATING_FLOOR, K_BASE, SENTINEL_STAKES,
+    TIERS, START_RATING, RATING_FLOOR, K_BASE, SENTINEL_STAKES, PROVISIONAL_GAMES, PROVISIONAL_K_MULT,
     tierFor, tierIndexFor, expected, ratingDelta, createLadder, genId,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;

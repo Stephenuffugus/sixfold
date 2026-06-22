@@ -1635,7 +1635,8 @@
     const t=ladder.tier();
     const recHTML=`<div class="rankrec"><span><b>${ladder.wins}</b> W</span><span><b>${ladder.losses}</b> L</span>`+
       `<span><b>${ladder.winRate()}%</b> win</span><span><b>${ladder.streak}</b>🔥</span></div>`;
-    const next = t.isTop ? `Peak rank` : `${t.toNext} to ${t.next}`;
+    const next = ladder.inPlacements() ? `Placement ${Rank.PROVISIONAL_GAMES-ladder.placementsLeft()+1}/${Rank.PROVISIONAL_GAMES} · rank moves fast`
+      : (t.isTop ? `Peak rank` : `${t.toNext} to ${t.next}`);
     $("duelscreen").innerHTML=
       `<div class="hero duel"><h2>RANKED DUEL</h2>`+
       `<div class="tiercard">`+
