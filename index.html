@@ -82,6 +82,20 @@
      the main cause of mobile jank now that every arena has a full-screen backdrop. */
   #scene.hasbg .glow,#scene.hasbg .disc,#scene.hasbg .ridge,#scene.hasbg .wash,#scene.hasbg .floor{display:none}
   body.reduce #scene *{transition:none}
+  /* ambient per-biome particles (embers/snow/petals/fireflies) — a thin drifting
+     layer over the arena, GPU-only (transform+opacity), behind the fighters.
+     Count kept low + paused under reduced motion (owner's mobile-perf guard). */
+  #scene .particles{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}
+  body.reduce #scene .particles{display:none}
+  .pt{position:absolute;top:-8%;border-radius:50%;opacity:0;will-change:transform,opacity}
+  .pt-snow{background:radial-gradient(circle,#fff,#ffffff55);animation:p-fall linear infinite}
+  .pt-petal{border-radius:55% 0 55% 55%;background:linear-gradient(#f6c1d6,#d98ab0);animation:p-sway linear infinite}
+  .pt-ember{top:auto;bottom:-6%;background:radial-gradient(circle,#ffd27f,#ff7a3c00);animation:p-rise linear infinite}
+  .pt-firefly{background:radial-gradient(circle,#ffe7a3,#cda64f00);animation:p-drift ease-in-out infinite}
+  @keyframes p-fall{0%{transform:translate3d(0,0,0);opacity:0}12%{opacity:.8}90%{opacity:.7}100%{transform:translate3d(var(--drift),118vh,0);opacity:0}}
+  @keyframes p-sway{0%{transform:translate3d(0,0,0) rotate(0);opacity:0}12%{opacity:.82}100%{transform:translate3d(var(--drift),118vh,0) rotate(240deg);opacity:0}}
+  @keyframes p-rise{0%{transform:translate3d(0,0,0);opacity:0}16%{opacity:.85}84%{opacity:.6}100%{transform:translate3d(var(--drift),-118vh,0);opacity:0}}
+  @keyframes p-drift{0%,100%{transform:translate3d(0,0,0);opacity:.18}50%{transform:translate3d(var(--drift),-34px,0);opacity:.8}}
 
   header{width:100%;max-width:460px;display:flex;align-items:baseline;justify-content:space-between}
   h1{font-family:var(--disp);font-weight:800;letter-spacing:.18em;margin:0;font-size:23px;color:var(--washi);
@@ -413,7 +427,13 @@
   .coll-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:8px;overflow-y:auto;max-height:64vh;padding:3px}
   .ccard{position:relative;border-radius:11px;border:1px solid #ffffff18;background:#ffffff0c;padding:8px 5px 7px;
     display:flex;flex-direction:column;align-items:center;gap:4px}
-  .ccard.got{border-color:#5f917366;background:#5f917312}
+  .ccard.got{border-color:#5f917366;background:#5f917312;cursor:pointer;transition:transform .1s,border-color .15s,box-shadow .15s}
+  .ccard.got:active{transform:scale(.96)}
+  @media(hover:hover){.ccard.got:hover{border-color:var(--gold);box-shadow:0 4px 14px #0006}}
+  .ccard.equipped{border-color:var(--gold);background:#cda64f1e;box-shadow:0 0 0 1px var(--gold),0 4px 16px #cda64f33}
+  .ccard .eq{position:absolute;top:9px;left:9px;width:18px;height:18px;border-radius:50%;background:var(--gold);color:#1a1206;
+    font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px #000a}
+  .ccard.equipped .cs{color:var(--gold)}
   .cthumb{width:78px;height:78px;border-radius:9px;overflow:hidden;background:radial-gradient(circle at 50% 38%,#ffffff12,#0003)}
   .cthumb i{display:block;width:100%;height:100%;background-repeat:no-repeat;background-position:0% 0%;background-size:300% 200%}
   .ccard.lock .cthumb i{filter:brightness(.05) contrast(.6)}
@@ -828,7 +848,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
         <li><span class="ic">↻</span><span>You beat the <span class="k">2 stances clockwise</span> of yours: <span class="c-clean">CLEAN −2</span>, then <span class="c-glance">GLANCE −1</span>.</span></li>
         <li><span class="ic">⇄</span><span>Directly <span class="c-steel">across = WHIFF</span> — blades pass, no damage.</span></li>
         <li><span class="ic">⚔</span><span><span class="k">Same stance = CLASH</span> → break the bind: <span class="c-gold">Drive ▸ Slip ▸ Trap ▸ Drive</span>.</span></li>
-        <li><span class="ic">資</span><span>Dead rounds build <span class="c-gold">Resolve</span> — spend it to read the foe, never to hit harder. <span class="c-gold">Foresight</span> names their next stance and the one to strike: land it for a <span class="c-gold">READ 🎯</span>.</span></li>
+        <li><span class="ic">資</span><span>Dead rounds build <span class="c-gold">Resolve</span> — spend it to read the foe, never to hit harder. <span class="c-gold">Foresight</span> names their likely next stance — you read the wheel and strike to land a <span class="c-gold">READ 🎯</span>.</span></li>
         <li><span class="ic">🏆</span><span>Drop the foe's <span class="k">4 HP</span> first. Stay unpredictable — they're reading you too.</span></li>
       </ol>
       <button class="gotit" id="howtoclose">Got it</button>
@@ -3197,18 +3217,18 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     });
     g.bus.on("round-revealed",({pPick,aPick,outcome})=>{
       showAiPick(aPick,pPick);
-      // a called shot: Foresight was up, you struck its recommended counter, and
-      // the foe walked into the predicted stance. The prediction was dead-on, so
-      // this is always a CLEAN — but it's a read, not luck, so we crown it.
+      // a READ: Foresight was up, the foe walked into the predicted stance, AND
+      // YOU converted it into a clean strike yourself (you found the counter on the
+      // wheel — Foresight no longer hands it to you). Skill, not a free win.
       const cf=committedForesight; committedForesight=null;
-      const read = !!(cf && aPick===cf.node && pPick===cf.strike && outcome.winner==="P");
-      const misread = !!(cf && pPick===cf.strike && !read); // acted on the read, foe slipped it
+      const read = !!(cf && aPick===cf.node && outcome.kind==="clean" && outcome.winner==="P");
+      const misread = !!(cf && aPick===cf.node && !read); // foe did as foreseen but you didn't land the clean
       const colors={clean:getCss("--seal"),glance:getCss("--jade"),whiff:getCss("--steel"),clash:"#fff"};
       drawLink(pPick,aPick,outcome.bind?"#fff":colors[outcome.kind]);
       const vEl=$("verdict"); vEl.classList.toggle("read",read);
       vEl.textContent= read ? "READ!" : (outcome.bind && outcome.winner ? "BIND!" : VERDICT[outcome.kind]);
       const early=game.state().playerHist.length<=3;   // coach the clockwise rule early
-      $("sub").textContent= read ? "you called it — clean" : (misread ? "they slipped your read" : (early?teachReason(pPick,aPick):subText(outcome)));
+      $("sub").textContent= read ? "you read it — clean!" : (misread ? "you had the read — strike one BEFORE their stance" : (early?teachReason(pPick,aPick):subText(outcome)));
       const hub=$("hub"); hub.classList.remove("flash-clean","flash-glance","flash-read","flash-whiff"); void hub.offsetWidth;
       if(read)hub.classList.add("flash-read");
       else if(outcome.winner&&outcome.kind==="clean")hub.classList.add("flash-clean");
@@ -3372,11 +3392,13 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     if(action==="FORESIGHT"&&payload.predict){
       matchUsedForesight=true;
       clearForesight();
+      // Foresight reveals the foe's LIKELY STANCE only — NOT the stance to strike.
+      // You still have to read the wheel and choose the counter yourself; that's
+      // the skill. (Handing you the exact 2-damage strike made it a free win.)
       foresightNode=payload.predict.pick;
-      foresightStrike=(payload.counter!=null)?payload.counter:((foresightNode-1+N)%N);
+      foresightStrike=null;
       nodeEls[foresightNode].classList.add("foresight");           // foe's likely stance
-      nodeEls[foresightStrike].classList.add("calledshot");        // strike here to land the read
-      showToast("Foresight: foe likely "+STANCES[foresightNode].n+" — strike "+STANCES[foresightStrike].n+" ⚔");
+      showToast("Foresight: foe likely "+STANCES[foresightNode].n+" — read the wheel and punish it");
     }else if(action==="INSIGHT"){
       aiResolveVisible=true;
       Readout.render(game.state().playerHist,game.state().aiHist,game.state().outcomes,{aiRibbonK:10});
@@ -3566,6 +3588,30 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     frozen:TINT_COOL, coast:TINT_COOL, cloudsea:TINT_COOL, palace:TINT_COOL,
     bamboo:TINT_DAY, cherry:TINT_DAY,
   };
+  // per-biome ambient particle type (same mood groups as the tint)
+  const ARENA_PARTICLE={
+    sunset:"ember", maple:"ember", market:"ember", village:"ember", ash:"ember", bloodmtn:"ember",
+    frozen:"snow", coast:"snow", cloudsea:"snow", palace:"snow",
+    bamboo:"petal", cherry:"petal",
+    dojo:"firefly", darkdojo:"firefly", torii:"firefly", graveyard:"firefly",
+  };
+  function setParticles(type){
+    const sc=$("scene"); if(!sc)return;
+    let layer=sc.querySelector(".particles");
+    if(reduced()||!type||type==="none"){ if(layer){layer.innerHTML="";layer._type=null;} return; }
+    if(!layer){ layer=document.createElement("div"); layer.className="particles"; sc.appendChild(layer); } // z-index:1 lifts it regardless of DOM order
+    if(layer._type===type)return;                       // already showing this biome's motes
+    layer._type=type; layer.innerHTML="";
+    const N=type==="firefly"?10:14;
+    for(let i=0;i<N;i++){
+      const p=document.createElement("span"); p.className="pt pt-"+type;
+      const big=type==="petal", size=big?(6+Math.random()*6):(2+Math.random()*3);
+      const dur=(type==="firefly"?7:6)+Math.random()*8, delay=-Math.random()*dur;
+      const drift=Math.round((Math.random()*2-1)*46);
+      p.style.cssText=`left:${Math.round(Math.random()*100)}%;width:${size.toFixed(1)}px;height:${size.toFixed(1)}px;animation-duration:${dur.toFixed(1)}s;animation-delay:${delay.toFixed(1)}s;--drift:${drift}px`;
+      layer.appendChild(p);
+    }
+  }
   function applyTheme(id){
     const t=THEMES[id]||THEMES.dojo, s=$("scene"); if(!s)return;
     s.style.setProperty("--sky",t.sky); s.style.setProperty("--disc",t.disc); s.style.setProperty("--glow",t.glow);
@@ -3573,6 +3619,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     s.style.setProperty("--floor1",t.floor1); s.style.setProperty("--floor2",t.floor2);
     // set on body so it inherits into .arena/.fighter-art (#scene is a separate subtree)
     document.body.style.setProperty("--fighter-tint", ARENA_TINT[id]||"none");
+    setParticles(ARENA_PARTICLE[id]||"none");
     const ridge=s.querySelector(".ridge"); if(ridge) ridge.style.backgroundImage='url("'+t.ridge+'")';
     // optional painted backdrop (THEME.bg): drop-in image takes over the scene
     const sb=s.querySelector(".scenebg");
@@ -3731,25 +3778,42 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   }
   function openCollection(){ renderCollection(); const o=$("collection"); o.classList.add("show"); o.setAttribute("aria-hidden","false"); }
   function closeCollection(){ const o=$("collection"); o.classList.remove("show"); o.setAttribute("aria-hidden","true"); }
+  // equip an unlocked fighter to play as. Safe mid-match: the visual swap is
+  // deferred to the next duel if one is live (re-rendering the player art would
+  // break the active Stage refs), otherwise it applies immediately.
+  function equipFighter(id){
+    if(!unlockedSkinSet().has(id)) return;
+    player.skin=id;
+    renderSkinPicker();                                   // keep the customizer in sync
+    if(!game || over || introPlaying) renderFighter("P"); // reflect now when not mid-duel
+    const live=(game && !over && !introPlaying);
+    showToast("Playing as "+Skins.get(id).name+(live?" — from your next duel":""));
+    renderCollection();                                  // refresh the equipped highlight
+  }
   function renderCollection(){
     const unlocked=unlockedSkinSet(), entries=collectionEntries();
     const cards=entries.map(e=>{
       const skin=Skins.get(e.id), got=unlocked.has(e.id), src=Skins.src(skin,player.pal);
+      const equipped=got&&(player.skin===e.id);
       const thumb=src?`<i style="background-image:url('${src}')"></i>`:`<i></i>`;
       let sub;
-      if(e.rung<0) sub="Starter";
+      if(equipped) sub="✓ Playing as";
+      else if(e.rung<0) sub="Starter";
       else if(got) sub="Won · rung "+(e.rung+1);
       else { const a=Personalities.ARCHES[e.foe]; sub="Rung "+(e.rung+1)+" · beat "+(a?a.name:"?"); }
-      return `<div class="ccard ${got?"got":"lock"}"><div class="cthumb">${thumb}</div>`+
-        (got?"":`<span class="lk">🔒</span>`)+
+      return `<div class="ccard ${got?"got":"lock"}${equipped?" equipped":""}"${got?` data-skin="${e.id}"`:""}><div class="cthumb">${thumb}</div>`+
+        (got?"":`<span class="lk">🔒</span>`)+(equipped?`<span class="eq">✓</span>`:"")+
         `<div class="cn">${skin.name}</div><div class="cs">${sub}</div></div>`;
     }).join("");
     $("collection").innerHTML=
       `<div class="hero collection"><h2>ROSTER</h2>`+
-      `<div class="prog">${unlocked.size} / ${entries.length} fighters earned</div>`+
+      `<div class="prog">${unlocked.size} / ${entries.length} earned · tap a fighter to play as them</div>`+
       `<div class="coll-grid">${cards}</div>`+
       `<button class="close" id="collclose">Close</button></div>`;
     const c=$("collclose"); if(c) c.onclick=closeCollection;
+    Array.prototype.forEach.call($("collection").querySelectorAll(".ccard.got[data-skin]"),(card)=>{
+      card.onclick=()=>equipFighter(card.getAttribute("data-skin"));
+    });
   }
 
   /* ---- PROFILE / lifetime stats ---- */
