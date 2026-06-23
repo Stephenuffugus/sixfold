@@ -782,6 +782,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   <div class="postmatch" id="postmatch"></div>
 
   <div class="controls">
+    <button class="act ghost" id="homebtn">⌂ Home</button>
     <button class="act primary" id="duelbtn">⚔ Ranked Duel</button>
     <button class="act primary" id="dailybtn">🗓 Daily Duel</button>
     <button class="act ghost" id="ascentbtn">⛰ Ascent</button>
@@ -3531,6 +3532,8 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   function newGame(){
     // leaving a LIVE, unresolved ranked duel for any new match = a loss (anti-dodge)
     if(isPvP && pvpSession && game && !over && !pvpResolved){ abandonPvp(); }
+    // every duel starts at the TOP of the page — the fighters + wheel in view, no scrolling up
+    try{ window.scrollTo(0,0); }catch(e){}
     over=false;busy=false;aiResolveVisible=false;committedForesight=null;matchReads=0;aimed=null;matchBindWon=false;matchUsedForesight=false;clearForesight();
     if(introTimer){clearTimeout(introTimer);introTimer=null;} introPlaying=false;
     prevHP.P=HP; prevHP.A=HP; resetCombo();
@@ -4420,6 +4423,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   // the wordmark is a HOME button back to the title hub
   { const h=(document.querySelector?document.querySelector("header h1"):null); if(h) h.onclick=openTitle; }
   $("duelbtn").onclick=openDuel;
+  $("homebtn").onclick=openTitle;
   $("ascentbtn").onclick=openAscent;
   $("collbtn").onclick=openCollection;
   $("profbtn").onclick=openProfile;
@@ -4441,6 +4445,18 @@ body.reduce .fighter-art .sprite { animation: none !important; }
 
   // Prime the audio context on the very first user gesture (browser autoplay rule).
   if(typeof window!=="undefined" && window.addEventListener) window.addEventListener("pointerdown",()=>{Sfx.unlock(); if(typeof Music!=="undefined")Music.unlock();},{passive:true});
+
+  // Come back to a calm HOME screen after stepping away — but only when you're idle
+  // (no duel in progress and no overlay already up), so it never interrupts a live
+  // match. The title's own fade + menu-music handle the rest.
+  if(typeof document!=="undefined" && document.addEventListener) document.addEventListener("visibilitychange",()=>{
+    if(document.visibilityState!=="visible") return;
+    const titleUp=$("title")&&$("title").classList.contains("show");
+    const anyOverlay=["resultscreen","bindstage","ascent","collection","profile","dailyscreen","duelscreen","howto"]
+      .some(id=>{const e=$(id);return e&&e.classList.contains("show");});
+    const idle=(over || !game || introPlaying);
+    if(idle && !titleUp && !anyOverlay) openTitle();
+  });
 
   // PWA: register the service worker for offline play. Guarded so the game still
   // runs when opened as a local file:// (no SW) or in a headless test sandbox.
