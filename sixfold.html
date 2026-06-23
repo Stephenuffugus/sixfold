@@ -2961,8 +2961,10 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     try{
       if(typeof Sunbeam==="undefined" || !Sunbeam.earn) return;
       initLucid();
-      if(win) Sunbeam.earn(3, "sixfold:win");              // win:3
-      if(reads>0) Sunbeam.earn(Math.min(reads,8), "sixfold:combo"); // combo:1 per landed read
+      // Deliberately STINGY: a fast <1-min duel must not inflate the shared
+      // constellation economy. 1 sunbeam per WIN, nothing else. No per-loss, no
+      // combo bonus, no grind path.
+      if(win) Sunbeam.earn(1, "sixfold:win");
     }catch(e){}
   }
   if(typeof window!=="undefined" && window.addEventListener) window.addEventListener("sunbeam-ready", initLucid);
