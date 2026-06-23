@@ -940,6 +940,9 @@
     const real=pool.filter(id=>Skins.get(id).url);
     return rid(real.length?real:(pool.length?pool:[player.skin]));
   }
+  // the opponent's NAME should be the actual character it's wearing, from the
+  // skin registry — so a Kitsune is called "Kitsune", not a random/archetype name.
+  function skinName(id){ const s=Skins.get(id); return (s&&s.name)||id; }
   function vectorInner(f,dir){ return bodySVG(f.pal)+`<div class="face">${f.face}</div>`; }
   function renderFighter(side){
     const f=side==="P"?player:ai, stage=$(side==="P"?"pstage":"astage"), dir=side==="P"?"left":"right";
@@ -1388,10 +1391,11 @@
     const seed = mode.seeded ? dailySeed() : (Math.floor(Math.random()*1e9)>>>0);
     game=Engine.createGame({archetype:foeId,difficulty,mode,seed});
     matchWinner=null;
-    // fresh foe cosmetics + name + skin
-    ai={name:rid(FOE_NAMES),face:rid(FACES),pal:rid(PALS),crest:rid(CRESTS),skin:pickFoeSkin()};
-    // Ascent duels: the foe wears the rung's themed skin and the archetype's name.
-    if(ascentRun>=0){ ai.skin=ASCENT[ascentRun].foeSkin; ai.name=Personalities.ARCHES[ASCENT[ascentRun].foe].name; }
+    // fresh foe cosmetics + skin; the NAME is the character it wears (matches the art)
+    const foeSkin=pickFoeSkin();
+    ai={name:skinName(foeSkin),face:rid(FACES),pal:rid(PALS),crest:rid(CRESTS),skin:foeSkin};
+    // Ascent duels: the foe wears the rung's themed character; name it that character.
+    if(ascentRun>=0){ ai.skin=ASCENT[ascentRun].foeSkin; ai.name=skinName(ASCENT[ascentRun].foeSkin); }
     // Ranked duels: the foe is the matched rival / Sentinel (name from matchmaking).
     if(isPvP && pvpOpp){ ai.name=pvpOpp.name; }
     // render BEFORE Stage.init so it captures the live art elements (renderFighter
@@ -1438,7 +1442,9 @@
       return;
     }
     mt.classList.remove("ranked");
-    $("foename").textContent=a.name;
+    // Ascent: name the specific CHARACTER you're climbing to beat. Casual: show the
+    // archetype you selected (the style) — the character's own name still floats over them.
+    $("foename").textContent = (ascentRun>=0 && ai && ai.name) ? ai.name : a.name;
     $("foestars").textContent="★".repeat(a.stars)+"☆".repeat(5-a.stars);
     $("foetell").textContent=a.tell;
     const mode=Engine.MODES[modeId];
