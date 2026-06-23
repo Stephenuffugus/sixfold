@@ -628,6 +628,14 @@
 body.reduce .fighter-art .sprite { animation: none !important; }
 
 </style>
+<!-- Lucid Winds / Sky Wolf Studios — Sunbeam SDK (cross-game currency).
+     Async + fully optional: if it fails to load (offline / opened standalone),
+     window.Sunbeam is simply undefined and the game is unaffected. Earning is
+     post-match only (off the fair-play combat path). Fires `sunbeam-ready` on load
+     so the glue can init once it's available. -->
+<script async src="https://lucidwinds.com/sunbeam-sdk.js?v=2"
+        onload="try{window.dispatchEvent(new Event('sunbeam-ready'))}catch(e){}"
+        onerror="try{window.__sunbeamFailed=1}catch(e){}"></script>
 </head>
 <body>
   <div id="scene" aria-hidden="true">
@@ -2935,6 +2943,30 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   function addSunbeams(n){ if(!n)return; sunbeams+=n; saveSunbeams(); updateSunbeamUI(); }
   function spendSunbeams(n){ if(sunbeams<n)return false; sunbeams-=n; saveSunbeams(); updateSunbeamUI(); return true; }
 
+  /* ---- Lucid Winds / Sky Wolf Studios — Sunbeam SDK (cross-game economy) ----
+     SEPARATE from SIXFOLD's local cosmetic sunbeams: this mints the ECOSYSTEM
+     currency into the player's Lucid Winds vault on a win, so playing SIXFOLD
+     (in the portal or standalone) earns toward the constellation wallet. Fully
+     optional + guarded — no SDK (offline/standalone) means a silent no-op — and
+     post-match ONLY, so it never touches the fair-play combat path. */
+  let lucidReady=false;
+  function initLucid(){
+    try{
+      if(lucidReady || typeof Sunbeam==="undefined" || !Sunbeam.init) return;
+      lucidReady=true;
+      Sunbeam.init({gameId:"sixfold"});   // matches the portal card + earn rule {win:3,combo:1}
+    }catch(e){}
+  }
+  function lucidEarn(win,reads){
+    try{
+      if(typeof Sunbeam==="undefined" || !Sunbeam.earn) return;
+      initLucid();
+      if(win) Sunbeam.earn(3, "sixfold:win");              // win:3
+      if(reads>0) Sunbeam.earn(Math.min(reads,8), "sixfold:combo"); // combo:1 per landed read
+    }catch(e){}
+  }
+  if(typeof window!=="undefined" && window.addEventListener) window.addEventListener("sunbeam-ready", initLucid);
+
   /* ---- fighter rendering (placeholder shapes; art-wrap enables stage transforms) ---- */
   function bodySVG(color){
     return `<svg class="body" width="86" height="96" viewBox="0 0 86 96">
@@ -3173,6 +3205,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       // never in damage. Out-reading the foe pays in shine, never in force.
       const beams=win?(8+Math.round(summary.difficulty*8)+Math.round(summary.unpredictabilityPct/12)+matchReads*4):0;
       if(beams)addSunbeams(beams);   // persist into the balance (was display-only)
+      lucidEarn(win,matchReads);     // mint cross-game Lucid Winds sunbeams (optional, off-combat)
       setSpendEnabled(false);
       // Ascent: a win on the current frontier rung clears it and grants the reward.
       let ascentInfo=null;
@@ -3928,6 +3961,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     const beamBase = 6+Math.round((opp.difficulty||0.5)*6);
     const beams = win ? Math.max(1,Math.round(beamBase*(stakesKind==="sentinel"?Rank.SENTINEL_STAKES:1))) : 0;
     if(beams)addSunbeams(beams);
+    lucidEarn(win,matchReads);     // mint cross-game Lucid Winds sunbeams (optional, off-combat)
     if(pvpSession){ try{pvpSession.close();}catch(e){} }
     setTimeout(()=>{ Sfx.play(win?"victory":"defeat"); buzz(win?[0,45,45,45]:130); }, reduced()?0:950);
     setTimeout(()=>{ showPvpResult(win,summary,res,beams); }, reduced()?0:2000);
@@ -4184,6 +4218,8 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   // players land straight on the title hub. (The duel board is built behind it.)
   let firstRun=false; try{ firstRun=!localStorage.getItem("sixfold_seen"); }catch(e){}
   if(firstRun){ titlePending=true; openHowto(); } else { openTitle(); }
+
+  initLucid();   // wire the Lucid Winds Sunbeam economy if the SDK is already present
 
   // Prime the audio context on the very first user gesture (browser autoplay rule).
   if(typeof window!=="undefined" && window.addEventListener) window.addEventListener("pointerdown",()=>{Sfx.unlock(); if(typeof Music!=="undefined")Music.unlock();},{passive:true});
