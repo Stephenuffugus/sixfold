@@ -396,6 +396,12 @@
   .result{text-align:center;gap:16px}
   .result-word{font-family:var(--disp);font-weight:800;font-size:46px;letter-spacing:.14em;margin:0;line-height:1}
   .result.win .result-word{color:var(--gold);text-shadow:0 0 30px #cda64f88,0 2px 0 #0008}
+  /* victory gold-spark burst behind the result card content */
+  .winburst{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;border-radius:inherit}
+  .winburst span{position:absolute;bottom:-6%;border-radius:50%;opacity:0;
+    background:radial-gradient(circle,#ffe7a3,#cda64f00);animation:winrise linear infinite}
+  @keyframes winrise{0%{opacity:0;transform:translate3d(0,0,0)}14%{opacity:.95}100%{opacity:0;transform:translate3d(var(--dx),-280px,0)}}
+  body.reduce .winburst{display:none}
   .result.lose .result-word{color:var(--seal);text-shadow:0 0 26px #cf413088,0 2px 0 #0008}
   .result-flavor{font-size:13px;letter-spacing:.06em;color:var(--washi-dim);margin-top:-8px}
   .stat-chips{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
@@ -2975,6 +2981,19 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     }else{ b.classList.remove("on","hot","bump"); b.textContent=""; }
   }
   function resetCombo(){ combo=0; const b=$("combobadge"); if(b){b.classList.remove("on","hot","bump");b.textContent="";} }
+  // celebratory gold-spark burst behind the VICTORY card
+  function victoryBurst(){
+    if(reduced())return;
+    const rs=$("resultscreen"); const hero=rs&&rs.querySelector?rs.querySelector(".hero"):null; if(!hero||!hero.appendChild)return;
+    const layer=document.createElement("div"); layer.className="winburst";
+    for(let i=0;i<18;i++){
+      const s=document.createElement("span");
+      const x=8+Math.random()*84, dur=1.3+Math.random()*1.5, delay=(Math.random()*1.4).toFixed(2), size=(3+Math.random()*4).toFixed(1);
+      s.style.cssText=`left:${x.toFixed(0)}%;width:${size}px;height:${size}px;animation-duration:${dur.toFixed(2)}s;animation-delay:${delay}s;--dx:${Math.round((Math.random()*2-1)*32)}px`;
+      layer.appendChild(s);
+    }
+    hero.appendChild(layer);
+  }
   // impact juice (sound + haptics + flash), fired at the strike moment. Cosmetic.
   function outcomeJuice(o,isRead){
     if(o.bind){
@@ -3402,6 +3421,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     const rs=$("resultscreen"); rs.setAttribute("aria-hidden","false");
     if(rs.offsetWidth!==undefined) void rs.offsetWidth;
     rs.classList.add("show");
+    if(win)victoryBurst();
     const on=(id,fn)=>{const el=$(id); if(el) el.onclick=fn;};
     on("resAgain",()=>{ hideResult(); newGame(); });
     on("resFoe",()=>{ ascentRun=-1; hideResult(); $("foedrawer").classList.add("open"); $("foedrawer").scrollIntoView({behavior:"smooth",block:"nearest"}); });
@@ -4187,6 +4207,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
         `<div class="result-actions"><button class="primary" id="pvpNext">Find next rival ⚔</button><button id="pvpDone">Done</button></div>`+
       `</div>`;
     const rs=$("resultscreen"); rs.setAttribute("aria-hidden","false"); if(rs.offsetWidth!==undefined) void rs.offsetWidth; rs.classList.add("show");
+    if(win)victoryBurst();
     // animate the rank bar from before -> after
     setTimeout(()=>{ const b=$("pvpbar"); if(b)b.style.width=endPct+"%"; }, reduced()?0:80);
     const on=(id,fn)=>{const el=$(id); if(el) el.onclick=fn;};
