@@ -159,6 +159,16 @@
   .dmgnum.read{color:var(--gold);font-size:35px;text-shadow:0 2px 5px #000b,0 0 18px #cda64fdd}
   @keyframes dmgfloat{0%{opacity:0;transform:translate(-50%,8px) scale(.6)}22%{opacity:1;transform:translate(-50%,-4px) scale(1.12)}100%{opacity:0;transform:translate(-50%,-38px) scale(1)}}
   body.reduce .dmgnum{display:none}
+  /* combo momentum badge — builds as you chain damage-dealing rounds without taking a hit */
+  .combobadge{position:absolute;left:50%;top:-4px;transform:translateX(-50%) scale(.6);z-index:7;pointer-events:none;
+    font-family:var(--disp);font-weight:800;font-size:15px;letter-spacing:.04em;color:var(--gold);white-space:nowrap;
+    background:#1a1206d8;border:1px solid var(--gold);border-radius:999px;padding:3px 12px;opacity:0;
+    text-shadow:0 0 8px #cda64f99;box-shadow:0 2px 12px #cda64f55;transition:opacity .2s}
+  .combobadge.on{opacity:1;transform:translateX(-50%) scale(1)}
+  .combobadge.hot{color:#ff8a4c;border-color:#ff7a3c;text-shadow:0 0 11px #ff7a3c;box-shadow:0 2px 18px #ff7a3c66}
+  .combobadge.bump{animation:combobump .42s cubic-bezier(.2,1.5,.4,1)}
+  @keyframes combobump{0%{transform:translateX(-50%) scale(.7)}60%{transform:translateX(-50%) scale(1.28)}100%{transform:translateX(-50%) scale(1)}}
+  body.reduce .combobadge.bump{animation:none;transform:translateX(-50%) scale(1)}
 
   /* stance ribbon + unpredictability bar */
   .ribbon{display:flex;gap:3px;height:18px;align-items:center;justify-content:center}
@@ -738,6 +748,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   <div class="esc" id="esc">⚡ Fury — every blow strikes deeper</div>
 
   <div class="wheelwrap" id="wheel">
+    <div class="combobadge" id="combobadge"></div>
     <svg class="links" id="links" viewBox="0 0 300 300"></svg>
     <div class="spark" id="spark"></div>
     <div class="hub" id="hub">
@@ -2950,6 +2961,20 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     stage.appendChild(el);
     setTimeout(()=>{ try{ el.parentNode&&el.parentNode.removeChild&&el.parentNode.removeChild(el); }catch(e){} }, 950);
   }
+  // combo momentum: consecutive rounds you DEAL damage without taking any. Breaks
+  // the instant you get hit; whiffs/ties stall it but don't reset it.
+  let combo=0, bestCombo=0;
+  function updateCombo(dealt,took){
+    const before=combo;
+    if(took) combo=0; else if(dealt) combo++;
+    if(combo>bestCombo)bestCombo=combo;
+    const b=$("combobadge"); if(!b)return;
+    if(combo>=2){
+      b.textContent="🔥 ×"+combo; b.classList.add("on"); b.classList.toggle("hot",combo>=4);
+      if(combo>before){ b.classList.remove("bump"); void b.offsetWidth; b.classList.add("bump"); if(combo>=3)buzz(combo>=5?[0,18,22,18]:14); }
+    }else{ b.classList.remove("on","hot","bump"); b.textContent=""; }
+  }
+  function resetCombo(){ combo=0; const b=$("combobadge"); if(b){b.classList.remove("on","hot","bump");b.textContent="";} }
   // impact juice (sound + haptics + flash), fired at the strike moment. Cosmetic.
   function outcomeJuice(o,isRead){
     if(o.bind){
@@ -3268,6 +3293,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       setTimeout(()=>outcomeJuice(outcome,read), reduced()?0:330); // sync cue to the strike
       if(outcome.winner && (outcome.dmg||0)>0)                      // floating −N over the struck fighter
         setTimeout(()=>floatDamage(outcome.winner==="P"?"A":"P", outcome, read), reduced()?0:330);
+      updateCombo(outcome.winner==="P"&&(outcome.dmg||0)>0, outcome.winner==="A"&&(outcome.dmg||0)>0);
       if(read){ // the apex: gold wash + big stamp at impact, dedicated sting just after
         setTimeout(()=>{ flashRead(); showReadStamp(); }, reduced()?0:330);
         setTimeout(()=>{ Sfx.play("read"); buzz([0,30,40,30]); }, reduced()?0:430);
@@ -3340,6 +3366,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     const tell=summary.tell||"well hidden — no clear tell";
     const streakChip=streak>1?`<div class="chip streak"><b>×${streak}</b><span>win streak</span></div>`:"";
     const readsChip=matchReads>0?`<div class="chip reads"><b>🎯 ${matchReads}</b><span>${matchReads===1?"read":"reads"} landed</span></div>`:"";
+    const comboChip=bestCombo>=3?`<div class="chip"><b>🔥 ×${bestCombo}</b><span>best combo</span></div>`:"";
     const extra=win?`<div class="sunbeams">+${beams} ☀ sunbeams</div>`
                    :`<div class="result-tell">best streak <b>${bestStreak}</b> · they read you this time</div>`;
     const reward=ascentInfo&&ascentInfo.reward;
@@ -3366,6 +3393,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
           `<div class="chip"><b>${summary.rounds}</b><span>rounds</span></div>`+
           `<div class="chip"><b>${summary.unpredictabilityPct}%</b><span>unpred</span></div>`+
           readsChip+
+          comboChip+
           streakChip+
         `</div>`+extra+
         `<div class="result-tell">your tell: <b>${tell}</b></div>`+
@@ -3482,7 +3510,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     if(isPvP && pvpSession && game && !over && !pvpResolved){ abandonPvp(); }
     over=false;busy=false;aiResolveVisible=false;committedForesight=null;matchReads=0;aimed=null;matchBindWon=false;matchUsedForesight=false;clearForesight();
     if(introTimer){clearTimeout(introTimer);introTimer=null;} introPlaying=false;
-    prevHP.P=HP; prevHP.A=HP;
+    prevHP.P=HP; prevHP.A=HP; resetCombo();
     $("pstage").classList.remove("victor","fallen");$("astage").classList.remove("victor","fallen");$("verdict").classList.remove("vs");
     predictNudge._m=false; const _pb=$("pbar"); if(_pb)_pb.classList.remove("danger");
     isPvP=(modeId==="pvp"); pvpResolved=false;
