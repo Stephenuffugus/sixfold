@@ -9,3 +9,8 @@ roster_contact.png
 REFERENCE_*.png
 incoming/
 *.zip
+
+# python cache
+tools/__pycache__/
+__pycache__/
+*.pyc
