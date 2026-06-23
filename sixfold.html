@@ -586,6 +586,25 @@
 .fighter-art.striking .sprite, .fighter-art.locked .sprite { animation: none; }
 @keyframes idle-breathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.006); } }
 
+/* per-arena lighting tint on the fighters (set via --fighter-tint on body in
+   applyTheme); crossfades on arena change so fighters sit into each scene. */
+.fighter-art .sprite { filter: var(--fighter-tint, none); transition: filter .6s ease; }
+
+/* ===== match-over: held victory beat ===== */
+/* winner swells + glows gold; loser greys out and stops breathing */
+.stage.victor .fighter-art { animation: victor-rise .9s cubic-bezier(.2,.9,.3,1.25) forwards; z-index: 3; }
+.stage.victor .fighter-art .sprite { animation: none; }
+@keyframes victor-rise {
+  0% {} 60% { transform: translateY(-9px) scale(1.13); }
+  100% { transform: translateY(-5px) scale(1.1); filter: drop-shadow(0 0 16px var(--gold)) drop-shadow(0 8px 12px #000a); }
+}
+.stage.fallen .fighter-art .sprite { filter: grayscale(.78) brightness(.48) !important; animation: none; }
+.stage.fallen .fighter-art { opacity: .92; }
+body.reduce .stage.victor .fighter-art { animation: none; transform: scale(1.07); }
+
+/* face-off "VS" in the hub */
+.verdict.vs { color: var(--seal); text-shadow: 0 0 22px #cf4130aa, 0 2px 0 #0008; letter-spacing: .12em; }
+
 /* held strike frame (when PNG frames exist) */
 .fighter-art.striking .frame-idle { opacity: 0; }
 .fighter-art.striking .frame-strike { opacity: 1; }
@@ -3048,10 +3067,33 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   // visible on touch); tap the aimed stance again to STRIKE. Re-tap any other to
   // re-aim. This makes the clockwise rule legible on mobile (was hover-only).
   function onNode(i){
+    if(introPlaying){ Sfx.unlock(); if(typeof Music!=="undefined")Music.unlock(); endFaceOff(); return; }   // tap skips the intro
     if(busy||over||!game)return;
     Sfx.unlock(); if(typeof Music!=="undefined")Music.unlock();
     if(aimed===i){ commit(i); return; }
     aim(i);
+  }
+  /* ---- pre-duel FACE-OFF: a brief guard-lean stare-down before round 1 ---- */
+  let introPlaying=false, introTimer=null;
+  function faceOff(){
+    if(reduced()){ introPlaying=false; return; }      // no intro under reduced motion
+    introPlaying=true; busy=true;
+    Stage.lockBlades();                               // both -> guard frame, leaning toward centre, spark
+    $("roundlbl").textContent=""; $("verdict").textContent="VS";
+    $("sub").textContent=player.name+" vs "+ai.name;
+    $("verdict").classList.add("vs");
+    Sfx.play("bind");   // no haptic here: faceOff can run pre-gesture (auto-start), and
+                        // navigator.vibrate warns if called before the first user tap
+    if(introTimer)clearTimeout(introTimer);
+    introTimer=setTimeout(endFaceOff, 1000);
+  }
+  function endFaceOff(){
+    if(!introPlaying)return; introPlaying=false;
+    if(introTimer){ clearTimeout(introTimer); introTimer=null; }
+    Stage.unlock();
+    $("verdict").classList.remove("vs");
+    $("roundlbl").textContent="Round 1"; $("verdict").textContent="Choose"; $("sub").textContent="tap a stance";
+    busy=false;
   }
   function aim(i){
     aimed=i; Sfx.play("tap");
@@ -3183,7 +3225,12 @@ body.reduce .fighter-art .sprite { animation: none !important; }
         renderHP("P");renderHP("A");
         Readout.render(game.state().playerHist,game.state().aiHist,game.state().outcomes,ribbonOpts());
         predictNudge();
-        if(over){ if(matchWinner){Stage.setFrame(matchWinner,"win");Stage.setFrame(matchWinner==="P"?"A":"P","ko");} }
+        if(over){ if(matchWinner){
+          Stage.setFrame(matchWinner,"win");Stage.setFrame(matchWinner==="P"?"A":"P","ko");
+          // held victory beat: the winner swells + glows gold, the loser greys out
+          const win=$(matchWinner==="P"?"pstage":"astage"), lose=$(matchWinner==="P"?"astage":"pstage");
+          if(win)win.classList.add("victor"); if(lose)lose.classList.add("fallen");
+        } }
         else endRoundUI();
       });
     });
@@ -3381,6 +3428,8 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     // leaving a LIVE, unresolved ranked duel for any new match = a loss (anti-dodge)
     if(isPvP && pvpSession && game && !over && !pvpResolved){ abandonPvp(); }
     over=false;busy=false;aiResolveVisible=false;committedForesight=null;matchReads=0;aimed=null;matchBindWon=false;matchUsedForesight=false;clearForesight();
+    if(introTimer){clearTimeout(introTimer);introTimer=null;} introPlaying=false;
+    $("pstage").classList.remove("victor","fallen");$("astage").classList.remove("victor","fallen");$("verdict").classList.remove("vs");
     predictNudge._m=false; const _pb=$("pbar"); if(_pb)_pb.classList.remove("danger");
     isPvP=(modeId==="pvp"); pvpResolved=false;
     // leaving a ranked duel for any other mode: tear down the live session
@@ -3412,6 +3461,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     $("pbar").classList.remove("show");$("abar").classList.remove("show");
     updateFoeBar();updateMeter(game.meter.state());applyCompass();
     mirrorTeachOnce(); refreshDailyPrompt();
+    faceOff();   // brief pre-duel stare-down before round 1 (skippable; off under reduced motion)
   }
   // Mirror copies your LAST stance — a hard wall if you don't know the trick.
   // Teach it the first time you ever face one (Ascent or casual).
@@ -3503,11 +3553,26 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     metronome:"dojo",trickster:"bamboo",ghost:"torii",echo:"sunset"};
   function setArena(id,force){ if(!THEMES[id])return; if(!force && !unlockedArenaSet().has(id))return; arenaId=id; applyTheme(id);
     const box=$("arenas"); if(box){[...box.children].forEach(c=>c.classList.toggle("sel",c._arena===id));} }
+  // per-arena lighting tint on the FIGHTERS so they pick up each scene's colour
+  // temperature instead of looking pasted on. Grouped by biome mood; deliberately
+  // SUBTLE (brightness/saturation/warmth only — no hue-rotate that would skew art).
+  const TINT_WARM="saturate(1.09) brightness(.95) sepia(.12)";       // fire/sunset/autumn
+  const TINT_COOL="saturate(.98) brightness(1.02) contrast(1.03)";   // ice/water/sky
+  const TINT_NIGHT="saturate(.95) brightness(.9) contrast(1.05)";    // dark/eerie
+  const TINT_DAY="saturate(1.05) brightness(1.0)";                   // green/day
+  const ARENA_TINT={
+    dojo:TINT_NIGHT, darkdojo:TINT_NIGHT, torii:TINT_NIGHT, graveyard:TINT_NIGHT,
+    sunset:TINT_WARM, maple:TINT_WARM, market:TINT_WARM, village:TINT_WARM, ash:TINT_WARM, bloodmtn:TINT_WARM,
+    frozen:TINT_COOL, coast:TINT_COOL, cloudsea:TINT_COOL, palace:TINT_COOL,
+    bamboo:TINT_DAY, cherry:TINT_DAY,
+  };
   function applyTheme(id){
     const t=THEMES[id]||THEMES.dojo, s=$("scene"); if(!s)return;
     s.style.setProperty("--sky",t.sky); s.style.setProperty("--disc",t.disc); s.style.setProperty("--glow",t.glow);
     s.style.setProperty("--wash1",t.wash1); s.style.setProperty("--wash2",t.wash2);
     s.style.setProperty("--floor1",t.floor1); s.style.setProperty("--floor2",t.floor2);
+    // set on body so it inherits into .arena/.fighter-art (#scene is a separate subtree)
+    document.body.style.setProperty("--fighter-tint", ARENA_TINT[id]||"none");
     const ridge=s.querySelector(".ridge"); if(ridge) ridge.style.backgroundImage='url("'+t.ridge+'")';
     // optional painted backdrop (THEME.bg): drop-in image takes over the scene
     const sb=s.querySelector(".scenebg");

@@ -38,6 +38,25 @@
 .fighter-art.striking .sprite, .fighter-art.locked .sprite { animation: none; }
 @keyframes idle-breathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.006); } }
 
+/* per-arena lighting tint on the fighters (set via --fighter-tint on body in
+   applyTheme); crossfades on arena change so fighters sit into each scene. */
+.fighter-art .sprite { filter: var(--fighter-tint, none); transition: filter .6s ease; }
+
+/* ===== match-over: held victory beat ===== */
+/* winner swells + glows gold; loser greys out and stops breathing */
+.stage.victor .fighter-art { animation: victor-rise .9s cubic-bezier(.2,.9,.3,1.25) forwards; z-index: 3; }
+.stage.victor .fighter-art .sprite { animation: none; }
+@keyframes victor-rise {
+  0% {} 60% { transform: translateY(-9px) scale(1.13); }
+  100% { transform: translateY(-5px) scale(1.1); filter: drop-shadow(0 0 16px var(--gold)) drop-shadow(0 8px 12px #000a); }
+}
+.stage.fallen .fighter-art .sprite { filter: grayscale(.78) brightness(.48) !important; animation: none; }
+.stage.fallen .fighter-art { opacity: .92; }
+body.reduce .stage.victor .fighter-art { animation: none; transform: scale(1.07); }
+
+/* face-off "VS" in the hub */
+.verdict.vs { color: var(--seal); text-shadow: 0 0 22px #cf4130aa, 0 2px 0 #0008; letter-spacing: .12em; }
+
 /* held strike frame (when PNG frames exist) */
 .fighter-art.striking .frame-idle { opacity: 0; }
 .fighter-art.striking .frame-strike { opacity: 1; }
