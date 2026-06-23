@@ -148,6 +148,17 @@
   .pip{width:15px;height:13px;border-radius:2px;background:#0003;border:1px solid #ffffff22;transition:background .25s,transform .25s}
   .pip.full{background:linear-gradient(#e8645a,var(--seal));border-color:#ffffff44;box-shadow:0 0 5px #cf413066}
   .pip.lost{transform:scale(.7) rotate(8deg);opacity:.35}
+  .pip.justlost{animation:piploss .45s ease-out}
+  @keyframes piploss{0%{box-shadow:0 0 0 2px #fff,0 0 14px #cf4130cc;transform:scale(1.25)}100%{transform:scale(.7) rotate(8deg)}}
+  body.reduce .pip.justlost{animation:none}
+  /* floating damage numbers — the hit's weight + exact value, at the strike moment */
+  .dmgnum{position:absolute;left:50%;top:30%;z-index:6;pointer-events:none;font-family:var(--disp);font-weight:800;
+    font-size:30px;line-height:1;color:var(--seal);text-shadow:0 2px 5px #000b,0 0 14px #cf413099;
+    animation:dmgfloat .9s cubic-bezier(.2,.8,.3,1) forwards}
+  .dmgnum.glance{color:var(--jade);font-size:25px;text-shadow:0 2px 5px #000b,0 0 12px #5f917399}
+  .dmgnum.read{color:var(--gold);font-size:35px;text-shadow:0 2px 5px #000b,0 0 18px #cda64fdd}
+  @keyframes dmgfloat{0%{opacity:0;transform:translate(-50%,8px) scale(.6)}22%{opacity:1;transform:translate(-50%,-4px) scale(1.12)}100%{opacity:0;transform:translate(-50%,-38px) scale(1)}}
+  body.reduce .dmgnum{display:none}
 
   /* stance ribbon + unpredictability bar */
   .ribbon{display:flex;gap:3px;height:18px;align-items:center;justify-content:center}
@@ -776,6 +787,17 @@
   function flashRead(){ if(reduced())return; const f=$("flash"); if(!f)return; f.classList.remove("go","read-go"); void f.offsetWidth; f.classList.add("read-go"); }
   function showReadStamp(){ const el=$("readstamp"); if(!el)return; el.classList.remove("go"); void el.offsetWidth; el.classList.add("go"); }
   function shake(){ if(reduced())return; document.body.classList.add("shake"); setTimeout(()=>document.body.classList.remove("shake"),360); }
+  // floating damage number over the struck fighter — exact value + the hit's weight
+  function floatDamage(loserSide,outcome,isRead){
+    if(reduced())return;
+    const dmg=(outcome&&outcome.dmg)||0; if(dmg<=0)return;
+    const stage=$(loserSide==="P"?"pstage":"astage"); if(!stage||!stage.appendChild)return;
+    const el=document.createElement("div");
+    el.className="dmgnum"+(isRead?" read":(outcome.kind==="glance"?" glance":""));
+    el.textContent="−"+dmg;
+    stage.appendChild(el);
+    setTimeout(()=>{ try{ el.parentNode&&el.parentNode.removeChild&&el.parentNode.removeChild(el); }catch(e){} }, 950);
+  }
   // impact juice (sound + haptics + flash), fired at the strike moment. Cosmetic.
   function outcomeJuice(o,isRead){
     if(o.bind){
@@ -903,10 +925,17 @@
     $(side==="P"?"pname":"aname").textContent=f.name;
     renderHP(side);
   }
+  const prevHP={P:HP,A:HP};
   function renderHP(side){
     const hp=game?game.state()[side==="P"?"hpP":"hpA"]:HP, box=$(side==="P"?"php":"ahp");
+    const prev=prevHP[side]; prevHP[side]=hp;
     box.innerHTML="";
-    for(let i=0;i<HP;i++){const p=document.createElement("div");p.className="pip "+(i<hp?"full":"lost");box.appendChild(p);}
+    for(let i=0;i<HP;i++){
+      const p=document.createElement("div"); const lost=i>=hp;
+      p.className="pip "+(lost?"lost":"full");
+      if(lost && i<prev && !reduced()) p.classList.add("justlost");   // newly lost this update -> flash
+      box.appendChild(p);
+    }
   }
   function artEl(side){ return $(side==="P"?"pstage":"astage").querySelector(".fighter-art"); }
 
@@ -1085,6 +1114,8 @@
       if(read){ matchReads++; addLifetimeReads(1); onReadLanded(); }
       if(outcome.bind && outcome.winner==="P") matchBindWon=true;   // for Trials
       setTimeout(()=>outcomeJuice(outcome,read), reduced()?0:330); // sync cue to the strike
+      if(outcome.winner && (outcome.dmg||0)>0)                      // floating −N over the struck fighter
+        setTimeout(()=>floatDamage(outcome.winner==="P"?"A":"P", outcome, read), reduced()?0:330);
       if(read){ // the apex: gold wash + big stamp at impact, dedicated sting just after
         setTimeout(()=>{ flashRead(); showReadStamp(); }, reduced()?0:330);
         setTimeout(()=>{ Sfx.play("read"); buzz([0,30,40,30]); }, reduced()?0:430);
@@ -1299,6 +1330,7 @@
     if(isPvP && pvpSession && game && !over && !pvpResolved){ abandonPvp(); }
     over=false;busy=false;aiResolveVisible=false;committedForesight=null;matchReads=0;aimed=null;matchBindWon=false;matchUsedForesight=false;clearForesight();
     if(introTimer){clearTimeout(introTimer);introTimer=null;} introPlaying=false;
+    prevHP.P=HP; prevHP.A=HP;
     $("pstage").classList.remove("victor","fallen");$("astage").classList.remove("victor","fallen");$("verdict").classList.remove("vs");
     predictNudge._m=false; const _pb=$("pbar"); if(_pb)_pb.classList.remove("danger");
     isPvP=(modeId==="pvp"); pvpResolved=false;
