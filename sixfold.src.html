@@ -2339,5 +2339,28 @@
   }catch(e){}
 })();
 </script>
+<script>
+/* ===== Sky Wolf Studios host-music handshake =====
+   When embedded in the portal jukebox, the studio soundtrack may own the audio.
+   The portal posts {sws:'host-music', on:true} => silence OUR music (studio
+   wins), on:false => play ours. We wrap Music.setEnabled so the game's own
+   re-asserts (arena changes call Music.setEnabled(s.music)) can't override a
+   host mute. Purely cosmetic; never touches combat. */
+(function(){
+  var M = window.Music;
+  if(!M || M.__swsHostWrapped) return;
+  var hostOn = false;                    // is the studio soundtrack active?
+  var realSet = M.setEnabled;
+  M.setEnabled = function(v){ return realSet.call(M, hostOn ? false : v); };
+  window.addEventListener('message', function(e){
+    var d = e && e.data;
+    if(!d || d.sws !== 'host-music') return;
+    hostOn = !!d.on;
+    if(hostOn){ realSet.call(M, false); }
+    else { realSet.call(M, true); try{ if(M.unlock) M.unlock(); }catch(_){} }
+  });
+  M.__swsHostWrapped = true;
+})();
+</script>
 </body>
 </html>
