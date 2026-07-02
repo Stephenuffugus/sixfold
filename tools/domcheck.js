@@ -13,9 +13,11 @@ const path = require("path");
 const vm = require("vm");
 
 const html = fs.readFileSync(path.join(__dirname, "..", "sixfold.html"), "utf8");
-const m = html.match(/<script>([\s\S]*?)<\/script>/);
-if (!m) { console.error("no <script> found"); process.exit(1); }
-const scriptSrc = m[1];
+// pick the GAME script (the largest inline block) — the small Sky Wolf embed
+// protocol block also matches `<script>`, so "first match" is no longer enough.
+let scriptSrc = "", sm; const sre = /<script>([\s\S]*?)<\/script>/g;
+while ((sm = sre.exec(html))) if (sm[1].length > scriptSrc.length) scriptSrc = sm[1];
+if (!scriptSrc) { console.error("no <script> found"); process.exit(1); }
 
 // ---- minimal DOM ----
 let timers = [];

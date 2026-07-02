@@ -588,13 +588,33 @@
     border:1px solid #ffffff1c;color:var(--washi);background:#ffffff0d;display:flex;align-items:center;justify-content:center;gap:6px;transition:transform .1s}
   #title .tchip:active{transform:scale(.96)}
   #title .tfoot{display:flex;gap:18px;margin-top:7px}
-  #title .tfoot button{background:none;border:none;color:var(--washi-dim);font-family:var(--ui);font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+  #title .tfoot button{background:none;border:none;color:var(--washi-dim);font-family:var(--ui);font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;min-height:44px;padding:10px 6px}
+  #title .tfoot{flex-wrap:wrap;justify-content:center}
   body.reduce #title,body.reduce #title .tinner{transition:none} body.reduce #title .tbg{animation:none}
   /* the wordmark in the header becomes a HOME button back to the title */
   h1{cursor:pointer}
 
   /*__ANIM_CSS__*/
 </style>
+<script>
+/* ===== Sky Wolf Studios embed protocol =====
+   The portal (lucidwinds.com/portal/) frames games with ?embed=1 and
+   listens for {sws:'ready'} and {sws:'close'}.
+   Rules when embedded:
+     - NEVER history.back() or navigate location — an iframe with no
+       history entry goes blank (the black-screen bug).
+     - The in-game back/X returns to the game's OWN menu screen.
+     - Only the menu's explicit exit control calls SWS_EXIT(). */
+(function(){
+  var SWS_EMBED=/[?&]embed=1(&|$)/.test(location.search);
+  window.SWS_EMBED=SWS_EMBED;
+  window.SWS_EXIT=function(){
+    if(SWS_EMBED&&parent!==window){try{parent.postMessage({sws:'close'},'*');}catch(e){} return;}
+    location.href='https://lucidwinds.com/portal/';
+  };
+  if(SWS_EMBED&&parent!==window){try{parent.postMessage({sws:'ready'},'*');}catch(e){}}
+})();
+</script>
 <!-- Lucid Winds / Sky Wolf Studios — Sunbeam SDK (cross-game currency).
      Async + fully optional: if it fails to load (offline / opened standalone),
      window.Sunbeam is simply undefined and the game is unaffected. Earning is
@@ -2226,7 +2246,7 @@
           `<button class="tchip" id="tRoster">🎴 Roster</button>`+
           `<button class="tchip" id="tProfile">📊 Profile</button>`+
         `</div>`+
-        `<div class="tfoot"><button id="tSettings">⚙ Settings</button><button id="tHow">How to play</button></div>`+
+        `<div class="tfoot"><button id="tSettings">⚙ Settings</button><button id="tHow">How to play</button><button id="tExit">← All Sky Wolf games</button></div>`+
       `</div>`;
     const on=(id,fn)=>{const el=$(id); if(el) el.onclick=fn;};
     on("tDuel",()=>{ closeTitle(); openDuel(); });
@@ -2237,6 +2257,8 @@
     on("tProfile",()=>{ closeTitle(); openProfile(); });
     on("tSettings",()=>{ closeTitle(); $("setdrawer").classList.add("open"); $("setdrawer").scrollIntoView({behavior:"smooth",block:"nearest"}); });
     on("tHow",()=>{ closeTitle(); openHowto(); });
+    // Sky Wolf embed protocol: the ONLY control that leaves the game.
+    on("tExit",()=>{ if(window.SWS_EXIT) window.SWS_EXIT(); });
   }
   function openTitle(){
     renderTitle();
