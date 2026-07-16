@@ -4295,7 +4295,12 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     document.querySelectorAll("[data-a11y]").forEach(inp=>{
       const key=inp.getAttribute("data-a11y");
       inp.checked=!!Assists.settings()[key];
-      inp.addEventListener("change",()=>{Assists.setSetting(key,inp.checked);applyA11y();});
+      inp.addEventListener("change",()=>{Assists.setSetting(key,inp.checked);applyA11y();
+        // Player turned OUR music on while the portal's studio soundtrack owns
+        // the audio → ask the host to hand it over instead of double-playing.
+        if(key==="music"&&inp.checked&&window.SWS_EMBED&&parent!==window){
+          try{parent.postMessage({sws:"game-music",on:true},"*");}catch(_){}
+        }});
     });
     const box=$("charms");
     const charms=[{id:null,name:"None",glyph:"∅"}].concat(Object.values(Assists.CHARMS));
@@ -4502,14 +4507,17 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   var M = window.Music;
   if(!M || M.__swsHostWrapped) return;
   var hostOn = false;                    // is the studio soundtrack active?
+  var wanted = true;                     // the game/player's own last request
   var realSet = M.setEnabled;
-  M.setEnabled = function(v){ return realSet.call(M, hostOn ? false : v); };
+  M.setEnabled = function(v){ wanted = !!v; return realSet.call(M, hostOn ? false : v); };
   window.addEventListener('message', function(e){
     var d = e && e.data;
     if(!d || d.sws !== 'host-music') return;
     hostOn = !!d.on;
     if(hostOn){ realSet.call(M, false); }
-    else { realSet.call(M, true); try{ if(M.unlock) M.unlock(); }catch(_){} }
+    // Hand-back restores the PLAYER's setting — never force music on someone
+    // who has it off in our own settings.
+    else { realSet.call(M, wanted); if(wanted){ try{ if(M.unlock) M.unlock(); }catch(_){} } }
   });
   M.__swsHostWrapped = true;
 })();
