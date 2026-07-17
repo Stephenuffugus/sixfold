@@ -809,6 +809,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     <button class="act ghost" id="collbtn">🎴 Roster</button>
     <button class="act ghost" id="profbtn">📊 Profile</button>
     <button class="act ghost" id="howbtn">How it works</button>
+    <button class="act ghost" id="btn-install-main">📲 Add to Home Screen</button>
     <button class="act primary" id="rematch" style="display:none">Rematch</button>
   </div>
 
@@ -4501,19 +4502,20 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   // Add to Home Screen button (Dewball pattern — visible even when
   // beforeinstallprompt never fires, e.g. iOS)
   try{
-    const ib=document.getElementById("btn-install");
-    if(ib){
+    const ibs=["btn-install","btn-install-main"].map((id)=>document.getElementById(id)).filter(Boolean);
+    if(ibs.length){
       const standalone=!!(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)||!!window.navigator.standalone;
-      if(standalone){ ib.style.display="none"; }
+      if(standalone){ ibs.forEach((b)=>b.style.display="none"); }
       else{
         let deferred=null;
         window.addEventListener("beforeinstallprompt",(e)=>{ e.preventDefault(); deferred=e; });
-        ib.addEventListener("click",()=>{
+        const onInstall=()=>{
           if(deferred){ deferred.prompt(); deferred=null; return; }
           const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
           alert(ios ? "To add Sixfold to your Home Screen:\n\nTap the Share button, then Add to Home Screen."
                     : "To add Sixfold to your Home Screen:\n\nOpen the browser menu, then Add to Home Screen or Install.");
-        });
+        };
+        ibs.forEach((b)=>b.addEventListener("click",onInstall));
       }
     }
   }catch(e){}
