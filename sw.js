@@ -10,6 +10,9 @@
  * shown and then available offline. Bump CACHE on every deploy.
  */
 const CACHE = "sixfold-v58";
+/* Only ever delete caches that belong to THIS app. `caches` is shared by the
+   whole origin, so an unfiltered sweep deletes every sibling app's cache too. */
+const OWNED = /^sixfold\-/;
 const ASSETS = ["./", "./index.html", "./sixfold.html", "./manifest.webmanifest", "./icon.svg", "./skins/ronin.png"];
 
 self.addEventListener("install", (e) => {
@@ -21,7 +24,7 @@ self.addEventListener("install", (e) => {
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && OWNED.test(k)).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
