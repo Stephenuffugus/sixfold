@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>SIXFOLD — stance duel</title>
+<title>SIXFOLD: stance duel</title>
 <meta name="theme-color" content="#171d30">
 <meta name="description" content="A six-stance power-wheel duel. Read your foe, break the bind, win in under a minute.">
 <!-- Social share preview (Open Graph + Twitter) -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="SIXFOLD — stance duel">
+<meta property="og:title" content="SIXFOLD: stance duel">
 <meta property="og:description" content="A six-stance power-wheel duel. Read your foe, break the bind, win in under a minute.">
 <meta property="og:url" content="https://stephenuffugus.github.io/sixfold/">
 <meta property="og:image" content="https://stephenuffugus.github.io/sixfold/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="SIXFOLD — stance duel">
+<meta name="twitter:title" content="SIXFOLD: stance duel">
 <meta name="twitter:description" content="Read your foe. Break the bind. Win in under a minute.">
 <meta name="twitter:image" content="https://stephenuffugus.github.io/sixfold/og.png">
 <!-- PWA: installable + offline (degrades gracefully when opened as a local file) -->
@@ -675,7 +675,7 @@
     </div>
   </div>
 
-  <div class="esc" id="esc">⚡ Fury — every blow strikes deeper</div>
+  <div class="esc" id="esc">⚡ Fury. Every blow strikes deeper</div>
 
   <div class="wheelwrap" id="wheel">
     <div class="combobadge" id="combobadge"></div>
@@ -716,7 +716,7 @@
     <button class="act primary" id="rematch" style="display:none">Rematch</button>
   </div>
 
-  <div class="compbanner" id="compbanner">Assists off — competitive</div>
+  <div class="compbanner" id="compbanner">Assists off. Competitive.</div>
 
   <!-- Foe select -->
   <div class="drawer" id="foedrawer">
@@ -739,14 +739,14 @@
         <div class="toggle"><span>Sound effects</span><input type="checkbox" data-a11y="audioCues"></div>
         <div class="toggle"><span>Haptics (vibrate)</span><input type="checkbox" data-a11y="haptics"></div>
       </div>
-      <div class="row"><label>Accessibility — always free</label>
+      <div class="row"><label>Accessibility, always free</label>
         <div class="toggle"><span>Colorblind-safe palette</span><input type="checkbox" data-a11y="colorblind"></div>
         <div class="toggle"><span>Reduced motion</span><input type="checkbox" data-a11y="reducedMotion"></div>
         <div class="toggle"><span>High contrast</span><input type="checkbox" data-a11y="highContrast"></div>
         <div class="toggle"><span>Large tap targets</span><input type="checkbox" data-a11y="largeTapTargets"></div>
         <div class="toggle"><span>Slower reveal</span><input type="checkbox" data-a11y="slowReveal"></div>
       </div>
-      <div class="row"><label>Assist charm — casual/practice only</label>
+      <div class="row"><label>Assist charm, casual and practice only</label>
         <div class="opts" id="charms"></div>
         <div class="hint" id="charmhint">Charms go inert the moment a match is ranked, seeded, or PvP.</div>
       </div>
@@ -797,12 +797,12 @@
     <div class="hero howto">
       <h2>HOW TO DUEL</h2>
       <ol>
-        <li><span class="ic">👆</span><span>Tap a stance on the wheel each round — you both reveal at once.</span></li>
+        <li><span class="ic">👆</span><span>Tap a stance on the wheel each round. You both reveal at once.</span></li>
         <li><span class="ic">↻</span><span>You beat the <span class="k">2 stances clockwise</span> of yours: <span class="c-clean">CLEAN −2</span>, then <span class="c-glance">GLANCE −1</span>.</span></li>
-        <li><span class="ic">⇄</span><span>Directly <span class="c-steel">across = WHIFF</span> — blades pass, no damage.</span></li>
+        <li><span class="ic">⇄</span><span>Directly <span class="c-steel">across = WHIFF</span>. Blades pass, no damage.</span></li>
         <li><span class="ic">⚔</span><span><span class="k">Same stance = CLASH</span> → break the bind: <span class="c-gold">Drive ▸ Slip ▸ Trap ▸ Drive</span>.</span></li>
-        <li><span class="ic">資</span><span>Dead rounds build <span class="c-gold">Resolve</span> — spend it to read the foe, never to hit harder. <span class="c-gold">Foresight</span> names their likely next stance — you read the wheel and strike to land a <span class="c-gold">READ 🎯</span>.</span></li>
-        <li><span class="ic">🏆</span><span>Drop the foe's <span class="k">4 HP</span> first. Stay unpredictable — they're reading you too.</span></li>
+        <li><span class="ic">資</span><span>Dead rounds build <span class="c-gold">Resolve</span>. Spend it to read the foe, never to hit harder. <span class="c-gold">Foresight</span> names their likely next stance, so you read the wheel and strike to land a <span class="c-gold">READ 🎯</span>.</span></li>
+        <li><span class="ic">🏆</span><span>Drop the foe's <span class="k">4 HP</span> first. Stay unpredictable, because they're reading you too.</span></li>
       </ol>
       <button class="gotit" id="howtoclose">Got it</button>
     </div>
@@ -1094,7 +1094,7 @@
     if(o.bind) return o.winner? (o.winner==="P"?"bind won — a cut":"bind lost — grazed") : "blades spark — locked";
     return {clean:o.winner==="P"?"you struck deep":"you got opened up",
       glance:o.winner==="P"?"a grazing cut":"grazed you",
-      whiff:"blades pass — nothing",clash:"stances mirror"}[o.kind];
+      whiff:"blades pass, nothing",clash:"stances mirror"}[o.kind];
   }
   // first-rounds coaching: explain WHY the round resolved, in clockwise terms
   function teachReason(p,a){
