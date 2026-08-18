@@ -610,6 +610,9 @@
   window.SWS_EMBED=SWS_EMBED;
   window.SWS_EXIT=function(){
     if(SWS_EMBED&&parent!==window){try{parent.postMessage({sws:'close'},'*');}catch(e){} return;}
+    /* Came from the arcade: step back so the portal is restored instantly
+       instead of reloading a large page and losing its scroll. */
+    if(document.referrer.indexOf('/portal')>=0&&history.length>1){history.back();return;}
     location.href='https://lucidwinds.com/portal/';
   };
   if(SWS_EMBED&&parent!==window){try{parent.postMessage({sws:'ready'},'*');}catch(e){}}
