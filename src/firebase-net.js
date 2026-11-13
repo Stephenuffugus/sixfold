@@ -606,7 +606,7 @@
     var joinedAt = keepAt || now();
     var announcing = false, entered = false;
     var st = { here: {}, ready: {}, duel: null, won: {}, ended: {}, say: {}, left: {} };
-    var subs = { change: [], duel: [], say: [], ended: [], gone: [], back: [] };
+    var subs = { change: [], duel: [], say: [], ended: [], gone: [], back: [], stale: [] };
     var seenSay = {}, endedSeen = {}, startedN = 0, creating = 0, first = true, tidied = {}, tidyTimers = [], staleN = 0;
     var TIDY_MS = o.tidyMs == null ? 8000 : o.tidyMs;
     var lastFriend = null, friendHere = false, lastSayAt = -Infinity, gone = false;
@@ -717,6 +717,7 @@
           if (!st.ended[dn]) room.endDuel(dn, "reload");
           endedSeen[dn] = 1;
           staleN = dn;
+          emit("stale", { n: dn });   // the live database answers after openRoom resolves
         }
       }
       if (d && (Number(d.n) || 0) > startedN && (d.a === uid || d.b === uid)) {
@@ -794,8 +795,9 @@
           // the last one out takes the room with them (only this code's own record)
           .then(function () { return clearIfEmpty(db, code, null); });
       },
-      // the duel this page found interrupted when it opened (0 if none). Read it
-      // after openRoom resolves: "Your duel was called off".
+      // the duel this page found interrupted when it opened (0 if none): read it
+      // after openRoom resolves AND listen for "stale" (the live database's first
+      // answer can come later), then say "Your duel was called off".
       staleDuel: function () { return staleN; },
       _enter: function () {
         return announce().then(function () {

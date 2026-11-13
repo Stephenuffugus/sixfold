@@ -2258,7 +2258,7 @@
       room=r; roomNote=""; roomGone=null; roomInDuel=0; roomHadFriend=false;
       // this page was reloaded in the middle of a duel: it cannot be rejoined (the
       // board lived in the old page), so it was called off; say so plainly
-      if(r.staleDuel && r.staleDuel()) roomNote=`<div>Your duel was called off.</div><div class="rn-sub">The page reloaded during the duel. Tap Ready to play again.</div>`;
+      if(r.staleDuel && r.staleDuel()) roomNote=STALE_NOTE;
       wireRoom(r); setRoomParam(r.code); syncTalk();
       openDuel();
     },(e)=>{
@@ -2287,8 +2287,10 @@
   function setRoomParam(code){ try{ const u=new URL(location.href); u.searchParams.set("room",code); history.replaceState(null,"",u.toString()); }catch(e){} }
   function clearRoomParam(){ try{ const u=new URL(location.href); if(!u.searchParams.has("room"))return; u.searchParams.delete("room"); history.replaceState(null,"",u.toString()); }catch(e){} }
   function friendLabel(){ const v=room&&room.view(); return (v&&v.friend&&v.friend.name)||(roomGone&&roomGone.name)||"Your friend"; }
+  const STALE_NOTE=`<div>Your duel was called off.</div><div class="rn-sub">The page reloaded during the duel. Tap Ready to play again.</div>`;
   function wireRoom(r){
     r.on("change",()=>{ if(room===r) updateRoom(); });
+    r.on("stale",()=>{ if(room!==r) return; roomNote=STALE_NOTE; updateRoom(true); });
     r.on("duel",(d)=>{ if(room===r) startRoomCountdown(d); });
     r.on("say",(s)=>{ if(room===r) onRoomSay(s); });
     r.on("gone",(g)=>{

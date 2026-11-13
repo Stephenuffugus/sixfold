@@ -4,8 +4,12 @@
 // Duel > Play a friend > Get a code and lands in the room; phone B opens the room
 // LINK cold (?room=CODE, no first-run flag). Then: ready shows across, an emote
 // and a call are seen on the other phone, both ready, a duel is played to the end,
-// the result and score show in the room, ready again, a second duel starts, A
-// leaves mid duel and lands home, B stays in the room. Prints PASS or the failure.
+// the result and score show in the room, duel 1's record is tidied away, ready
+// again, a second duel starts, B does not pick in its first round and the 30 s
+// clock settles it the same on both phones, B reloads mid duel and is back in the
+// room with the duel called off, a third duel starts, A leaves mid duel and lands
+// home, B stays at an Empty seat, C joins by typing the code, then both leave and
+// the room record is gone. Prints PASS or the failure.
 // --offline: one phone, every request off this machine blocked; checks that the
 // page boots, that online play says why it cannot connect, and that a Sentinel
 // duel still starts and plays a round. Puppeteer comes from lucid-winds.
@@ -194,6 +198,17 @@ try {
   say('back in the room: A "' + na + '" / "' + sca + '"; B "' + nb + '" / "' + scb + '"');
   await shot(A, 'room-after-duel');
   if (ra.tagShot) say('reveal tags seen on A: ' + ra.tags);
+  // the room keeps itself tidy: duel 1's record goes a few seconds after its result
+  const dbGet = (p, path) => p.evaluate((path) => FirebaseNet.liveDb().ref(path).get().then((s) => s.val()), path);
+  const waitGone = async (p, path, ms, what) => {
+    const t0 = Date.now(); let v;
+    while (Date.now() - t0 < ms) { v = await dbGet(p, path); if (v == null) return true; await sleep(1000); }
+    throw new Error(what + ' (still ' + JSON.stringify(v).slice(0, 160) + ')');
+  };
+  await waitGone(A, 'sixfold/friends/' + code + '/duels', 25000, 'duel 1 record was not tidied away');
+  const won1 = await dbGet(A, 'sixfold/friends/' + code + '/room/won');
+  if (!won1 || !won1[1]) throw new Error('the score of duel 1 is not kept in the room');
+  say('duel 1 record tidied away, the score kept in the room');
   // B steps away for a few seconds (network off), then the room carries on
   await B.setOfflineMode(true); await sleep(5000); await B.setOfflineMode(false); await sleep(3000);
   const stillA = await text(A, '#rfrname');
@@ -204,7 +219,32 @@ try {
   if (!m2a || !m2b) throw new Error('duel 2 did not start (A ' + m2a + ', B ' + m2b + '; A note "' + (await text(A, '#rnote')) + '", B note "' + (await text(B, '#rnote')) + '")');
   const r2 = await text(A, '#roundlbl');
   say('duel 2 started on both (' + r2 + ')');
-  // A leaves in the middle of duel 2: duel button, then Leave the room
+  // round 1 of duel 2: A picks, B never touches its phone. The round clock settles it.
+  await sleep(1200);
+  await A.evaluate(() => { const n = document.querySelectorAll('#wheel .node')[2]; if (n) n.click(); }); await sleep(400);
+  await A.evaluate(() => { const n = document.querySelector('#wheel .node.aiming'); if (n) n.click(); });
+  const clockA = await waitText(A, '#rclock', /Jessie has \d+ s/, 40000, 'A never saw the countdown while B did not pick');
+  const clockB = await text(B, '#rclock');
+  say('A sees "' + clockA + '", B sees "' + clockB + '"');
+  await shot(A, 'duel-clock-wait'); await shot(B, 'duel-clock-pick');
+  await Promise.all([waitText(A, '#roundlbl', /Round 2/, 40000, 'A: the unpicked round never settled'), waitText(B, '#roundlbl', /Round 2/, 40000, 'B: the unpicked round never settled')]);
+  await sleep(600);
+  const hp = async (p) => p.evaluate(() => ({ me: document.querySelectorAll('#php .pip.lost').length, foe: document.querySelectorAll('#ahp .pip.lost').length }));
+  const [hpA, hpB] = [await hp(A), await hp(B)];
+  if (!(hpA.me === 0 && hpA.foe === 2 && hpB.me === 2 && hpB.foe === 0)) throw new Error('the missed round did not settle the same on both phones (A ' + JSON.stringify(hpA) + ', B ' + JSON.stringify(hpB) + ')');
+  say('the round B never picked settled after the clock: B took a clean hit on both phones (A ' + JSON.stringify(hpA) + ', B ' + JSON.stringify(hpB) + ')');
+  await shot(A, 'duel-clock-settled');
+  // B reloads the page in the middle of duel 2: back in the room, the duel called off
+  await B.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
+  const bBack = await waitText(B, '#rnote', /Your duel was called off/, 40000, 'B (reloaded) was not told its duel was called off');
+  const aTold = await waitText(A, '#rnote', /reloaded the page/, 30000, 'A was not told B reloaded');
+  say('after B reloaded mid duel: B "' + bBack + '"; A "' + aTold + '"');
+  await shot(B, 'room-after-reload');
+  await click(A, '#rready'); await sleep(400); await click(B, '#rready');
+  const [m3a, m3b] = await Promise.all([friendly(A), friendly(B)]);
+  if (!m3a || !m3b) throw new Error('duel 3 did not start after the reload (A ' + m3a + ', B ' + m3b + ')');
+  say('duel 3 started on both');
+  // A leaves in the middle of duel 3: duel button, then Leave the room
   await sleep(1500);
   await click(A, '#duelbtn'); await sleep(500);
   await shot(A, 'room-during-duel');
@@ -222,7 +262,10 @@ try {
   const bNote = await text(B, '#rnote');
   const bMode = await text(B, '#modetag');
   say('B tapped Wait here: "' + bNote + '"');
-  if (!/Waiting for your friend/.test(bNote || '')) throw new Error('B is not waiting in the room');
+  if (!/Send the code or the link to play again/.test(bNote || '')) throw new Error('B is not waiting in the room ("' + bNote + '")');
+  const seat = await text(B, '#rfrname');
+  if (seat !== 'Empty seat') throw new Error('the empty seat reads "' + seat + '"');
+  await shot(B, 'room-empty-seat');
   // the same code takes a new friend, this time by TYPING the code (the Join path)
   await A.close();
   const C = await phone('C', { name: 'Jo' });
@@ -234,9 +277,13 @@ try {
   const bScore = await text(B, '#rscore');
   say('C joined by typing the code; B now sees "' + bNew + '", score "' + bScore + '"');
   const ladders = await Promise.all([B, C].map((p) => p.evaluate(() => localStorage.getItem('sixfold_pvp'))));
+  // both leave: the last one out takes the room record with them
+  await click(C, '#rleave'); await sleep(1500); await click(B, '#rleave');
+  await waitGone(B, 'sixfold/friends/' + code, 20000, 'the room record was not removed after both left');
+  say('both left: sixfold/friends/' + code + ' is gone');
   const errs = A._errs.concat(B._errs, C._errs);
   if (errs.length) throw new Error(errs.join(' | '));
-  await done('PASS room ' + code + ': link join, ready, emote and call seen across, duel 1 to a result in the room (' + sca + '), rematch, duel 2 started, A left mid duel and landed home, B stayed in the room waiting, C joined by typing the code and met B; ladder untouched: ' + (ladders.every((l) => l == null || l === '{}' || /"wins":0,"losses":0/.test(l))));
+  await done('PASS room ' + code + ': link join, ready, emote and call seen across, duel 1 to a result in the room (' + sca + ') and its record tidied, rematch, an unpicked round settled by the clock the same on both phones, a reload mid duel came back to the room with the duel called off, duel 3 started, A left mid duel and landed home, B stayed at an Empty seat, C joined by typing the code and met B, both left and the room record is gone; ladder untouched: ' + (ladders.every((l) => l == null || l === '{}' || /"wins":0,"losses":0/.test(l))));
 } catch (e) {
   await done('FAIL ' + (e && e.message || e));
 }
