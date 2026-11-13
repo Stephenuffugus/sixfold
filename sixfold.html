@@ -542,6 +542,20 @@
   .ll-row .ll-r{color:var(--washi-dim);font-variant-numeric:tabular-nums}
   .ll-note{font-size:10px;color:var(--washi-dim);text-align:center;margin-top:6px;font-style:italic}
   .modetag.ranked{background:linear-gradient(180deg,#b98a2e,#8a6420);color:#fff;border-color:#0003}
+  /* Play a friend */
+  .friendbox{display:flex;flex-direction:column;align-items:stretch;gap:9px;width:100%}
+  .friendbox .fb-t{font-weight:800;font-size:14px;color:var(--washi);text-align:center}
+  .friendbox .fb-s,.friendbox .fb-or{font-size:11px;color:var(--washi-dim);text-align:center}
+  .fb-join{display:flex;gap:8px}
+  .fb-join input{flex:1;min-width:0;min-height:48px;box-sizing:border-box;font-family:var(--disp);font-weight:800;font-size:22px;letter-spacing:.3em;
+    text-align:center;text-transform:uppercase;color:var(--washi);background:#0006;border:1px solid #ffffff33;border-radius:12px;padding:6px 10px}
+  .fb-join input:focus{outline:2px solid var(--gold);outline-offset:1px}
+  .duel-actions button{min-height:48px}
+  .friendcode{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--washi-dim)}
+  .friendcode b{font-family:var(--disp);font-size:44px;letter-spacing:.22em;color:var(--gold);text-transform:none;line-height:1.1;user-select:all}
+  .netmsg{background:#cf41301a;border:1px solid #cf413055;border-radius:13px;padding:12px;text-align:center;width:100%;max-width:340px;box-sizing:border-box}
+  .netmsg .so-t{font-weight:700;font-size:13px;color:var(--washi)}
+  .netmsg .so-s{font-size:12px;color:var(--washi);margin:4px 0 2px}
   /* PvP result extras (rendered inside #resultscreen) */
   .pvp-rank{display:flex;flex-direction:column;align-items:center;gap:7px;margin:6px 0;width:100%;max-width:320px}
   .pvp-delta{font-family:var(--disp);font-weight:800;font-size:26px}
@@ -722,6 +736,18 @@ body.reduce .fighter-art .sprite { animation: none !important; }
      window.Sunbeam is simply undefined and the game is unaffected. Earning is
      post-match only (off the fair-play combat path). Fires `sunbeam-ready` on load
      so the glue can init once it's available. -->
+<!-- Online play: the studio's Firebase project (public web config, safe to ship).
+     NO SDK here: firebase-net.js fetches it only when a player opens online play,
+     so the page boots and plays offline exactly as before. -->
+<script>
+  window.SIXFOLD_FIREBASE={
+    apiKey:"AIzaSyBAE_JvPixhHwt4ziu8LdZ7HAszd9T58zY",
+    authDomain:"focus-grove-fffa8.firebaseapp.com",
+    databaseURL:"https://focus-grove-fffa8-default-rtdb.firebaseio.com",
+    projectId:"focus-grove-fffa8",
+    appId:"1:739627513827:web:3d4088a90fd388730652d6"
+  };
+</script>
 <script async src="https://lucidwinds.com/sunbeam-sdk.js?v=2"
         onload="try{window.dispatchEvent(new Event('sunbeam-ready'))}catch(e){}"
         onerror="try{window.__sunbeamFailed=1}catch(e){}"></script>
@@ -812,7 +838,6 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     <button class="act ghost" id="collbtn">🎴 Roster</button>
     <button class="act ghost" id="profbtn">📊 Profile</button>
     <button class="act ghost" id="howbtn">How it works</button>
-    <button class="act ghost" id="btn-install-main">📲 Add to Home Screen</button>
     <button class="act primary" id="rematch" style="display:none">Rematch</button>
   </div>
 
@@ -849,9 +874,6 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       <div class="row"><label>Assist charm, casual and practice only</label>
         <div class="opts" id="charms"></div>
         <div class="hint" id="charmhint">Charms go inert the moment a match is ranked, seeded, or PvP.</div>
-      </div>
-      <div class="row"><label>App</label>
-        <button id="btn-install" style="width:100%;min-height:48px;border:1px solid rgba(255,255,255,.25);border-radius:12px;background:rgba(255,255,255,.06);color:inherit;font:inherit;font-weight:700;cursor:pointer;padding:12px">📲 Add to Home Screen</button>
       </div>
     </div>
   </div>
@@ -2219,6 +2241,472 @@ body.reduce .fighter-art .sprite { animation: none !important; }
 })(typeof globalThis !== "undefined" ? globalThis : this);
 
 
+/* ============================ firebase-net.js ============================ */
+/* SIXFOLD — firebase-net.js  (PHASE 2 backend, live: inlined and connected on demand)
+ *
+ * Implements the EXACT Net transport seam (see net.js) against a Firebase
+ * Realtime Database, so going live is `Net.configure(FirebaseBackend(db))` and
+ * nothing above the seam changes. It is inlined by tools/build.js; the SDK itself
+ * is fetched only when a player opens online play (see connect() below), so the
+ * offline game still boots and plays with the network off.
+ *
+ * Why a DB and not WebRTC: a stance duel is lockstep + low-frequency (a handful
+ * of tiny messages per round), so a realtime DB IS the channel — no signaling,
+ * no NAT traversal. The DB does three jobs: presence (who's online), a rank-
+ * banded matchmaking claim, and a per-round commit-reveal relay.
+ *
+ * INTEGRITY (the same rule as the mock, now enforced over the wire):
+ *   each side writes a COMMIT (hash of pick+salt) first; only after BOTH commits
+ *   exist does either reveal its pick; the reveal is verified against the commit
+ *   (hash(reveal) must equal the stored commit). Neither side can see or change
+ *   its pick after seeing the other's — a live duel is as unexploitable as solo.
+ *
+ * The `db` passed in is a thin abstraction (a subset of the firebase compat
+ * Database API) so the relay is unit-testable against an in-memory mock:
+ *   db.ref(path) -> { set, update, remove, get, on, off, transaction,
+ *                     onDisconnect()->{remove}, push()->{key}, child(p) }
+ * In production pass `firebase.database()` (compat) — its API is a superset.
+ *
+ * NAMESPACE: every path lives under a root (default "sixfold"), so the studio's
+ * shared database keeps Sixfold in its own branch:
+ *   sixfold/lobby/$uid, sixfold/duels/$id            (public "Find a rival")
+ *   sixfold/friends/$CODE/lobby, .../duels           (private "Play a friend")
+ * A friend duel is the SAME protocol (presence, claim, commit-reveal) run inside
+ * a private root: pass opts.root = friendRoot(code) and opts.friend = true.
+ *
+ * LIVE: the SDK is NOT loaded with the page. connect() fetches it on demand when a
+ * player opens online play, probes the database, and rejects with plain words if
+ * anything is unreachable or refused, so the offline game never waits on the net.
+ */
+(function (root) {
+  "use strict";
+  var req = (typeof require !== "undefined");
+  var Matchmaker = req ? require("./matchmaker.js") : root.Matchmaker;
+
+  // djb2 — same commit hash as net.js LocalMock so behavior matches exactly
+  function hash(s) { var h = 5381; s = String(s); for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0; return h.toString(36); }
+  function nowMs() { try { return Date.now(); } catch (e) { return 0; } }
+  function rand() { try { return Math.random(); } catch (e) { return 0.5; } }
+  function salt() { return (rand().toString(36).slice(2) + nowMs().toString(36)); }
+  // anything read off the wire is untrusted: names land in the page, so keep them
+  // short and free of markup; ratings are clamped numbers.
+  function cleanName(n) { var s = String(n == null ? "" : n).replace(/[<>&"'`\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 20); return s || "Rival"; }
+  function cleanRating(r) { r = Number(r); return (r >= 0 && r <= 5000) ? Math.round(r) : 1000; }
+
+  /* ---------------- namespacing + friend codes ---------------- */
+  var ROOT = "sixfold";
+  // friend codes: 4 chars from A-Z + 2-9 without the look-alikes I, O, 0, 1.
+  // (The database rule checks the same set: /^[A-HJ-NP-Z2-9]{4}$/.)
+  var CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  var CODE_RE = /^[A-HJ-NP-Z2-9]{4}$/;
+  function newFriendCode(rng) {
+    var r = (typeof rng === "function") ? rng : rand, s = "";
+    for (var i = 0; i < 4; i++) s += CODE_ALPHABET.charAt(Math.floor(r() * CODE_ALPHABET.length) % CODE_ALPHABET.length);
+    return s;
+  }
+  // tidy what a player typed: upper case, drop spaces/dashes; null if not a code
+  function normalizeCode(str) {
+    var s = String(str == null ? "" : str).toUpperCase().replace(/[^A-Z0-9]/g, "");
+    return CODE_RE.test(s) ? s : null;
+  }
+  function friendRoot(code) { return ROOT + "/friends/" + code; }
+  function pathsFor(rootPath) {
+    var r = String(rootPath || ROOT).replace(/\/+$/, "");
+    return { root: r, lobby: r + "/lobby", duels: r + "/duels" };
+  }
+
+  /* ---------------- the backend ---------------- */
+  // db: thin RTDB handle. opts.root (default "sixfold"), opts.friend (private
+  // lobby: no rating band, no Sentinel), opts.searchTimeoutMs/tickMs optional.
+  function FirebaseBackend(db, opts) {
+    opts = opts || {};
+    if (!db) throw new Error("FirebaseBackend requires a database handle");
+    var SEARCH_TIMEOUT = opts.searchTimeoutMs || (Matchmaker ? Matchmaker.SEARCH_TIMEOUT_MS : 13000);
+    var TICK = opts.tickMs || 1000;
+    var P = pathsFor(opts.root);
+    var FRIEND = !!opts.friend;
+    // public: past the timeout, a human who is still searching gets a short grace
+    // (any rating) before the Sentinel offer, so two lone humans always meet.
+    var HUMAN_GRACE = opts.humanGraceMs == null ? 8000 : opts.humanGraceMs;
+    var FRIEND_WAIT = opts.friendWaitMs || 10 * 60 * 1000;  // host waits up to 10 min
+    var JOIN_WAIT = opts.joinWaitMs || 8000;                // joiner gives up on an empty code
+
+    /* presence: <root>/lobby/$uid = {name,rating,ts,status}; auto-removed on disconnect */
+    function announce(uid, info) {
+      var ref = db.ref(P.lobby + "/" + uid);
+      try { ref.onDisconnect().remove(); } catch (e) {}
+      var w = ref.set({ name: info.name || "Rival", rating: info.rating || 1000, ts: nowMs(), status: "searching" });
+      if (w && w.catch) w.catch(function () {});
+      return w;
+    }
+    function leaveLobby(uid) { try { var w = db.ref(P.lobby + "/" + uid).remove(); if (w && w.catch) w.catch(function () {}); return w; } catch (e) {} }
+
+    /* read the current lobby as a matchmaker pool */
+    function readPool() {
+      return db.ref(P.lobby).get().then(function (snap) {
+        var v = (snap && snap.val && snap.val()) || {};
+        return Object.keys(v).map(function (id) { var e = v[id] || {}; return { id: id, name: cleanName(e.name), rating: cleanRating(e.rating), online: true, status: e.status }; });
+      });
+    }
+
+    /* try to CLAIM an opponent atomically. Two locks, mine first then theirs:
+       if both searchers claim each other at the same instant, each holds its OWN
+       lock, so neither can take the other's and both back off and retry (instead
+       of building two duels that never meet). A searcher already claimed by
+       someone else finds its own lock taken and stands down. The winner creates
+       the duel and points both lobbies at it. returns duelId|null. */
+    function takeLock(ref, myUid) {
+      return ref.transaction(function (cur) {
+        if (cur) return; // already held -> abort
+        return myUid;
+      }).then(function (res) { return !!(res && res.committed && res.snapshot && res.snapshot.val() === myUid); });
+    }
+    function dropLock(ref, myUid) {
+      return ref.transaction(function (cur) { if (cur === myUid) return null; return; })
+        .then(function () {}, function () {});
+    }
+    function tryClaim(myUid, opp, me) {
+      var myLock = db.ref(P.lobby + "/" + myUid + "/lock");
+      var oppLock = db.ref(P.lobby + "/" + opp.id + "/lock");
+      return takeLock(myLock, myUid).then(function (mine) {
+        if (!mine) return null;                     // someone claimed ME: their duel is on its way
+        return takeLock(oppLock, myUid).then(function (theirs) {
+          if (!theirs) return dropLock(myLock, myUid).then(function () { return null; });
+          // the rival must still be present (a transaction on a vanished node would
+          // recreate it as a ghost we then wait on forever)
+          return db.ref(P.lobby + "/" + opp.id).get().then(function (snap) {
+            var v = (snap && snap.val && snap.val()) || {};
+            if (!v.name) {
+              return Promise.all([dropLock(myLock, myUid), db.ref(P.lobby + "/" + opp.id).remove()]).then(function () { return null; });
+            }
+            // we own the claim — create the duel node (a = claimer, b = claimed)
+            var duelId = "d_" + myUid + "_" + opp.id + "_" + nowMs();
+            var duel = { a: myUid, b: opp.id, aName: me.name, bName: opp.name, aRating: me.rating, bRating: opp.rating, ts: nowMs(), state: "live" };
+            return db.ref(P.duels + "/" + duelId).set(duel).then(function () {
+              return Promise.all([
+                db.ref(P.lobby + "/" + myUid).update({ status: "busy", matchedDuel: duelId }),
+                db.ref(P.lobby + "/" + opp.id).update({ status: "busy", matchedDuel: duelId }),
+              ]).then(function () { return duelId; });
+            });
+          });
+        });
+      }).catch(function () { return null; });
+    }
+
+    /* findMatch — drives presence + claim loop + Sentinel fallback. Same Search
+       shape as the LocalMock (onState/acceptSentinel/keepSearching/cancel). */
+    function findMatch(o) {
+      o = o || {};
+      var clock = o.clock || { setTimeout: function (f, ms) { return root.setTimeout(f, ms); }, clearTimeout: function (id) { root.clearTimeout(id); } };
+      var uid = o.selfId || ("anon_" + Math.floor(rand() * 1e9));
+      var me = { name: o.name || "Rival", rating: o.rating || 1000 };
+      var role = o.role === "join" ? "join" : "host";   // friend lobby only
+      var elapsed = 0, cancelled = false, settled = false, matched = false, nameIdx = 0;
+      var subs = [];
+      var emit = function (s) { if (!cancelled) subs.forEach(function (f) { try { f(s); } catch (e) {} }); };
+
+      // listen for being claimed BY someone else (we become side 'b')
+      // (Our OWN claim also writes this field, and a real database fires local
+      // writes at once, so openClaimedDuel reads the duel node to learn its side.)
+      var lobbyRef = db.ref(P.lobby + "/" + uid + "/matchedDuel");
+      var onMatched = function (snap) {
+        var duelId = snap && snap.val && snap.val();
+        // a human claim is honoured even while the Sentinel offer is showing
+        if (!duelId || matched || cancelled) return;
+        matched = settled = true; lobbyRef.off("value", onMatched);
+        openClaimedDuel(duelId, uid).then(function (sess) {
+          emit({ state: "matched", opponent: sess.meta, session: sess });
+        }, function () { emit({ state: "error", reason: "duel-unreadable" }); });
+      };
+      lobbyRef.on("value", onMatched);
+
+      announce(uid, me);
+
+      function tick() {
+        if (cancelled || settled) return;
+        elapsed += TICK;
+        readPool().then(function (pool) {
+          if (cancelled || settled) return;
+          var searching = pool.filter(function (p) { return p.status === "searching"; });
+          // the rating band: a friend lobby has none (you came for that person);
+          // the public lobby widens to ANY rating once the timeout is reached, so
+          // two lone humans far apart in rating still meet instead of each being
+          // handed a Sentinel (the band schedule alone stops at +-500 before 13s).
+          var bandElapsed = (FRIEND || elapsed >= SEARCH_TIMEOUT) ? Infinity : elapsed;
+          var cand = Matchmaker.pickOpponent(searching, me.rating, bandElapsed, { selfId: uid });
+          if (cand) {
+            tryClaim(uid, cand, me).then(function (duelId) {
+              if (cancelled || settled) return;
+              if (duelId) {
+                matched = settled = true; lobbyRef.off("value", onMatched);
+                var sess = openCreatedDuel(duelId, uid, normalize(cand));
+                emit({ state: "matched", opponent: sess.meta, session: sess });
+              } else { schedule(true); } // lost the race — retry after a jittered beat
+            });
+            return;
+          }
+          // "is any other human waiting?" counts only SEARCHING entries: a finished
+          // duel leaves a busy entry behind until that tab closes.
+          var anyone = Matchmaker.pickOpponent(searching, me.rating, Infinity, { selfId: uid });
+          if (FRIEND) {
+            if (role === "join" && !anyone && elapsed >= JOIN_WAIT) return endFriend("friend-missing");
+            if (elapsed >= FRIEND_WAIT) return endFriend("friend-timeout");
+            emit({ state: "searching", elapsedMs: elapsed, half: Infinity, friend: true });
+            return schedule();
+          }
+          if (!anyone && elapsed >= Math.min(SEARCH_TIMEOUT, 2600)) return offerSentinel();
+          if (elapsed >= SEARCH_TIMEOUT + (anyone ? HUMAN_GRACE : 0)) return offerSentinel();
+          emit({ state: "searching", elapsedMs: elapsed, half: elapsed >= SEARCH_TIMEOUT ? Infinity : Matchmaker.bandFor(elapsed) });
+          schedule();
+        }).catch(function (e) {
+          if (cancelled || settled) return;
+          if (isPermissionError(e)) { settled = true; return emit({ state: "error", reason: "permission-denied" }); }
+          schedule();
+        });
+      }
+      function endFriend(why) {
+        if (settled || cancelled) return;
+        settled = true; try { lobbyRef.off("value", onMatched); } catch (e) {}
+        leaveLobby(uid);
+        emit({ state: why });
+      }
+      function offerSentinel() { if (!settled && !cancelled) { settled = true; emit({ state: "sentinel-offer", opponent: Matchmaker.sentinelFor(me.rating, rand, nameIdx++) }); } }
+      function schedule(jitter) { clock.setTimeout(tick, jitter ? Math.round(TICK * (0.35 + rand())) : TICK); }
+      clock.setTimeout(function () { emit({ state: "searching", elapsedMs: 0, half: Matchmaker.bandFor(0) }); tick(); }, 0);
+
+      var handle = {
+        onState: function (cb) { if (typeof cb === "function") subs.push(cb); return handle; },
+        acceptSentinel: function () {
+          if (cancelled || matched || FRIEND) return null;
+          matched = settled = true;
+          leaveLobby(uid); try { lobbyRef.off("value", onMatched); } catch (e) {}
+          var opp = Matchmaker.sentinelFor(me.rating, rand, nameIdx++);
+          // Sentinel runs LOCALLY (no peer) — reuse the same local AI session as
+          // the mock so a fallback duel never needs the network at all.
+          var sess = root.Net.makeSession(opp, { seed: (me.rating ^ 0x9e37) >>> 0 });
+          emit({ state: "matched", opponent: opp, session: sess });
+          return sess;
+        },
+        keepSearching: function () { if (!cancelled && !matched) { settled = false; elapsed = 0; schedule(); } return handle; },
+        cancel: function () { cancelled = true; try { lobbyRef.off("value", onMatched); } catch (e) {} leaveLobby(uid); },
+      };
+      return handle;
+    }
+
+    function normalize(c) { return { id: c.id, name: c.name || "Rival", kind: "human", rating: c.rating || 1000, tierName: c.tierName, friend: FRIEND }; }
+
+    /* open a duel I CREATED (I am side 'a') */
+    function openCreatedDuel(duelId, myUid, opponent) { return makeRtdbSession(db, duelId, myUid, "a", opponent, P); }
+    /* open a duel I was pointed at; the duel node says which side I am (normally
+       'b', the claimed one; 'a' if this is our own claim echoing back) */
+    function openClaimedDuel(duelId, myUid) {
+      return db.ref(P.duels + "/" + duelId).get().then(function (snap) {
+        var d = (snap && snap.val && snap.val()) || {};
+        if (!d.a || !d.b) throw new Error("duel node missing");
+        var mine = d.a === myUid ? "a" : "b";
+        var opp = mine === "a"
+          ? { id: d.b, name: cleanName(d.bName), kind: "human", rating: cleanRating(d.bRating), friend: FRIEND }
+          : { id: d.a, name: cleanName(d.aName), kind: "human", rating: cleanRating(d.aRating), friend: FRIEND };
+        return makeRtdbSession(db, duelId, myUid, mine, opp, P);
+      });
+    }
+
+    return { name: FRIEND ? "firebase-friend" : "firebase", findMatch: findMatch, paths: P, friend: FRIEND, _db: db };
+  }
+
+  function isPermissionError(e) {
+    var s = e ? (String(e.code || "") + " " + String(e.message || e)) : "";
+    return /permission/i.test(s);
+  }
+
+  /* ---------------- RTDB-backed duel session (commit-reveal relay) ---------------- */
+  function makeRtdbSession(db, duelId, myUid, mySide, opponent, paths) {
+    var P = paths || pathsFor(ROOT);
+    var oppSide = mySide === "a" ? "b" : "a";
+    var base = P.duels + "/" + duelId;
+    var dead = false, discSubs = [];
+    var lastIndependent = false;
+
+    // generic commit-reveal exchange over a path (rounds/$n or binds/$n)
+    function exchange(kind, n, myPick) {
+      return new Promise(function (resolve, reject) {
+        if (dead) return reject(new Error("disconnected"));
+        var path = base + "/" + kind + "/" + n;
+        var s = salt();
+        var myCommit = hash(n + ":" + myPick + ":" + s);
+        var oppRef = db.ref(path + "/" + oppSide);
+        // 1) write my commit
+        db.ref(path + "/" + mySide).update({ commit: myCommit }).then(function () {
+          lastIndependent = true; // my reveal is gated on the opponent's commit, never their pick
+          // 2) wait for opponent commit, THEN reveal mine
+          var revealed = false;
+          var onVal = function (snap) {
+            if (dead) { try { oppRef.off("value", onVal); } catch (e) {} return reject(new Error("disconnected")); }
+            var ov = (snap && snap.val && snap.val()) || {};
+            if (!revealed && ov.commit != null) {
+              revealed = true;
+              db.ref(path + "/" + mySide).update({ reveal: myPick, salt: s });
+            }
+            // 3) once opponent has revealed, verify + resolve
+            if (ov.reveal != null && ov.commit != null) {
+              try { oppRef.off("value", onVal); } catch (e) {}
+              var ok = hash(n + ":" + ov.reveal + ":" + ov.salt) === ov.commit;
+              if (!ok) return reject(new Error("commit-reveal mismatch (cheat?)"));
+              // a valid reveal is a whole stance 0..5 (rounds) or bind 0..2 (binds)
+              var top = kind === "rounds" ? 6 : 3, rv = ov.reveal;
+              if (typeof rv !== "number" || rv < 0 || rv >= top || Math.floor(rv) !== rv) return reject(new Error("reveal out of range"));
+              resolve(kind === "rounds" ? { oppPick: ov.reveal } : { oppBind: ov.reveal });
+            }
+          };
+          oppRef.on("value", onVal);
+        }).catch(reject);
+      });
+    }
+
+    // watch for the opponent dropping (their lobby presence vanishing). on('value')
+    // fires immediately with the current value, so only a TRANSITION present->absent
+    // is a real drop — an initial null (presence not yet/ever seen) must NOT count.
+    var oppPresenceRef = db.ref(P.lobby + "/" + opponent.id);
+    var sawPresence = false;
+    var onPres = function (snap) { var v = snap && snap.val && snap.val(); if (v) { sawPresence = true; } else if (sawPresence && !dead) { fireDisconnect("left"); } };
+    try { oppPresenceRef.on("value", onPres); } catch (e) {}
+
+    function fireDisconnect(reason) { if (dead) return; dead = true; try { oppPresenceRef.off("value", onPres); } catch (e) {} discSubs.forEach(function (f) { try { f({ reason: reason }); } catch (e) {} }); }
+
+    return {
+      meta: opponent,
+      exchangeStance: function (n, myPick) { return exchange("rounds", n, myPick); },
+      exchangeBind: function (n, myBind) { return exchange("binds", n, myBind); },
+      onDisconnect: function (cb) { if (typeof cb === "function") discSubs.push(cb); },
+      close: function () { dead = true; try { oppPresenceRef.off("value", onPres); } catch (e) {} },
+      simulateDisconnect: function (r) { fireDisconnect(r || "left"); },
+      _decidedIndependently: function () { return lastIndependent; },
+    };
+  }
+
+  /* ---------------- activation bootstrap (INERT without config) ---------------- */
+  // In the browser, going live = (a) load the firebase compat SDK, (b) define
+  // window.SIXFOLD_FIREBASE = {...config}, (c) include this file in the build.
+  // This never throws and does nothing unless BOTH the config and the SDK exist.
+  function tryActivate() {
+    try {
+      var cfg = root.SIXFOLD_FIREBASE;
+      var firebase = root.firebase;
+      if (!cfg || !firebase || !firebase.initializeApp || !firebase.database || !root.Net) return false;
+      if (!root.firebase.apps || !root.firebase.apps.length) firebase.initializeApp(cfg);
+      var db = wrapCompat(firebase.database());
+      liveDb = db;
+      root.Net.configure(FirebaseBackend(db));
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /* ---------------- on-demand connect (the live path) ---------------- */
+  // The page never loads the SDK at boot. connect() loads it the first time a
+  // player opens online play, initialises the app, then PROBES the database with
+  // one small read. Resolves with the db handle (and switches Net to Firebase) or
+  // rejects with an Error whose .reason is one of:
+  //   "not-configured" | "sdk-unreachable" | "db-unreachable" | "permission-denied"
+  // friendlyError(err) turns that into plain words for the player.
+  var SDK_VERSION = "9.23.0";
+  var SDK_URLS = [
+    "https://www.gstatic.com/firebasejs/" + SDK_VERSION + "/firebase-app-compat.js",
+    "https://www.gstatic.com/firebasejs/" + SDK_VERSION + "/firebase-database-compat.js",
+  ];
+  var liveDb = null, sdkLoading = null;
+  function fail(reason, cause) { var e = new Error(reason); e.reason = reason; e.cause = cause; return e; }
+  function withTimeout(p, ms, reason) {
+    return new Promise(function (resolve, reject) {
+      var done = false;
+      var t = root.setTimeout(function () { if (!done) { done = true; reject(fail(reason)); } }, ms);
+      p.then(function (v) { if (!done) { done = true; root.clearTimeout(t); resolve(v); } },
+        function (e) { if (!done) { done = true; root.clearTimeout(t); reject(e); } });
+    });
+  }
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var doc = root.document;
+      if (!doc || !doc.createElement) return reject(fail("sdk-unreachable"));
+      var s = doc.createElement("script");
+      s.src = src; s.async = true; s.crossOrigin = "anonymous";
+      s.onload = function () { resolve(); };
+      s.onerror = function () { reject(fail("sdk-unreachable")); };
+      (doc.head || doc.body || doc.documentElement).appendChild(s);
+    });
+  }
+  function loadSdk(ms) {
+    if (root.firebase && root.firebase.database) return Promise.resolve(root.firebase);
+    if (!sdkLoading) {
+      sdkLoading = loadScript(SDK_URLS[0]).then(function () { return loadScript(SDK_URLS[1]); })
+        .then(function () {
+          if (!root.firebase || !root.firebase.database) throw fail("sdk-unreachable");
+          return root.firebase;
+        });
+      sdkLoading.catch(function () { sdkLoading = null; });  // a later tap may retry
+    }
+    return withTimeout(sdkLoading, ms, "sdk-unreachable");
+  }
+  function connect(o) {
+    o = o || {};
+    if (liveDb && !o.reprobe) return Promise.resolve(liveDb);
+    var cfg = root.SIXFOLD_FIREBASE;
+    if (!cfg || !cfg.databaseURL) return Promise.reject(fail("not-configured"));
+    return loadSdk(o.sdkTimeoutMs || 12000).then(function (firebase) {
+      var app;
+      try { app = (firebase.apps && firebase.apps.length) ? firebase.app() : firebase.initializeApp(cfg); }
+      catch (e) { throw fail("sdk-unreachable", e); }
+      var database = app.database ? app.database() : firebase.database();
+      // the probe: one tiny read of the public lobby. Refused -> the rules are not
+      // open to us; silent -> the database cannot be reached from here.
+      var probe = database.ref(ROOT + "/lobby").limitToFirst(1).get();
+      return withTimeout(probe, o.dbTimeoutMs || 9000, "db-unreachable").then(function () {
+        liveDb = wrapCompat(database);
+        if (root.Net) root.Net.configure(FirebaseBackend(liveDb));
+        return liveDb;
+      }, function (e) {
+        if (e && e.reason) throw e;
+        if (isPermissionError(e)) throw fail("permission-denied", e);
+        throw fail("db-unreachable", e);
+      });
+    });
+  }
+  function friendlyError(e) {
+    var r = (e && e.reason) || (isPermissionError(e) ? "permission-denied" : "db-unreachable");
+    if (r === "permission-denied") return "The online server said no (permission denied). Online play is not switched on yet. Duel a Sentinel for now.";
+    if (r === "not-configured") return "Online play is not set up in this build.";
+    if (r === "sdk-unreachable") return "Could not load online play. Check your connection and try again.";
+    return "Could not reach the online server. Check your connection and try again.";
+  }
+  // a friend backend on the live db (connect() first)
+  function friendBackend(code, db) { return FirebaseBackend(db || liveDb, { root: friendRoot(code), friend: true }); }
+  // adapt firebase compat Database to the thin handle the backend uses
+  function wrapCompat(database) {
+    function wrapRef(ref) {
+      return {
+        set: function (v) { return ref.set(v); },
+        update: function (v) { return ref.update(v); },
+        remove: function () { return ref.remove(); },
+        get: function () { return ref.get(); },
+        on: function (ev, cb) { return ref.on(ev, cb); },
+        off: function (ev, cb) { return ref.off(ev, cb); },
+        transaction: function (fn) { return ref.transaction(fn); },
+        onDisconnect: function () { return ref.onDisconnect(); },
+        push: function () { return ref.push(); },
+        child: function (p) { return wrapRef(ref.child(p)); },
+      };
+    }
+    return { ref: function (p) { return wrapRef(database.ref(p)); } };
+  }
+
+  var api = { FirebaseBackend: FirebaseBackend, makeRtdbSession: makeRtdbSession, tryActivate: tryActivate, _hash: hash,
+    ROOT: ROOT, CODE_ALPHABET: CODE_ALPHABET, CODE_RE: CODE_RE, newFriendCode: newFriendCode, normalizeCode: normalizeCode,
+    friendRoot: friendRoot, pathsFor: pathsFor, friendBackend: friendBackend,
+    connect: connect, friendlyError: friendlyError, isPermissionError: isPermissionError, SDK_URLS: SDK_URLS };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else { root.FirebaseNet = api; try { tryActivate(); } catch (e) {} }
+})(typeof globalThis !== "undefined" ? globalThis : this);
+
+
 /* ============================ skins.js ============================ */
 /* SIXFOLD — skins.js  (cosmetic art layer)
  *
@@ -2660,7 +3148,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
 
   // UI helper: the banner competitive modes must show.
   function statusLabel(mode) {
-    if (mode && !mode.honorsAssists) return "Assists off. Competitive.";
+    if (mode && !mode.honorsAssists) return "Assists off — competitive";
     const c = current();
     return c ? ("Assist: " + c.name) : "Assists: none";
   }
@@ -3616,10 +4104,12 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       $("foename").textContent=pvpOpp.name;
       const t=Rank.tierFor(pvpOpp.rating);
       $("foestars").textContent=t.glyph+" "+t.name;
-      $("foetell").textContent= pvpOpp.kind==="sentinel"
+      $("foetell").textContent= pvpOpp.friend
+        ? "Friend · friendly duel, unranked · charms rest, pure wheel"
+        : pvpOpp.kind==="sentinel"
         ? "Sentinel · practice bot at your "+t.name+" rank · reduced rank stakes"
         : "Live rival · "+t.name+" tier · charms rest, pure wheel";
-      mt.textContent="Ranked"; mt.classList.add("comp","ranked");
+      mt.textContent=pvpOpp.friend?"Friendly":"Ranked"; mt.classList.add("comp","ranked");
       $("compbanner").classList.toggle("show",false);
       return;
     }
@@ -4078,8 +4568,32 @@ body.reduce .fighter-art .sprite { animation: none !important; }
      the combat math. A Sentinel (no-opponent fallback) is a fair AI at the player's
      rank, clearly labelled, at reduced rank stakes (can't be farmed). */
   const nowMs=()=>{ try{ return Date.now(); }catch(e){ return 0; } };
+  // Online identity for THIS page load. (Rank.playerId is seeded the same on every
+  // fresh install, so it cannot tell two phones apart on the wire.)
+  const netId="n"+Math.random().toString(36).slice(2,10)+nowMs().toString(36);
+  function netName(){ return (ladder.name && ladder.name!=="You") ? ladder.name : "Rival"; }
+  let onlineGen=0;      // bumps whenever the player leaves an online step, so late answers are ignored
+  function goOnline(){
+    if(typeof FirebaseNet==="undefined" || !FirebaseNet.connect){ const e=new Error("not-configured"); e.reason="not-configured"; return Promise.reject(e); }
+    return FirebaseNet.connect();
+  }
+  // online play failed: say why in plain words and put the duel menu back.
+  // A ranked search can still fall back to a Sentinel, which needs no network.
+  function onlineFailed(err, sentinelOk){
+    if(pvpSearch){ try{pvpSearch.cancel();}catch(e){} pvpSearch=null; }
+    const msg=(typeof FirebaseNet!=="undefined" && FirebaseNet.friendlyError) ? FirebaseNet.friendlyError(err) : "Online play is not available.";
+    setDuelControls("idle");
+    setDuelStatus(`<div class="netmsg"><div class="so-t">Online play is not available</div><div class="so-s">${msg}</div>`+
+      (sentinelOk?`<div class="so-btns" style="margin-top:8px"><button class="primary" id="sooffline">Duel a Sentinel</button></div>`:"")+`</div>`);
+    const b=$("sooffline"); if(b) b.onclick=offlineSentinel;
+  }
+  function offlineSentinel(){
+    const s=Net.LocalMock().findMatch({rating:ladder.rating, name:netName(), tier:ladder.tier().name});
+    const sess=s.acceptSentinel(); s.cancel();
+    if(sess) acceptMatch(sess.meta, sess);
+  }
   function openDuel(){ renderDuel(); const o=$("duelscreen"); o.classList.add("show"); o.setAttribute("aria-hidden","false"); }
-  function closeDuel(){ if(pvpSearch){pvpSearch.cancel();pvpSearch=null;} const o=$("duelscreen"); o.classList.remove("show"); o.setAttribute("aria-hidden","true"); }
+  function closeDuel(){ onlineGen++; if(pvpSearch){pvpSearch.cancel();pvpSearch=null;} const o=$("duelscreen"); o.classList.remove("show"); o.setAttribute("aria-hidden","true"); }
   // honest "your standing" panel — REAL earned data only (peak / current / record /
   // placement). No invented rivals: the global leaderboard arrives with cloud play.
   function standingRows(){
@@ -4098,7 +4612,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       : (t.isTop ? `Peak rank` : `${t.toNext} to ${t.next}`);
     $("duelscreen").innerHTML=
       `<div class="hero duel"><h2>RANKED DUEL</h2>`+
-      `<div class="ll-note" style="margin:-2px 0 4px">Live rivals arrive with cloud play — sharpen up against Sentinels (practice bots at your rank) now.</div>`+
+      `<div class="ll-note" style="margin:-2px 0 4px">Find a rival searches for live players near your rank. Nobody around? A Sentinel, a practice bot at your rank, steps in. Play a friend is unranked.</div>`+
       `<div class="tiercard">`+
         `<div class="tierbadge"><span class="tg">${t.glyph}</span><span class="tn">${t.name}<small>${ladder.rating} rating · ${next}</small></span></div>`+
         `<div class="rankbar"><i style="width:${Math.round(t.progress*100)}%"></i></div>`+
@@ -4108,7 +4622,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       `<div class="duelstatus" id="duelstatus"></div>`+
       `<div class="duel-actions" id="duelactions"></div>`+
       `<div class="ladderlist"><div class="ll-h">Your standing</div>${standingRows()}`+
-        `<div class="ll-note">Global leaderboard & live rivals arrive with cloud play. No fake opponents here.</div></div>`+
+        `<div class="ll-note">A global leaderboard comes later. No fake opponents here.</div></div>`+
       `<button class="close" id="duelclose">Close</button></div>`;
     $("duelclose").onclick=closeDuel;
     setDuelControls("idle");
@@ -4116,37 +4630,115 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   function setDuelStatus(html){ const el=$("duelstatus"); if(el) el.innerHTML=html||""; }
   function setDuelControls(state){
     const box=$("duelactions"); if(!box)return;
+    const stop=()=>{ onlineGen++; if(pvpSearch){pvpSearch.cancel();pvpSearch=null;} };
     if(state==="idle"){
-      box.innerHTML=`<button class="primary" id="findbtn">Find a rival ⚔</button>`;
+      box.innerHTML=`<button class="primary" id="findbtn">Find a rival ⚔</button><button id="friendbtn">Play a friend</button>`;
       $("findbtn").onclick=startSearch;
+      $("friendbtn").onclick=()=>{ stop(); setDuelStatus(""); setDuelControls("friend"); };
     }else if(state==="searching"){
       box.innerHTML=`<button id="cancelbtn">Cancel search</button>`;
-      $("cancelbtn").onclick=()=>{ if(pvpSearch){pvpSearch.cancel();pvpSearch=null;} setDuelStatus(""); setDuelControls("idle"); };
+      $("cancelbtn").onclick=()=>{ stop(); setDuelStatus(""); setDuelControls("idle"); };
+    }else if(state==="friend"){
+      box.innerHTML=`<div class="friendbox">`+
+        `<div class="fb-t">Play a friend</div>`+
+        `<div class="fb-s">One of you gets a code, the other types it in. Friendly duels are unranked, so no rating moves.</div>`+
+        `<button class="primary" id="fhost">Get a code</button>`+
+        `<div class="fb-or">or type your friend's code</div>`+
+        `<div class="fb-join"><input id="fcode" maxlength="4" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" aria-label="Friend's code"><button id="fjoin">Join</button></div>`+
+        `<button id="fback">Back</button></div>`;
+      $("fhost").onclick=()=>hostFriend(null);
+      $("fjoin").onclick=joinFriend;
+      const inp=$("fcode"); if(inp && inp.addEventListener) inp.addEventListener("keydown",(e)=>{ if(e && e.key==="Enter") joinFriend(); });
+      $("fback").onclick=()=>{ stop(); setDuelStatus(""); setDuelControls("idle"); };
+    }else if(state==="friendwait"){
+      box.innerHTML=`<button id="cancelbtn">Cancel</button>`;
+      $("cancelbtn").onclick=()=>{ stop(); setDuelStatus(""); setDuelControls("friend"); };
     }
   }
+  const connectingLine=()=>`<div class="searchline"><span class="spinner"></span><span>Connecting to online play…</span></div>`;
   function startSearch(){
-    if(pvpSearch)pvpSearch.cancel();
+    if(pvpSearch)pvpSearch.cancel(); pvpSearch=null;
     pvpResolved=false; offerCount=0;
+    const gen=++onlineGen;
     setDuelControls("searching");
-    const t=ladder.tier();
-    setDuelStatus(`<div class="searchline"><span class="spinner"></span><span>Searching for a ${t.name} rival…</span></div>`);
-    pvpSearch=Net.findMatch({rating:ladder.rating, name:ladder.name, selfId:ladder.playerId, tier:t.name});
-    pvpSearch.onState(onSearchState);
+    setDuelStatus(connectingLine());
+    goOnline().then(()=>{
+      if(gen!==onlineGen)return;
+      const t=ladder.tier();
+      setDuelStatus(`<div class="searchline"><span class="spinner"></span><span>Searching for a ${t.name} rival…</span></div>`);
+      pvpSearch=Net.findMatch({rating:ladder.rating, name:netName(), selfId:netId, tier:t.name});
+      pvpSearch.onState((s)=>{ if(gen===onlineGen) onSearchState(s); });
+    },(e)=>{ if(gen===onlineGen) onlineFailed(e,true); });
+  }
+  /* ---- Play a friend: a private lobby at sixfold/friends/<CODE>. Same presence,
+     claim and commit-reveal relay as the public lobby; never a Sentinel; unranked. */
+  let friendCode=null;
+  function pickFreeCode(db,tries){
+    const c=FirebaseNet.newFriendCode();
+    return db.ref(FirebaseNet.friendRoot(c)+"/lobby").get().then((snap)=>{
+      const v=snap&&snap.val&&snap.val();
+      return (v && Object.keys(v).length && (tries|0)<6) ? pickFreeCode(db,(tries|0)+1) : c;
+    });
+  }
+  function hostFriend(code){
+    if(pvpSearch){pvpSearch.cancel();pvpSearch=null;}
+    pvpResolved=false;
+    const gen=++onlineGen;
+    setDuelControls("friendwait"); setDuelStatus(connectingLine());
+    goOnline().then((db)=> gen!==onlineGen ? null : (code || pickFreeCode(db)))
+      .then((c)=>{ if(gen===onlineGen && c) runFriendSearch(c,"host",gen); },
+        (e)=>{ if(gen===onlineGen) onlineFailed(e,false); });
+  }
+  function joinFriend(){
+    const inp=$("fcode"), code=FirebaseNet.normalizeCode(inp?inp.value:"");
+    if(!code){
+      setDuelStatus(`<div class="netmsg"><div class="so-s">A code is 4 letters or numbers, like K7QX. Ask your friend to read it out again.</div></div>`);
+      return;
+    }
+    if(pvpSearch){pvpSearch.cancel();pvpSearch=null;}
+    pvpResolved=false;
+    const gen=++onlineGen;
+    setDuelControls("friendwait"); setDuelStatus(connectingLine());
+    goOnline().then(()=>{ if(gen===onlineGen) runFriendSearch(code,"join",gen); },
+      (e)=>{ if(gen===onlineGen) onlineFailed(e,false); });
+  }
+  function runFriendSearch(code,role,gen){
+    friendCode=code;
+    setDuelControls("friendwait");
+    setDuelStatus(role==="host"
+      ? `<div class="friendcode">Your code<b>${code}</b></div>`+
+        `<div class="searchsub">Your friend taps Play a friend and types this code.</div>`+
+        `<div class="searchline"><span class="spinner"></span><span>Waiting for your friend…</span></div>`
+      : `<div class="searchline"><span class="spinner"></span><span>Joining ${code}…</span></div>`);
+    pvpSearch=FirebaseNet.friendBackend(code).findMatch({rating:ladder.rating, name:netName(), selfId:netId, role});
+    pvpSearch.onState((s)=>{
+      if(gen!==onlineGen)return;
+      if(s.state==="matched"){ acceptMatch(s.opponent, s.session); }
+      else if(s.state==="friend-missing"||s.state==="friend-timeout"){
+        pvpSearch=null; setDuelControls("friend");
+        setDuelStatus(`<div class="netmsg"><div class="so-s">`+(s.state==="friend-missing"
+          ? `Nobody is waiting with code <b>${code}</b>. Check the code with your friend, or tap Get a code and send them yours.`
+          : `Your friend did not join within 10 minutes. Get a new code when you are both ready.`)+`</div></div>`);
+      }
+      else if(s.state==="error"){ onlineFailed({reason:s.reason},false); }
+    });
   }
   function onSearchState(s){
     if(s.state==="searching"){
       const widen = s.half===Infinity ? "anyone online" : ("±"+s.half+" rating");
       setDuelStatus(`<div class="searchline"><span class="spinner"></span><span>Searching… (${widen})</span></div>`+
-        `<div class="searchsub">${Math.round(s.elapsedMs/1000)}s — widening the net</div>`);
+        `<div class="searchsub">${Math.round(s.elapsedMs/1000)}s, widening the net</div>`);
     }else if(s.state==="matched"){
       acceptMatch(s.opponent, s.session);
+    }else if(s.state==="error"){
+      onlineFailed({reason:s.reason},true);
     }else if(s.state==="sentinel-offer"){
       setDuelControls("searching");
       offerCount++;
       const honest = offerCount>1
-        ? `No human players are online yet — that's coming with cloud play. A <b>Sentinel</b> (a practice bot at your ${ladder.tier().name} rank) is your opponent for now. You still climb, with less rank at risk.`
-        : `Face a <b>Sentinel</b> — a practice bot tuned to your ${s.opponent.tierName||ladder.tier().name} rank. You still climb, but you risk less rank than against a human.`;
-      setDuelStatus(`<div class="sentineloffer"><div class="so-t">No live rivals online right now</div>`+
+        ? `No other players are searching right now. A <b>Sentinel</b> (a practice bot at your ${ladder.tier().name} rank) is your opponent for now. You still climb, with less rank at risk.`
+        : `Face a <b>Sentinel</b>, a practice bot tuned to your ${s.opponent.tierName||ladder.tier().name} rank. You still climb, but you risk less rank than against a human.`;
+      setDuelStatus(`<div class="sentineloffer"><div class="so-t">No live rivals searching right now</div>`+
         `<div class="so-s">${honest}</div>`+
         `<div class="so-btns"><button class="primary" id="sokeep">Face Sentinel</button>`+
         (offerCount>1?"":`<button id="sowait">Keep searching</button>`)+`</div></div>`);
@@ -4169,22 +4761,31 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     let taughtPillar=false; try{ taughtPillar=!!localStorage.getItem("sixfold_rankedpillar"); }catch(e){}
     if(!taughtPillar){
       try{localStorage.setItem("sixfold_rankedpillar","1");}catch(e){}
-      setTimeout(()=>showToast("⚔ Ranked is pure — assist charms rest. Only your own reads (Insight · Foresight) help here."), reduced()?0:500);
+      setTimeout(()=>showToast(opponent.friend
+        ? "⚔ Friendly duel with "+opponent.name+". Unranked, and assist charms rest: only your own reads help."
+        : "⚔ Ranked is pure: assist charms rest. Only your own reads (Insight · Foresight) help here."), reduced()?0:500);
     }else{
-      setTimeout(()=>showToast(opponent.kind==="sentinel"
-        ? "👻 Sentinel engaged — "+opponent.name+" · reduced stakes"
-        : "⚔ Rival found — "+opponent.name), reduced()?0:500);
+      setTimeout(()=>showToast(opponent.friend
+        ? "⚔ Friendly duel with "+opponent.name+" · unranked"
+        : opponent.kind==="sentinel"
+        ? "👻 Sentinel engaged: "+opponent.name+" · reduced stakes"
+        : "⚔ Rival found: "+opponent.name), reduced()?0:500);
     }
   }
   // Abandoning a LIVE, in-progress ranked duel counts as a loss — no free dodge.
   // (Closes the "navigate away while losing -> eat no rating" exploit.)
   function abandonPvp(){
     if(pvpResolved)return; pvpResolved=true;
+    if(pvpOpp && pvpOpp.friend){   // a friendly duel is unranked: leaving costs no rating
+      if(pvpSession){ try{pvpSession.close();}catch(e){} }
+      showToast("Friendly duel left");
+      return;
+    }
     const opp=pvpOpp||{rating:ladder.rating,kind:"live",id:null};
     ladder.applyResult(false,{rating:opp.rating,kind:opp.kind,id:opp.id},nowMs());
     savePvp();
     if(pvpSession){ try{pvpSession.close();}catch(e){} }
-    showToast("Ranked duel abandoned — counted as a loss");
+    showToast("Ranked duel abandoned: counted as a loss");
   }
   function leavePvp(){
     if(pvpSession){ try{pvpSession.close();}catch(e){} }
@@ -4198,6 +4799,14 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     opts=opts||{};
     $("rematch").style.display="none";
     recordMatchStats(win,summary);                 // ranked duels count toward lifetime stats too
+    if(pvpOpp && pvpOpp.friend){
+      // FRIENDLY duel: unranked. No rating change, no ranked sunbeams, no Lucid
+      // Winds mint (two friends must not be able to farm each other).
+      if(pvpSession){ try{pvpSession.close();}catch(e){} }
+      setTimeout(()=>{ Sfx.play(win?"victory":"defeat"); buzz(win?[0,45,45,45]:130); }, reduced()?0:950);
+      setTimeout(()=>{ showFriendResult(win,summary); }, reduced()?0:2000);
+      return;
+    }
     const opp = pvpOpp || {rating:ladder.rating, kind:"live", id:null};
     // stakesKind lets a disconnect-award resolve at REDUCED stakes (can't be farmed)
     const stakesKind = opts.stakesKind || opp.kind;
@@ -4250,9 +4859,28 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     on("pvpNext",()=>{ hideResult(); openDuel(); startSearch(); });
     on("pvpDone",()=>{ hideResult(); leavePvp(); });
   }
+  function showFriendResult(win,summary){
+    const name=pvpOpp?pvpOpp.name:"Friend", code=friendCode;
+    $("resultscreen").innerHTML=
+      `<div class="hero result ${win?"win":"lose"}">`+
+        `<div class="result-word">${win?"VICTORY":"DEFEAT"}</div>`+
+        `<div class="result-flavor">vs ${name} · friendly duel, unranked</div>`+
+        `<div class="stat-chips">`+
+          `<div class="chip"><b>${summary.rounds}</b><span>rounds</span></div>`+
+          `<div class="chip"><b>${summary.unpredictabilityPct}%</b><span>unpred</span></div>`+
+        `</div>`+
+        `<div class="result-actions">`+(code?`<button class="primary" id="pvpAgain">Play again · ${code}</button>`:"")+`<button id="pvpDone">Done</button></div>`+
+      `</div>`;
+    const rs=$("resultscreen"); rs.setAttribute("aria-hidden","false"); if(rs.offsetWidth!==undefined) void rs.offsetWidth; rs.classList.add("show");
+    if(win)victoryBurst();
+    const on=(id,fn)=>{const el=$(id); if(el) el.onclick=fn;};
+    // both friends tap Play again: they meet again in the same private lobby
+    on("pvpAgain",()=>{ hideResult(); openDuel(); setDuelControls("friend"); hostFriend(code); });
+    on("pvpDone",()=>{ hideResult(); leavePvp(); });
+  }
   function handlePvpDisconnect(){
     if(over||pvpResolved||!isPvP)return;
-    showToast("⚠ Rival disconnected — duel awarded to you");
+    showToast("⚠ Rival disconnected: duel awarded to you");
     over=true; busy=true; matchWinner="P";
     $("roundlbl").textContent="Match over"; $("verdict").textContent="VICTORY"; $("verdict").style.color=getCss("--gold"); $("sub").textContent="rival fled the duel";
     const st=game?game.state():{round:1,playerHist:[]};
@@ -4499,27 +5127,6 @@ body.reduce .fighter-art .sprite { animation: none !important; }
        typeof location!=="undefined" && /^https?:/.test(location.protocol)){
       const reg=()=>navigator.serviceWorker.register("sw.js").catch(()=>{});
       if(typeof window!=="undefined" && window.addEventListener) window.addEventListener("load",reg); else reg();
-    }
-  }catch(e){}
-
-  // Add to Home Screen button (Dewball pattern — visible even when
-  // beforeinstallprompt never fires, e.g. iOS)
-  try{
-    const ibs=["btn-install","btn-install-main"].map((id)=>document.getElementById(id)).filter(Boolean);
-    if(ibs.length){
-      const standalone=!!(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)||!!window.navigator.standalone;
-      if(standalone){ ibs.forEach((b)=>b.style.display="none"); }
-      else{
-        let deferred=null;
-        window.addEventListener("beforeinstallprompt",(e)=>{ e.preventDefault(); deferred=e; });
-        const onInstall=()=>{
-          if(deferred){ deferred.prompt(); deferred=null; return; }
-          const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
-          alert(ios ? "To add Sixfold to your Home Screen:\n\nTap the Share button, then Add to Home Screen."
-                    : "To add Sixfold to your Home Screen:\n\nOpen the browser menu, then Add to Home Screen or Install.");
-        };
-        ibs.forEach((b)=>b.addEventListener("click",onInstall));
-      }
     }
   }catch(e){}
 })();

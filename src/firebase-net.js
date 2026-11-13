@@ -44,6 +44,10 @@
   function nowMs() { try { return Date.now(); } catch (e) { return 0; } }
   function rand() { try { return Math.random(); } catch (e) { return 0.5; } }
   function salt() { return (rand().toString(36).slice(2) + nowMs().toString(36)); }
+  // anything read off the wire is untrusted: names land in the page, so keep them
+  // short and free of markup; ratings are clamped numbers.
+  function cleanName(n) { var s = String(n == null ? "" : n).replace(/[<>&"'`\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 20); return s || "Rival"; }
+  function cleanRating(r) { r = Number(r); return (r >= 0 && r <= 5000) ? Math.round(r) : 1000; }
 
   /* ---------------- namespacing + friend codes ---------------- */
   var ROOT = "sixfold";
@@ -97,7 +101,7 @@
     function readPool() {
       return db.ref(P.lobby).get().then(function (snap) {
         var v = (snap && snap.val && snap.val()) || {};
-        return Object.keys(v).map(function (id) { return { id: id, name: v[id].name, rating: v[id].rating, online: true, status: v[id].status }; });
+        return Object.keys(v).map(function (id) { var e = v[id] || {}; return { id: id, name: cleanName(e.name), rating: cleanRating(e.rating), online: true, status: e.status }; });
       });
     }
 
@@ -257,8 +261,8 @@
         if (!d.a || !d.b) throw new Error("duel node missing");
         var mine = d.a === myUid ? "a" : "b";
         var opp = mine === "a"
-          ? { id: d.b, name: d.bName || "Rival", kind: "human", rating: d.bRating || 1000, friend: FRIEND }
-          : { id: d.a, name: d.aName || "Rival", kind: "human", rating: d.aRating || 1000, friend: FRIEND };
+          ? { id: d.b, name: cleanName(d.bName), kind: "human", rating: cleanRating(d.bRating), friend: FRIEND }
+          : { id: d.a, name: cleanName(d.aName), kind: "human", rating: cleanRating(d.aRating), friend: FRIEND };
         return makeRtdbSession(db, duelId, myUid, mine, opp, P);
       });
     }
@@ -304,6 +308,9 @@
               try { oppRef.off("value", onVal); } catch (e) {}
               var ok = hash(n + ":" + ov.reveal + ":" + ov.salt) === ov.commit;
               if (!ok) return reject(new Error("commit-reveal mismatch (cheat?)"));
+              // a valid reveal is a whole stance 0..5 (rounds) or bind 0..2 (binds)
+              var top = kind === "rounds" ? 6 : 3, rv = ov.reveal;
+              if (typeof rv !== "number" || rv < 0 || rv >= top || Math.floor(rv) !== rv) return reject(new Error("reveal out of range"));
               resolve(kind === "rounds" ? { oppPick: ov.reveal } : { oppBind: ov.reveal });
             }
           };
