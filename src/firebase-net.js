@@ -481,7 +481,8 @@
       missTried[key] = t;
       quietP(db.ref(base + "/" + c.kind + "/" + c.n).transaction(function (cur) {
         var x = cur && typeof cur === "object" ? JSON.parse(JSON.stringify(cur)) : null;
-        if (!x || x.miss) return;
+        if (!x) return null;   // not known locally yet: a no-op the server retries with the real value
+        if (x.miss) return;
         var ca = o2(x.a).commit != null, cb = o2(x.b).commit != null;
         if (ca === cb || !(Number(x.t) > 0) || serverNow() < Number(x.t) + ROUND_MS) return;
         x.miss = ca ? "b" : "a";
@@ -567,9 +568,27 @@
       var here = obj(snap && snap.val && snap.val());
       var others = Object.keys(here).filter(function (k) { return k !== uid && here[k]; });
       if (others.length >= 2) throw fail("room-full");
-      var room = makeRoom(db, code, uid, o);
-      return room._enter().then(function () { return room; });
+      // nobody else here: whatever the code holds is left over from an earlier
+      // visit (a score, an old duel), so start the room clean
+      return (others.length ? Promise.resolve() : clearIfEmpty(db, code, uid)).then(function () {
+        var room = makeRoom(db, code, uid, o);
+        return room._enter().then(function () { return room; });
+      });
     });
+  }
+  // remove everything under sixfold/friends/<CODE> (and nothing else) if nobody
+  // but `except` is in its room. A transaction, so a player arriving at the same
+  // moment keeps the room. Resolves true if the code was cleared.
+  function clearIfEmpty(db, code, except) {
+    if (!CODE_RE.test(String(code || ""))) return Promise.resolve(false);
+    return db.ref(friendRoot(code)).transaction(function (cur) {
+      // (the live SDK may first call this with null before it knows the server's
+      // value: answer null, a no-op that the server retries with the real value)
+      if (cur == null) return null;
+      var here = obj(obj(obj(cur).room).here);
+      if (Object.keys(here).some(function (k) { return k !== except && here[k]; })) return;
+      return null;
+    }, undefined, false).then(function (r) { return !!(r && r.committed); }, function () { return false; });
   }
 
   function makeRoom(db, code, uid, o) {
@@ -579,7 +598,8 @@
     var joinedAt = now();
     var st = { here: {}, ready: {}, duel: null, won: {}, ended: {}, say: {}, left: {} };
     var subs = { change: [], duel: [], say: [], ended: [], gone: [], back: [] };
-    var seenSay = {}, endedSeen = {}, startedN = 0, creating = 0, first = true;
+    var seenSay = {}, endedSeen = {}, startedN = 0, creating = 0, first = true, tidied = {}, tidyTimers = [];
+    var TIDY_MS = o.tidyMs == null ? 8000 : o.tidyMs;
     var lastFriend = null, friendHere = false, lastSayAt = -Infinity, gone = false;
     var roomRef = db.ref(base), infoRef = null;
     function emit(k, x) { (subs[k] || []).forEach(function (f) { try { f(x); } catch (e) {} }); }
@@ -655,6 +675,14 @@
         var e = obj(st.ended[n]);
         if (!first) emit("ended", { n: Number(n) || 0, why: endWhy(e.why), by: String(e.by || "") });
       });
+      // a duel that has a result (or was called off) leaves only its score: its
+      // rounds under .../duels/<id> are removed a few seconds later (the delay lets
+      // the slower phone finish reading the last reveal)
+      if (st.duel && st.duel.id && safeKey(String(st.duel.id)) && (st.won[st.duel.n] || st.ended[st.duel.n]) && !tidied[st.duel.id]) {
+        var tid = String(st.duel.id);
+        tidied[tid] = 1;
+        tidyTimers.push(root.setTimeout(function () { quiet(db.ref(friendRoot(code) + "/duels/" + tid).remove()); }, TIDY_MS));
+      }
       // both ready for the same next duel: write it (once, whoever gets there first)
       if (vw.friend && !vw.full && vw.myReady && vw.friendReady) createDuel(vw);
       // a duel I am in and readied for has been written: start it, once
@@ -729,7 +757,9 @@
           quiet(db.ref(base + "/left/" + uid).set(now())),
           quiet(db.ref(base + "/ready/" + uid).remove()),
           quiet(db.ref(base + "/say/" + uid).remove()),
-        ]).then(function () { return quiet(db.ref(base + "/here/" + uid).remove()); });
+        ]).then(function () { return quiet(db.ref(base + "/here/" + uid).remove()); })
+          // the last one out takes the room with them (only this code's own record)
+          .then(function () { return clearIfEmpty(db, code, null); });
       },
       _enter: function () {
         return announce().then(function () {
