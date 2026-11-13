@@ -537,6 +537,7 @@
     border:1px solid #ffffff26;color:var(--washi);background:#ffffff12;transition:transform .1s,background .2s}
   .duel-actions button.primary{background:linear-gradient(180deg,#b98a2e,#8a6420);border-color:#0003;color:#fff;box-shadow:0 4px 14px #0005}
   .duel-actions button:active{transform:scale(.97)}
+  .duel-actions button.quietbtn{background:transparent;border:1px solid #f3ead755;color:var(--washi-dim);box-shadow:none}
   .duelstatus{min-height:30px;display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;max-width:340px;margin-top:4px}
   .searchline{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--washi)}
   .spinner{width:16px;height:16px;border-radius:50%;border:2px solid #ffffff33;border-top-color:var(--gold);animation:spin .8s linear infinite}
@@ -1242,7 +1243,7 @@
     clearForesight();
     nodeEls.forEach(el=>el.classList.add("dim"));
     nodeEls[p].classList.remove("dim"); nodeEls[p].classList.add("ppick");
-    $("verdict").textContent="…"; $("sub").textContent= isPvP?((pvpOpp&&pvpOpp.friend?pvpOpp.name:"rival")+" is choosing…"):"reading you";
+    $("verdict").textContent="…"; $("sub").textContent= isPvP?((pvpOpp&&pvpOpp.friend?(pvpOpp.name||"Your friend"):"Rival")+" is choosing…"):"reading you";
     if(isPvP){ pvpCommit(p); return; }
     game.chooseStance(p);   // engine emits events; handlers below drive the rest
   }
@@ -1274,7 +1275,7 @@
   // who the other side is, in words: the friend's name, "Rival" in a ranked duel,
   // the Sentinel's or the foe's own name against the computer
   function rivalName(){
-    if(isPvP && pvpOpp){ if(pvpOpp.friend || pvpOpp.kind==="sentinel") return pvpOpp.name||"Rival"; return "Rival"; }
+    if(isPvP && pvpOpp){ if(pvpOpp.friend) return pvpOpp.name||"Your friend"; if(pvpOpp.kind==="sentinel") return pvpOpp.name||"Rival"; return "Rival"; }
     return ai.name||"Rival";
   }
   function addTag(i,txt,cls){ const el=nodeEls[i]; if(!el)return; const s=document.createElement("span"); s.className="ptag"+(cls?" "+cls:""); s.textContent=txt; el.appendChild(s); }
@@ -1630,7 +1631,7 @@
         : pvpOpp.kind==="sentinel"
         ? "Sentinel · practice bot at your "+t.name+" rank · reduced rank stakes"
         : "Live rival · "+t.name+" tier · charms rest, pure wheel";
-      mt.textContent=pvpOpp.friend?"Friendly":"Ranked"; mt.classList.add("comp","ranked");
+      mt.textContent=pvpOpp.friend?"Friendly":"Ranked"; mt.classList.add("comp","ranked");   /* "ranked" is only the gold tag style */
       $("compbanner").classList.toggle("show",false);
       return;
     }
@@ -2204,7 +2205,7 @@
      computer: the only way out of a room is a tap on Leave. */
   const ROOM_LINK="https://lucidwinds.com/satellites/sixfold/";
   let revealing=false;
-  let room=null, roomNote="", roomGone=null, roomCount=null, roomInDuel=0;
+  let room=null, roomNote="", roomGone=null, roomCount=null, roomInDuel=0, roomHadFriend=false;
   let roomQuiet=false; try{ roomQuiet=localStorage.getItem("sixfold_quiet")==="1"; }catch(e){}
   function pickFreeCode(db,tries){
     const c=FirebaseNet.newFriendCode();
@@ -2254,7 +2255,7 @@
     }).then((r)=>{
       if(!r) return;
       if(gen!==onlineGen){ r.leave(); return; }
-      room=r; roomNote=""; roomGone=null; roomInDuel=0;
+      room=r; roomNote=""; roomGone=null; roomInDuel=0; roomHadFriend=false;
       wireRoom(r); setRoomParam(r.code); syncTalk();
       openDuel();
     },(e)=>{
@@ -2283,6 +2284,7 @@
       if(room!==r) return;
       cancelRoomCountdown();
       roomGone=g;
+      if(r.view().myReady) r.setReady(false);   // a Ready with nobody to duel means nothing
       roomNote= g.why==="left" ? `<div>${g.name} left the room.</div>`
         : `<div>${g.name} lost the connection.</div><div class="rn-sub">They can come back with the same code.</div>`;
       updateRoom(true);
@@ -2333,7 +2335,8 @@
     const o=$("duelscreen"); if(!o || !$("rnote")) return;
     const v=room.view(), fname=v.friend?v.friend.name:null;
     $("rmename").textContent=v.me.name;
-    $("rfrname").textContent=fname||"Nobody yet";
+    if(fname) roomHadFriend=true;
+    $("rfrname").textContent=fname||(roomHadFriend?"Empty seat":"Nobody yet");
     $("rfrseat").classList.toggle("empty",!fname);
     $("rmescore").textContent=v.score.me; $("rfrscore").textContent=fname?v.score.friend:"-";
     $("rmeready").textContent=(v.myReady&&fname)?"Ready":"";
@@ -2345,6 +2348,7 @@
     else{
       note=roomNote||"";
       if(roomInDuel) note+=`<div class="rn-sub">Your duel is on.</div>`;
+      else if(!fname && !roomGone && roomHadFriend) note+=`<div class="rn-wait"><span class="spinner"></span><span>Send the code or the link to play again</span></div>`;
       else if(!fname && !roomGone) note+=`<div class="rn-wait"><span class="spinner"></span><span>Waiting for your friend. Send them the code or the link.</span></div>`;
       else if(fname && v.myReady && !v.friendReady) note+=`<div class="rn-sub">Waiting for ${fname} to tap Ready.</div>`;
       else if(fname && !v.myReady && v.friendReady) note+=`<div><b>${fname} is ready.</b></div>`;
@@ -2356,7 +2360,7 @@
     if(roomCount){ sig="count"; acts=``; }
     else if(roomInDuel && !over){ sig="induel"; acts=`<button class="primary" id="rback">Back to the duel</button>`; }
     else if(roomGone && !fname){ sig="gone"; acts=`<button class="primary" id="rwait">Wait here</button>`; }
-    else{ sig="ready"+(v.myReady?1:0)+(fname?1:0); acts=`<button class="primary" id="rready"${fname?"":" disabled"}>${v.myReady?"Not ready":"Ready"}</button>`; }
+    else{ sig="ready"+(v.myReady?1:0)+(fname?1:0); acts=`<button class="${(v.myReady||!fname)?"quietbtn":"primary"}" id="rready"${fname?"":" disabled"}>${v.myReady?"Not ready":"Ready"}</button>`; }
     const box=$("ractions");
     if(force || box._sig!==sig){
       box._sig=sig; box.innerHTML=acts;
@@ -2860,7 +2864,7 @@
         `<div class="ttag">read · strike · ascend</div>`+
         `<div class="thero">${heroHTML}</div>`+
         `<div class="tmenu">`+
-          `<button class="tbtn primary" id="tDuel">⚔ Ranked Duel</button>`+
+          `<button class="tbtn primary" id="tDuel">${room?"⚔ Friend room":"⚔ Ranked Duel"}</button>`+
           `<button class="tbtn gold" id="tFree">▶ Free Duel</button>`+
         `</div>`+
         `<div class="tgrid">`+

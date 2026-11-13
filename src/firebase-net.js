@@ -46,7 +46,7 @@
   function salt() { return (rand().toString(36).slice(2) + nowMs().toString(36)); }
   // anything read off the wire is untrusted: names land in the page, so keep them
   // short and free of markup; ratings are clamped numbers.
-  function cleanName(n) { var s = String(n == null ? "" : n).replace(/[<>&"'`\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 20); return s || "Rival"; }
+  function cleanName(n, fallback) { var s = String(n == null ? "" : n).replace(/[<>&"'`\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 20); return s || fallback || "Rival"; }
   function cleanRating(r) { r = Number(r); return (r >= 0 && r <= 5000) ? Math.round(r) : 1000; }
 
   /* ---------------- namespacing + friend codes ---------------- */
@@ -575,7 +575,7 @@
   function makeRoom(db, code, uid, o) {
     var now = o.now || nowMs;
     var base = friendRoot(code) + "/room";
-    var name = cleanName(o.name);
+    var name = cleanName(o.name, "Player");
     var joinedAt = now();
     var st = { here: {}, ready: {}, duel: null, won: {}, ended: {}, say: {}, left: {} };
     var subs = { change: [], duel: [], say: [], ended: [], gone: [], back: [] };
@@ -601,7 +601,7 @@
       return {
         code: code,
         me: { uid: uid, name: name },
-        friend: f ? { uid: f, name: cleanName(st.here[f].name) } : null,
+        friend: f ? { uid: f, name: cleanName(st.here[f].name, "Player") } : null,
         full: full,
         nextN: nextN,
         myReady: st.ready[uid] === nextN,
@@ -611,7 +611,7 @@
       };
     }
     function cleanDuel(d) {
-      return { n: Number(d.n) || 0, id: String(d.id), a: String(d.a), b: String(d.b), aName: cleanName(d.aName), bName: cleanName(d.bName) };
+      return { n: Number(d.n) || 0, id: String(d.id), a: String(d.a), b: String(d.b), aName: cleanName(d.aName, "Player"), bName: cleanName(d.bName, "Player") };
     }
     function createDuel(v) {
       if (creating >= v.nextN) return;
@@ -619,7 +619,7 @@
       var ps = players(), a = ps[0], b = ps[1], nNext = v.nextN;
       if (!a || !b) return;
       var d = { n: nNext, id: "r" + nNext + "_" + now().toString(36) + "_" + Math.floor(rand() * 1e6).toString(36),
-        a: a, b: b, aName: cleanName(st.here[a].name), bName: cleanName(st.here[b].name), ts: now() };
+        a: a, b: b, aName: cleanName(st.here[a].name, "Player"), bName: cleanName(st.here[b].name, "Player"), ts: now() };
       // ONE writer: the first seat. (A transaction from both phones looked safe, but
       // the live SDK shows each phone its own optimistic duel before the server
       // picks one, so the two phones started two different duels and waited on
@@ -687,7 +687,7 @@
         return quiet(on ? r.set(view().nextN) : r.remove());
       },
       setName: function (nm) {
-        name = cleanName(nm);
+        name = cleanName(nm, "Player");
         if (!gone) quiet(db.ref(base + "/here/" + uid).update({ name: name }));
         return name;
       },
