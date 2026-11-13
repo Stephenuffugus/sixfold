@@ -2899,6 +2899,12 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   // why a room duel was called off: lost (a drop), quit, unready, idle (three
   // missed rounds), reload (a phone reloaded the page mid duel)
   function endWhy(w) { return (w === "quit" || w === "unready" || w === "idle" || w === "reload") ? w : "lost"; }
+  // two players with the same name (two "Player"s) are told apart by seat:
+  // "Player 1" (the first seat) and "Player 2". Returns [first, second].
+  function seatNames(n1, n2) {
+    if (String(n1).toLowerCase() !== String(n2).toLowerCase()) return [n1, n2];
+    return [String(n1).slice(0, 18) + " 1", String(n2).slice(0, 18) + " 2"];
+  }
   function obj(v) { return (v && typeof v === "object") ? v : {}; }
   function safeKey(k) { return typeof k === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(k); }
 
@@ -2966,10 +2972,12 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       var seats = ps.slice(0, 2), f = null;
       if (!full) for (var i = 0; i < seats.length; i++) if (seats[i] !== uid) f = seats[i];
       var nextN = ((st.duel && Number(st.duel.n)) || 0) + 1;
+      var myName = name, frName = f ? cleanName(st.here[f].name, "Player") : null;
+      if (f) { var sn = seatNames(me === 0 ? myName : frName, me === 0 ? frName : myName); myName = me === 0 ? sn[0] : sn[1]; frName = me === 0 ? sn[1] : sn[0]; }
       return {
         code: code,
-        me: { uid: uid, name: name },
-        friend: f ? { uid: f, name: cleanName(st.here[f].name, "Player") } : null,
+        me: { uid: uid, name: myName },
+        friend: f ? { uid: f, name: frName } : null,
         full: full,
         nextN: nextN,
         myReady: st.ready[uid] === nextN,
@@ -2979,7 +2987,8 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       };
     }
     function cleanDuel(d) {
-      return { n: Number(d.n) || 0, id: String(d.id), a: String(d.a), b: String(d.b), aName: cleanName(d.aName, "Player"), bName: cleanName(d.bName, "Player") };
+      var sn = seatNames(cleanName(d.aName, "Player"), cleanName(d.bName, "Player"));
+      return { n: Number(d.n) || 0, id: String(d.id), a: String(d.a), b: String(d.b), aName: sn[0], bName: sn[1] };
     }
     function createDuel(v) {
       if (creating >= v.nextN) return;
@@ -3111,7 +3120,8 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       // the duel session for a duel this room started (the relay under .../duels)
       session: function (d) {
         var side = d.a === uid ? "a" : "b", oppId = side === "a" ? d.b : d.a;
-        var opp = { id: oppId, name: side === "a" ? d.bName : d.aName, kind: "human", rating: 1000, friend: true, room: true, duelN: d.n };
+        var sn = seatNames(cleanName(d.aName, "Player"), cleanName(d.bName, "Player"));
+        var opp = { id: oppId, name: side === "a" ? sn[1] : sn[0], kind: "human", rating: 1000, friend: true, room: true, duelN: d.n };
         return makeRtdbSession(db, d.id, uid, side, opp,
           { root: friendRoot(code), lobby: base + "/here", duels: friendRoot(code) + "/duels" },
           { graceMs: o.graceMs == null ? 12000 : o.graceMs, roundMs: o.roundMs == null ? ROUND_MS_DEFAULT : o.roundMs, tickMs: o.tickMs, now: o.serverNow });
@@ -3265,7 +3275,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     ROOT: ROOT, CODE_ALPHABET: CODE_ALPHABET, CODE_RE: CODE_RE, newFriendCode: newFriendCode, normalizeCode: normalizeCode,
     friendRoot: friendRoot, pathsFor: pathsFor, friendBackend: friendBackend,
     connect: connect, friendlyError: friendlyError, isPermissionError: isPermissionError, SDK_URLS: SDK_URLS,
-    openRoom: openRoom, EMOTES: EMOTES, SAY_GAP_MS: SAY_GAP_MS, ROUND_MS: ROUND_MS_DEFAULT, cleanSay: cleanSay, liveDb: function () { return liveDb; } };
+    openRoom: openRoom, seatNames: seatNames, EMOTES: EMOTES, SAY_GAP_MS: SAY_GAP_MS, ROUND_MS: ROUND_MS_DEFAULT, cleanSay: cleanSay, liveDb: function () { return liveDb; } };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else { root.FirebaseNet = api; try { tryActivate(); } catch (e) {} }
 })(typeof globalThis !== "undefined" ? globalThis : this);
