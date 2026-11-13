@@ -570,8 +570,10 @@
       if (others.length >= 2) throw fail("room-full");
       // nobody else here: whatever the code holds is left over from an earlier
       // visit (a score, an old duel), so start the room clean
+      // coming back with the same id (a reload): keep the seat you had
+      var mine = here[uid], at = (mine && Number(mine.at) > 0) ? Number(mine.at) : null;
       return (others.length ? Promise.resolve() : clearIfEmpty(db, code, uid)).then(function () {
-        var room = makeRoom(db, code, uid, o);
+        var room = makeRoom(db, code, uid, o, others.length ? at : null);
         return room._enter().then(function () { return room; });
       });
     });
@@ -591,14 +593,15 @@
     }, undefined, false).then(function (r) { return !!(r && r.committed); }, function () { return false; });
   }
 
-  function makeRoom(db, code, uid, o) {
+  function makeRoom(db, code, uid, o, keepAt) {
     var now = o.now || nowMs;
     var base = friendRoot(code) + "/room";
     var name = cleanName(o.name, "Player");
-    var joinedAt = now();
+    var joinedAt = keepAt || now();
+    var announcing = false, entered = false;
     var st = { here: {}, ready: {}, duel: null, won: {}, ended: {}, say: {}, left: {} };
     var subs = { change: [], duel: [], say: [], ended: [], gone: [], back: [] };
-    var seenSay = {}, endedSeen = {}, startedN = 0, creating = 0, first = true, tidied = {}, tidyTimers = [];
+    var seenSay = {}, endedSeen = {}, startedN = 0, creating = 0, first = true, tidied = {}, tidyTimers = [], staleN = 0;
     var TIDY_MS = o.tidyMs == null ? 8000 : o.tidyMs;
     var lastFriend = null, friendHere = false, lastSayAt = -Infinity, gone = false;
     var roomRef = db.ref(base), infoRef = null;
@@ -652,6 +655,14 @@
       var v = obj(snap && snap.val && snap.val());
       st = { here: obj(v.here), ready: obj(v.ready), duel: (v.duel && typeof v.duel === "object" && v.duel.id && v.duel.a && v.duel.b) ? v.duel : null,
         won: obj(v.won), ended: obj(v.ended), say: obj(v.say), left: obj(v.left) };
+      // my own presence gone while I am still in the room (the server ran my
+      // onDisconnect during a blink, or an old tab's disconnect landed after this
+      // page's announce): say I am here again
+      if (entered && !gone && !announcing && !(st.here[uid] && typeof st.here[uid] === "object")) {
+        announcing = true;
+        var aw = announce(); var done = function () { announcing = false; };
+        if (aw && aw.then) aw.then(done, done); else done();
+      }
       var vw = view();
       // emotes and calls: only the friend's, only new ones, only known values
       Object.keys(st.say).forEach(function (u) {
@@ -687,6 +698,18 @@
       if (vw.friend && !vw.full && vw.myReady && vw.friendReady) createDuel(vw);
       // a duel I am in and readied for has been written: start it, once
       var d = st.duel;
+      if (first && d) {
+        // a page that has just opened never starts a duel it finds. If that duel
+        // is mine and unfinished, this page was reloaded in the middle of it: it
+        // cannot be rejoined (the board lived in the old page), so call it off
+        startedN = Number(d.n) || 0;
+        var dn = startedN, en = obj(st.ended[dn]);
+        if ((d.a === uid || d.b === uid) && !st.won[dn] && (!st.ended[dn] || en.why === "lost" || en.why === "reload")) {
+          if (!st.ended[dn]) room.endDuel(dn, "reload");
+          endedSeen[dn] = 1;
+          staleN = dn;
+        }
+      }
       if (d && (Number(d.n) || 0) > startedN && (d.a === uid || d.b === uid)) {
         startedN = Number(d.n) || 0;
         if (st.ready[uid] === startedN) emit("duel", cleanDuel(d));
@@ -761,8 +784,12 @@
           // the last one out takes the room with them (only this code's own record)
           .then(function () { return clearIfEmpty(db, code, null); });
       },
+      // the duel this page found interrupted when it opened (0 if none). Read it
+      // after openRoom resolves: "Your duel was called off".
+      staleDuel: function () { return staleN; },
       _enter: function () {
         return announce().then(function () {
+          entered = true;
           roomRef.on("value", onSnap);
           try { infoRef = db.ref(".info/connected"); infoRef.on("value", onInfo); } catch (e) { infoRef = null; }
         });

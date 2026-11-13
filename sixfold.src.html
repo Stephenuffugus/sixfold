@@ -2250,12 +2250,15 @@
       if(gen!==onlineGen) return null;
       return Promise.resolve(code || pickFreeCode(db)).then((c)=>{
         if(gen!==onlineGen) return null;
-        return FirebaseNet.openRoom(db, c, {uid:netId, name:roomName()});
+        return FirebaseNet.openRoom(db, c, {uid:roomUid(), name:roomName()});
       });
     }).then((r)=>{
       if(!r) return;
       if(gen!==onlineGen){ r.leave(); return; }
       room=r; roomNote=""; roomGone=null; roomInDuel=0; roomHadFriend=false;
+      // this page was reloaded in the middle of a duel: it cannot be rejoined (the
+      // board lived in the old page), so it was called off; say so plainly
+      if(r.staleDuel && r.staleDuel()) roomNote=`<div>Your duel was called off.</div><div class="rn-sub">The page reloaded during the duel. Tap Ready to play again.</div>`;
       wireRoom(r); setRoomParam(r.code); syncTalk();
       openDuel();
     },(e)=>{
@@ -2267,6 +2270,14 @@
       }
       onlineFailed(e,false);
     });
+  }
+  // the id this tab uses in friend rooms: kept for the tab's life (sessionStorage),
+  // so a reload comes back to the same seat instead of arriving as a stranger
+  function roomUid(){
+    let id=null;
+    try{ id=sessionStorage.getItem("sixfold_room_uid"); }catch(e){}
+    if(!id || !/^[A-Za-z0-9_-]{6,40}$/.test(id)){ id=netId; try{ sessionStorage.setItem("sixfold_room_uid",id); }catch(e){} }
+    return id;
   }
   function roomLink(code){
     let base=ROOM_LINK;
