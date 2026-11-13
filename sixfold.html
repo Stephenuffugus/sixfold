@@ -190,6 +190,13 @@
   body.reduce .bar.danger{animation:none}
   .barwrap{display:flex;flex-direction:column;align-items:center;gap:3px}
   .barlbl{font-size:9px;letter-spacing:.08em;color:var(--washi-dim);text-transform:uppercase}
+  .barlbl.danger{color:var(--seal);font-weight:800}
+  /* first friend duel: the three line card */
+  .hero.fcard{gap:10px;text-align:center;padding:22px 26px;border-radius:18px;background:#13182af0;border:1px solid #ffffff22}
+  .fcard .fc-l{font-family:var(--disp);font-weight:700;font-size:20px;color:var(--washi);line-height:1.3}
+  .fcard .fc-g{color:var(--gold)} .fcard .fc-r{color:#ef6a55}
+  .fcard button{margin-top:8px;font-family:var(--ui);font-weight:700;font-size:14px;min-height:48px;padding:11px 30px;border-radius:12px;cursor:pointer;
+    background:linear-gradient(180deg,#b98a2e,#8a6420);border:1px solid #0003;color:#fff}
 
   /* WHEEL */
   /* flex-shrink:0 is critical: body is a column flexbox, and on a phone the page
@@ -215,6 +222,12 @@
   .node.apick{border-color:var(--seal);box-shadow:0 0 0 2px var(--seal),0 0 18px #cf413088}
   .node.both{border-color:#fff;box-shadow:0 0 0 2px #fff,0 0 22px #fff8}
   .node.dim{opacity:.4}
+  /* whose pick is whose, said in words at the reveal */
+  .node .ptag{position:absolute;left:50%;top:-11px;transform:translateX(-50%);z-index:3;white-space:nowrap;pointer-events:none;
+    font-family:var(--ui);font-weight:800;font-size:10px;letter-spacing:.03em;padding:2px 7px;border-radius:9px;
+    background:var(--gold);color:#1a1206;box-shadow:0 2px 6px #0008;max-width:84px;overflow:hidden;text-overflow:ellipsis}
+  .node .ptag.rival{background:var(--seal);color:#fff}
+  .node .ptag.both{background:#fff;color:#222}
   .node.foresight{border-color:var(--jade);box-shadow:0 0 0 2px var(--jade),0 0 16px #5f917399;animation:fpulse 1s infinite alternate}
   @keyframes fpulse{to{box-shadow:0 0 0 3px var(--jade),0 0 24px #5f9173cc}}
   /* Foresight's recommended counter — the stance to STRIKE to land the read */
@@ -558,6 +571,72 @@
   .netmsg{background:#cf41301a;border:1px solid #cf413055;border-radius:13px;padding:12px;text-align:center;width:100%;max-width:340px;box-sizing:border-box}
   .netmsg .so-t{font-weight:700;font-size:13px;color:var(--washi)}
   .netmsg .so-s{font-size:12px;color:var(--washi);margin:4px 0 2px}
+  /* the duel screen scrolls on a short phone instead of clipping its top */
+  #duelscreen{overflow-y:auto}
+  #duelscreen .hero{margin:auto 0}
+  .duelstatus:empty{display:none}
+  .rname{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--washi-dim);width:100%;max-width:340px;box-sizing:border-box}
+  .rname input{flex:1;min-width:0;min-height:44px;box-sizing:border-box;font-family:var(--ui);font-weight:700;font-size:15px;color:var(--washi);
+    background:#0006;border:1px solid #ffffff33;border-radius:11px;padding:6px 12px}
+  .rname input:focus{outline:2px solid var(--gold);outline-offset:1px}
+  /* Play a friend: the ROOM */
+  .hero.room{gap:11px;width:100%;max-width:380px}
+  .roomcode{display:flex;align-items:baseline;gap:10px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--washi-dim)}
+  .roomcode b{font-family:var(--disp);font-size:36px;letter-spacing:.2em;color:var(--gold);line-height:1;user-select:all}
+  .roomlink{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .roomlink button{font-family:var(--ui);font-weight:700;font-size:13px;min-height:44px;padding:9px 18px;border-radius:11px;cursor:pointer;
+    border:1px solid #cda64f66;color:var(--gold);background:#cda64f14}
+  .roomlink .rl-s{font-size:11px;color:var(--washi-dim);word-break:break-all;text-align:center;max-width:320px}
+  .roomvs{display:flex;align-items:stretch;justify-content:center;gap:8px;width:100%}
+  .rseat{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 8px 10px;
+    border-radius:14px;background:#ffffff0c;border:1px solid #ffffff1c}
+  .rseat.me{border-color:#cda64f55}
+  .rseat.fr{border-color:#cf413055}
+  .rseat.empty{opacity:.55;border-style:dashed}
+  .rs-n{font-family:var(--disp);font-weight:700;font-size:15px;color:var(--washi);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rs-s{font-family:var(--disp);font-weight:800;font-size:34px;line-height:1.05;color:var(--gold)}
+  .rseat.fr .rs-s{color:#e6735f}
+  .rs-r{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--jade);min-height:14px}
+  .rs-vs{align-self:center;font-family:var(--disp);font-size:13px;color:var(--washi-dim);letter-spacing:.1em}
+  .rbub,.duelbub{position:absolute;left:50%;top:-14px;transform:translate(-50%,-6px);opacity:0;pointer-events:none;white-space:nowrap;
+    background:#f3ead7;color:#1a1d2b;font-weight:800;font-size:13px;padding:5px 11px;border-radius:14px;box-shadow:0 3px 12px #0007;
+    transition:opacity .2s,transform .2s;z-index:9;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+  .rbub.show,.duelbub.show{opacity:1;transform:translate(-50%,0)}
+  .roomscore{font-size:13px;font-weight:700;color:var(--washi)}
+  .roomnote{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;font-size:13px;color:var(--washi);min-height:20px;max-width:340px}
+  .roomnote .rn-res{font-family:var(--disp);font-weight:800;font-size:20px;letter-spacing:.06em}
+  .roomnote .rn-res.w{color:var(--gold)}
+  .roomnote .rn-res.l{color:#e6735f}
+  .roomnote .rn-sub{font-size:12px;color:var(--washi-dim)}
+  .roomnote .rn-count{font-family:var(--disp);font-weight:800;font-size:64px;line-height:1;color:var(--gold);text-shadow:0 0 22px #cda64f88}
+  .roomnote .rn-wait{display:flex;align-items:center;gap:9px}
+  .roomfoot{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;max-width:340px}
+  .rquiet{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--washi-dim);min-height:44px;cursor:pointer}
+  .rquiet input{width:20px;height:20px}
+  .hero.room .leave{font-family:var(--ui);font-weight:700;font-size:13px;min-height:48px;padding:11px 26px;border-radius:11px;cursor:pointer;
+    border:1px solid #cf413066;color:#f0b4a8;background:#cf41301a}
+  /* talk: six emotes (each with its word) and the call */
+  .talk{display:flex;flex-direction:column;align-items:center;gap:7px;width:100%;max-width:360px}
+  .talk .tk-row{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;width:100%}
+  .talk button{font-family:var(--ui);cursor:pointer;color:var(--washi);background:#ffffff10;border:1px solid #ffffff22;border-radius:11px;min-height:48px;padding:3px 0}
+  .talk .emo{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+  .talk .emo .ee{font-size:19px;line-height:1}
+  .talk .emo .ew,.talk .stc .sw{font-size:9.5px;font-weight:700;letter-spacing:.02em;color:var(--washi-dim)}
+  .talk .callbtn{font-weight:700;font-size:13px;padding:8px 16px;color:var(--gold);border-color:#cda64f55}
+  .talk .stc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+  .talk .stc .sg{font-size:17px;line-height:1}
+  .talk .tk-calls{display:none}
+  .talk.calling .tk-calls{display:grid}
+  .talk button:active{transform:scale(.95)}
+  .tk-h{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--washi-dim)}
+  /* in a room duel: one small Talk button opens the same bar */
+  .talkdock{position:fixed;right:10px;bottom:150px;z-index:30;display:none;flex-direction:column;align-items:flex-end;gap:8px}
+  .talkdock.on{display:flex}
+  .talkdock .talkbtn{font-family:var(--ui);font-weight:800;font-size:13px;min-height:48px;min-width:64px;padding:8px 14px;border-radius:24px;cursor:pointer;
+    color:var(--gold);background:#13182aee;border:1px solid var(--gold);box-shadow:0 3px 14px #0008}
+  .talkdock .talkpop{display:none;background:#13182af2;border:1px solid #ffffff2a;border-radius:14px;padding:9px;width:min(360px,calc(100vw - 20px));box-sizing:border-box}
+  .talkdock.open .talkpop{display:block}
+  .fighter{position:relative}
   /* PvP result extras (rendered inside #resultscreen) */
   .pvp-rank{display:flex;flex-direction:column;align-items:center;gap:7px;margin:6px 0;width:100%;max-width:320px}
   .pvp-delta{font-family:var(--disp);font-weight:800;font-size:26px}
@@ -786,14 +865,16 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   <div class="arena">
     <div class="fighter" id="pf">
       <div class="nm" id="pname">You</div>
+      <div class="duelbub" id="pbub"></div>
       <div class="stage" id="pstage"></div>
       <div class="hp" id="php"></div>
       <div class="ribbon" id="pribbon"></div>
-      <div class="barwrap"><span class="barlbl">unpred</span>
+      <div class="barwrap"><span class="barlbl" id="pbarlbl">unpred</span>
         <div class="bar" id="pbar"><div class="bar-fill"></div><span class="bar-num">—</span></div></div>
     </div>
     <div class="fighter" id="af">
       <div class="nm" id="aname">Ronin</div>
+      <div class="duelbub" id="abub"></div>
       <div class="stage" id="astage"></div>
       <div class="hp" id="ahp"></div>
       <div class="ribbon" id="aribbon"></div>
@@ -844,6 +925,9 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   </div>
 
   <div class="compbanner" id="compbanner">Assists off. Competitive.</div>
+
+  <!-- Talk in a friend room duel: emotes and the call (only talk, never a pick) -->
+  <div class="talkdock" id="talkdock"><div class="talkpop talk" id="talkpop"></div><button class="talkbtn" id="talkbtn" aria-expanded="false">Talk</button></div>
 
   <!-- Foe select -->
   <div class="drawer" id="foedrawer">
@@ -915,6 +999,9 @@ body.reduce .fighter-art .sprite { animation: none !important; }
 
   <!-- Ranked Duel — live head-to-head matchmaking + tier ladder (populated by glue) -->
   <div class="overlay" id="duelscreen" aria-hidden="true" role="dialog" aria-label="Ranked Duel"></div>
+
+  <!-- First friend duel only: the three line card -->
+  <div class="overlay" id="friendcard" aria-hidden="true" role="dialog" aria-label="How a friend duel works"></div>
 
   <!-- Title / home screen — the cinematic front door (populated by glue) -->
   <div id="title" aria-hidden="true" role="dialog" aria-label="SIXFOLD — title"></div>
@@ -2697,10 +2784,12 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       if (!a || !b) return;
       var d = { n: nNext, id: "r" + nNext + "_" + now().toString(36) + "_" + Math.floor(rand() * 1e6).toString(36),
         a: a, b: b, aName: cleanName(st.here[a].name), bName: cleanName(st.here[b].name), ts: now() };
-      quiet(db.ref(base + "/duel").transaction(function (cur) {
-        if (cur && (Number(cur.n) || 0) >= nNext) return;   // the other phone wrote it first
-        return d;
-      }));
+      // ONE writer: the first seat. (A transaction from both phones looked safe, but
+      // the live SDK shows each phone its own optimistic duel before the server
+      // picks one, so the two phones started two different duels and waited on
+      // each other forever. Found by the two phone smoke run, 13 Nov.)
+      if (a !== uid) return;
+      quiet(db.ref(base + "/duel").set(d));
     }
     function onSnap(snap) {
       if (gone) return;
@@ -3939,6 +4028,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     $("verdict").classList.remove("vs");
     $("roundlbl").textContent="Round 1"; $("verdict").textContent="Choose"; $("sub").textContent="tap a stance";
     busy=false;
+    syncTalk();
   }
   function aim(i){
     aimed=i; Sfx.play("tap");
@@ -3992,7 +4082,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     clearForesight();
     nodeEls.forEach(el=>el.classList.add("dim"));
     nodeEls[p].classList.remove("dim"); nodeEls[p].classList.add("ppick");
-    $("verdict").textContent="…"; $("sub").textContent= isPvP?"rival is choosing…":"reading you";
+    $("verdict").textContent="…"; $("sub").textContent= isPvP?((pvpOpp&&pvpOpp.friend?pvpOpp.name:"rival")+" is choosing…"):"reading you";
     if(isPvP){ pvpCommit(p); return; }
     game.chooseStance(p);   // engine emits events; handlers below drive the rest
   }
@@ -4010,11 +4100,33 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   function showAiPick(a, p){
     if(p===a){nodeEls[p].classList.remove("ppick");nodeEls[p].classList.add("both");}
     else{nodeEls[a].classList.remove("dim");nodeEls[a].classList.add("apick");}
+    clearTags();
+    if(p===a) addTag(p,"Both","both");
+    else{ addTag(p,"You",""); addTag(a,rivalName(),"rival"); }
+  }
+  // who the other side is, in words: the friend's name, "Rival" in a ranked duel,
+  // the Sentinel's or the foe's own name against the computer
+  function rivalName(){
+    if(isPvP && pvpOpp){ if(pvpOpp.friend || pvpOpp.kind==="sentinel") return pvpOpp.name||"Rival"; return "Rival"; }
+    return ai.name||"Rival";
+  }
+  function addTag(i,txt,cls){ const el=nodeEls[i]; if(!el)return; const s=document.createElement("span"); s.className="ptag"+(cls?" "+cls:""); s.textContent=txt; el.appendChild(s); }
+  function clearTags(){ nodeEls.forEach(el=>{ if(el.querySelectorAll) el.querySelectorAll(".ptag").forEach(x=>{ if(x.remove) x.remove(); }); }); }
+  // the verdict line names both stances: "Your Crane cuts Jessie's Tiger"
+  const VERB={clean:"cuts",glance:"grazes"};
+  function sayRound(p,a,o){
+    const mine="Your "+STANCES[p].n, theirs=rivalName()+"'s "+STANCES[a].n;
+    if(o.bind) return o.winner ? (o.winner==="P" ? "You win the bind" : rivalName()+" wins the bind") : "Blades spark, still locked";
+    if(o.kind==="clash") return "Both "+STANCES[p].n+": blades lock";
+    if(o.kind==="whiff") return mine+" and "+theirs+" pass";
+    const v=VERB[o.kind]||"cuts";
+    return o.winner==="P" ? (mine+" "+v+" "+theirs) : (theirs+" "+v+" "+mine.toLowerCase());
   }
 
   function wireEvents(g){
     g.bus.on("stance-selected",({side,stance})=>{ Stage.toStance(side,stance); });
     g.bus.on("clash-bind",()=>{
+      revealing=true; syncTalk();
       $("verdict").textContent="LOCK"; $("sub").textContent="break the bind";
       drawLink(game.state().playerHist.slice(-1)[0], game.state().playerHist.slice(-1)[0], "#fff");
       Stage.lockBlades();
@@ -4041,6 +4153,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       else if(side==="A" && aiResolveVisible && action==="FORESIGHT") showToast("foe spends Foresight — reading you 👁");
     });
     g.bus.on("round-revealed",({pPick,aPick,outcome})=>{
+      revealing=true; syncTalk();
       showAiPick(aPick,pPick);
       // a READ: Foresight was up, the foe walked into the predicted stance, AND
       // YOU converted it into a clean strike yourself (you found the counter on the
@@ -4053,7 +4166,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       const vEl=$("verdict"); vEl.classList.toggle("read",read);
       vEl.textContent= read ? "READ!" : (outcome.bind && outcome.winner ? "BIND!" : VERDICT[outcome.kind]);
       const early=game.state().playerHist.length<=3;   // coach the clockwise rule early
-      $("sub").textContent= read ? "you read it — clean!" : (misread ? "you had the read — strike one BEFORE their stance" : (early?teachReason(pPick,aPick):subText(outcome)));
+      $("sub").textContent= read ? "you read it, clean!" : (misread ? "you had the read: strike one BEFORE their stance" : sayRound(pPick,aPick,outcome));
       const hub=$("hub"); hub.classList.remove("flash-clean","flash-glance","flash-read","flash-whiff"); void hub.offsetWidth;
       if(read)hub.classList.add("flash-read");
       else if(outcome.winner&&outcome.kind==="clean")hub.classList.add("flash-clean");
@@ -4187,14 +4300,15 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   function endRoundUI(){
     const s=game.state();
     aimed=null;
-    nodeEls.forEach(el=>el.className="node");
+    nodeEls.forEach(el=>el.className="node"); clearTags();
     $("links").innerHTML="";
     $("roundlbl").textContent="Round "+s.round;
     $("verdict").textContent="Choose"; $("sub").textContent="tap to aim";
     if(s.round>ESC)$("esc").classList.add("on");
     if(compassOn)preview(0);
-    busy=false;
+    busy=false; revealing=false;
     setSpendEnabled(true);
+    syncTalk();
   }
 
   /* ---- resolve meter UI ---- */
@@ -4246,6 +4360,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     const h=game.state().playerHist; if(h.length<5)return;
     const up=Readout.unpredictabilityPct(h), readable=up<25;
     const pb=$("pbar"); if(pb) pb.classList.toggle("danger",readable);
+    setReadableLabel(readable);
     if(!readable)return;
     let taught=false; try{taught=!!localStorage.getItem("sixfold_predicthint");}catch(e){}
     if(!taught){
@@ -4257,6 +4372,8 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       showToast("⚠ Getting readable — vary your stances");
     }
   }
+  // the bar turns red when you are readable: say so in three words
+  function setReadableLabel(on){ const l=$("pbarlbl"); if(!l)return; l.textContent=on?"they read you":"unpred"; l.classList.toggle("danger",!!on); }
   function clearForesight(){
     if(foresightNode!=null){nodeEls[foresightNode]&&nodeEls[foresightNode].classList.remove("foresight");foresightNode=null;}
     if(foresightStrike!=null){nodeEls[foresightStrike]&&nodeEls[foresightStrike].classList.remove("calledshot");foresightStrike=null;}
@@ -4286,8 +4403,8 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     if(introTimer){clearTimeout(introTimer);introTimer=null;} introPlaying=false;
     prevHP.P=HP; prevHP.A=HP; resetCombo();
     $("pstage").classList.remove("victor","fallen");$("astage").classList.remove("victor","fallen");$("verdict").classList.remove("vs");
-    predictNudge._m=false; const _pb=$("pbar"); if(_pb)_pb.classList.remove("danger");
-    isPvP=(modeId==="pvp"); pvpResolved=false;
+    predictNudge._m=false; const _pb=$("pbar"); if(_pb)_pb.classList.remove("danger"); setReadableLabel(false);
+    isPvP=(modeId==="pvp"); pvpResolved=false; revealing=false;
     // leaving a ranked duel for any other mode: tear down the live session
     if(!isPvP && pvpSession){ try{pvpSession.close();}catch(e){} pvpSession=null; pvpOpp=null; }
     const mode=Engine.MODES[modeId];
@@ -4308,7 +4425,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       bindStage:$("bindstage"),reducedMotion:reduced(),timed:mode.timed});
     wireEvents(game);
     // reset UI
-    nodeEls.forEach(el=>el.className="node");$("links").innerHTML="";
+    nodeEls.forEach(el=>el.className="node");clearTags();$("links").innerHTML="";
     $("esc").classList.remove("on");$("verdict").style.color="";
     $("roundlbl").textContent="Round 1";$("verdict").textContent="Choose";$("sub").textContent="tap a stance";
     $("rematch").style.display="none";$("postmatch").classList.remove("show");$("aimeter").textContent="";
@@ -4319,6 +4436,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     updateFoeBar();updateMeter(game.meter.state());applyCompass();
     mirrorTeachOnce(); refreshDailyPrompt();
     faceOff();   // brief pre-duel stare-down before round 1 (skippable; off under reduced motion)
+    syncTalk();
   }
   // Mirror copies your LAST stance — a hard wall if you don't know the trick.
   // Teach it the first time you ever face one (Ascent or casual).
@@ -4804,7 +4922,10 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   // Online identity for THIS page load. (Rank.playerId is seeded the same on every
   // fresh install, so it cannot tell two phones apart on the wire.)
   const netId="n"+Math.random().toString(36).slice(2,10)+nowMs().toString(36);
-  function netName(){ return (ladder.name && ladder.name!=="You") ? ladder.name : "Rival"; }
+  // the name online play sends: the one typed in Play a friend, else the warrior's
+  function savedName(){ try{ return (localStorage.getItem("sixfold_netname")||"").trim(); }catch(e){ return ""; } }
+  function netName(){ const s=savedName(); if(s) return s; if(player.name && player.name!=="You") return player.name; return (ladder.name && ladder.name!=="You") ? ladder.name : "Rival"; }
+  function roomName(){ const s=savedName(); if(s) return s; return (player.name && player.name!=="You") ? player.name : "Player"; }
   let onlineGen=0;      // bumps whenever the player leaves an online step, so late answers are ignored
   function goOnline(){
     if(typeof FirebaseNet==="undefined" || !FirebaseNet.connect){ const e=new Error("not-configured"); e.reason="not-configured"; return Promise.reject(e); }
@@ -4825,7 +4946,11 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     const sess=s.acceptSentinel(); s.cancel();
     if(sess) acceptMatch(sess.meta, sess);
   }
-  function openDuel(){ renderDuel(); const o=$("duelscreen"); o.classList.add("show"); o.setAttribute("aria-hidden","false"); }
+  function openDuel(){
+    // in a friend room the duel button always brings you back to the room
+    if(room) renderRoom(); else renderDuel();
+    const o=$("duelscreen"); o.classList.add("show"); o.setAttribute("aria-hidden","false");
+  }
   function closeDuel(){ onlineGen++; if(pvpSearch){pvpSearch.cancel();pvpSearch=null;} const o=$("duelscreen"); o.classList.remove("show"); o.setAttribute("aria-hidden","true"); }
   // honest "your standing" panel — REAL earned data only (peak / current / record /
   // placement). No invented rivals: the global leaderboard arrives with cloud play.
@@ -4843,6 +4968,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       `<span><b>${ladder.winRate()}%</b> win</span><span><b>${ladder.streak}</b>🔥</span></div>`;
     const next = ladder.inPlacements() ? `Placement ${Rank.PROVISIONAL_GAMES-ladder.placementsLeft()+1}/${Rank.PROVISIONAL_GAMES} · sets your rank · no demotion yet`
       : (t.isTop ? `Peak rank` : `${t.toNext} to ${t.next}`);
+    $("duelscreen").setAttribute("aria-label","Ranked Duel");
     $("duelscreen").innerHTML=
       `<div class="hero duel"><h2>RANKED DUEL</h2>`+
       `<div class="ll-note" style="margin:-2px 0 4px">Find a rival searches for live players near your rank. Nobody around? A Sentinel, a practice bot at your rank, steps in. Play a friend is unranked.</div>`+
@@ -4867,22 +4993,19 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     if(state==="idle"){
       box.innerHTML=`<button class="primary" id="findbtn">Find a rival ⚔</button><button id="friendbtn">Play a friend</button>`;
       $("findbtn").onclick=startSearch;
-      $("friendbtn").onclick=()=>{ stop(); setDuelStatus(""); setDuelControls("friend"); };
+      $("friendbtn").onclick=()=>{ stop(); renderFriendPanel(); };
     }else if(state==="searching"){
       box.innerHTML=`<button id="cancelbtn">Cancel search</button>`;
       $("cancelbtn").onclick=()=>{ stop(); setDuelStatus(""); setDuelControls("idle"); };
     }else if(state==="friend"){
       box.innerHTML=`<div class="friendbox">`+
-        `<div class="fb-t">Play a friend</div>`+
-        `<div class="fb-s">One of you gets a code, the other types it in. Friendly duels are unranked, so no rating moves.</div>`+
         `<button class="primary" id="fhost">Get a code</button>`+
         `<div class="fb-or">or type your friend's code</div>`+
         `<div class="fb-join"><input id="fcode" maxlength="4" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" aria-label="Friend's code"><button id="fjoin">Join</button></div>`+
-        `<button id="fback">Back</button></div>`;
-      $("fhost").onclick=()=>hostFriend(null);
+        `</div>`;
+      $("fhost").onclick=()=>enterRoom(null);
       $("fjoin").onclick=joinFriend;
       const inp=$("fcode"); if(inp && inp.addEventListener) inp.addEventListener("keydown",(e)=>{ if(e && e.key==="Enter") joinFriend(); });
-      $("fback").onclick=()=>{ stop(); setDuelStatus(""); setDuelControls("idle"); };
     }else if(state==="friendwait"){
       box.innerHTML=`<button id="cancelbtn">Cancel</button>`;
       $("cancelbtn").onclick=()=>{ stop(); setDuelStatus(""); setDuelControls("friend"); };
@@ -4903,24 +5026,40 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       pvpSearch.onState((s)=>{ if(gen===onlineGen) onSearchState(s); });
     },(e)=>{ if(gen===onlineGen) onlineFailed(e,true); });
   }
-  /* ---- Play a friend: a private lobby at sixfold/friends/<CODE>. Same presence,
-     claim and commit-reveal relay as the public lobby; never a Sentinel; unranked. */
-  let friendCode=null;
+  /* ---- Play a friend: the ROOM. A friend code is a room at sixfold/friends/<CODE>/room
+     that outlives a duel: both names, a session score, Ready (also the rematch vote),
+     emotes and calls, and one explicit "Leave the room". A room duel runs the same
+     commit-reveal relay as any duel; it is unranked and pays nothing. Nobody is moved
+     into a duel without tapping Ready, and nothing here starts a duel against the
+     computer: the only way out of a room is a tap on Leave. */
+  const ROOM_LINK="https://lucidwinds.com/satellites/sixfold/";
+  let revealing=false;
+  let room=null, roomNote="", roomGone=null, roomCount=null, roomInDuel=0;
+  let roomQuiet=false; try{ roomQuiet=localStorage.getItem("sixfold_quiet")==="1"; }catch(e){}
   function pickFreeCode(db,tries){
     const c=FirebaseNet.newFriendCode();
-    return db.ref(FirebaseNet.friendRoot(c)+"/lobby").get().then((snap)=>{
+    return db.ref(FirebaseNet.friendRoot(c)+"/room/here").get().then((snap)=>{
       const v=snap&&snap.val&&snap.val();
       return (v && Object.keys(v).length && (tries|0)<6) ? pickFreeCode(db,(tries|0)+1) : c;
     });
   }
-  function hostFriend(code){
-    if(pvpSearch){pvpSearch.cancel();pvpSearch=null;}
-    pvpResolved=false;
-    const gen=++onlineGen;
-    setDuelControls("friendwait"); setDuelStatus(connectingLine());
-    goOnline().then((db)=> gen!==onlineGen ? null : (code || pickFreeCode(db)))
-      .then((c)=>{ if(gen===onlineGen && c) runFriendSearch(c,"host",gen); },
-        (e)=>{ if(gen===onlineGen) onlineFailed(e,false); });
+  function renderFriendPanel(){
+    const o=$("duelscreen"); o.setAttribute("aria-label","Play a friend");
+    o.innerHTML=`<div class="hero duel friend"><h2>PLAY A FRIEND</h2>`+
+      `<div class="ll-note" style="margin:-2px 0 2px">One of you gets a code, the other types it in. You meet in a room: tap Ready, duel, and go again as often as you like. Friendly duels are unranked.</div>`+
+      `<label class="rname">Your name <input id="fname" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Your name"></label>`+
+      `<div class="duelstatus" id="duelstatus"></div>`+
+      `<div class="duel-actions" id="duelactions"></div>`+
+      `<button class="close" id="duelclose">Back</button></div>`;
+    const fn=$("fname"); if(fn){ fn.value=savedName(); fn.oninput=()=>saveNetName(fn.value); }
+    $("duelclose").onclick=()=>{ onlineGen++; renderDuel(); };
+    setDuelControls("friend");
+  }
+  function saveNetName(v){
+    const s=String(v||"").replace(/[<>&"'`\\]/g,"").replace(/\s+/g," ").trim().slice(0,14);
+    try{ localStorage.setItem("sixfold_netname",s); }catch(e){}
+    if(room) room.setName(s||"Player");
+    return s;
   }
   function joinFriend(){
     const inp=$("fcode"), code=FirebaseNet.normalizeCode(inp?inp.value:"");
@@ -4928,34 +5067,252 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       setDuelStatus(`<div class="netmsg"><div class="so-s">A code is 4 letters or numbers, like K7QX. Ask your friend to read it out again.</div></div>`);
       return;
     }
+    enterRoom(code);
+  }
+  // Get a code (code null) or Join / a room link (code given): both land in the room.
+  function enterRoom(code){
     if(pvpSearch){pvpSearch.cancel();pvpSearch=null;}
-    pvpResolved=false;
+    if(room){ openDuel(); return; }
     const gen=++onlineGen;
     setDuelControls("friendwait"); setDuelStatus(connectingLine());
-    goOnline().then(()=>{ if(gen===onlineGen) runFriendSearch(code,"join",gen); },
-      (e)=>{ if(gen===onlineGen) onlineFailed(e,false); });
-  }
-  function runFriendSearch(code,role,gen){
-    friendCode=code;
-    setDuelControls("friendwait");
-    setDuelStatus(role==="host"
-      ? `<div class="friendcode">Your code<b>${code}</b></div>`+
-        `<div class="searchsub">Your friend taps Play a friend and types this code.</div>`+
-        `<div class="searchline"><span class="spinner"></span><span>Waiting for your friend…</span></div>`
-      : `<div class="searchline"><span class="spinner"></span><span>Joining ${code}…</span></div>`);
-    pvpSearch=FirebaseNet.friendBackend(code).findMatch({rating:ladder.rating, name:netName(), selfId:netId, role});
-    pvpSearch.onState((s)=>{
-      if(gen!==onlineGen)return;
-      if(s.state==="matched"){ acceptMatch(s.opponent, s.session); }
-      else if(s.state==="friend-missing"||s.state==="friend-timeout"){
-        pvpSearch=null; setDuelControls("friend");
-        setDuelStatus(`<div class="netmsg"><div class="so-s">`+(s.state==="friend-missing"
-          ? `Nobody is waiting with code <b>${code}</b>. Check the code with your friend, or tap Get a code and send them yours.`
-          : `Your friend did not join within 10 minutes. Get a new code when you are both ready.`)+`</div></div>`);
+    goOnline().then((db)=>{
+      if(gen!==onlineGen) return null;
+      return Promise.resolve(code || pickFreeCode(db)).then((c)=>{
+        if(gen!==onlineGen) return null;
+        return FirebaseNet.openRoom(db, c, {uid:netId, name:roomName()});
+      });
+    }).then((r)=>{
+      if(!r) return;
+      if(gen!==onlineGen){ r.leave(); return; }
+      room=r; roomNote=""; roomGone=null; roomInDuel=0;
+      wireRoom(r); setRoomParam(r.code); syncTalk();
+      openDuel();
+    },(e)=>{
+      if(gen!==onlineGen) return;
+      if(e && e.reason==="room-full"){
+        setDuelControls("friend");
+        setDuelStatus(`<div class="netmsg"><div class="so-s">Room <b>${code}</b> already has two players in it. Ask your friend for the code again, or get a new one.</div></div>`);
+        return;
       }
-      else if(s.state==="error"){ onlineFailed({reason:s.reason},false); }
+      onlineFailed(e,false);
     });
   }
+  function roomLink(code){
+    let base=ROOM_LINK;
+    try{ if(/\.github\.io$/i.test(location.hostname)) base=location.origin+location.pathname.replace(/[^\/]*$/,""); }catch(e){}
+    return base+"?room="+code;
+  }
+  function setRoomParam(code){ try{ const u=new URL(location.href); u.searchParams.set("room",code); history.replaceState(null,"",u.toString()); }catch(e){} }
+  function clearRoomParam(){ try{ const u=new URL(location.href); if(!u.searchParams.has("room"))return; u.searchParams.delete("room"); history.replaceState(null,"",u.toString()); }catch(e){} }
+  function friendLabel(){ const v=room&&room.view(); return (v&&v.friend&&v.friend.name)||(roomGone&&roomGone.name)||"Your friend"; }
+  function wireRoom(r){
+    r.on("change",()=>{ if(room===r) updateRoom(); });
+    r.on("duel",(d)=>{ if(room===r) startRoomCountdown(d); });
+    r.on("say",(s)=>{ if(room===r) onRoomSay(s); });
+    r.on("gone",(g)=>{
+      if(room!==r) return;
+      cancelRoomCountdown();
+      roomGone=g;
+      roomNote= g.why==="left" ? `<div>${g.name} left the room.</div>`
+        : `<div>${g.name} lost the connection.</div><div class="rn-sub">They can come back with the same code.</div>`;
+      updateRoom(true);
+    });
+    r.on("back",(f)=>{ if(room!==r) return; roomGone=null; roomNote=`<div>${f.name} is here.</div>`; updateRoom(true); });
+    r.on("ended",(e)=>{
+      if(room!==r || !roomInDuel || e.n!==roomInDuel) return;
+      const who=friendLabel();
+      roomCallOff(e.why==="quit" ? `${who} left the duel.` : e.why==="unready" ? `${who} took back Ready. The duel was called off.` : `The connection dropped, so the duel was called off.`);
+    });
+  }
+  // the room screen: built once, then only its parts change (so typing a name or a
+  // tap in progress is never wiped by an update from the other phone)
+  function renderRoom(){
+    const o=$("duelscreen"); o.setAttribute("aria-label","Play a friend");
+    o.innerHTML=`<div class="hero duel room">`+
+      `<h2>PLAY A FRIEND</h2>`+
+      `<div class="roomcode"><span>Room</span><b id="rcode"></b></div>`+
+      `<div class="roomlink"><button id="rshare">Share a link</button><span class="rl-s" id="rlinkmsg"></span></div>`+
+      `<div class="roomvs">`+
+        `<div class="rseat me"><div class="rbub" id="rmebub"></div><div class="rs-n" id="rmename"></div><div class="rs-s" id="rmescore">0</div><div class="rs-r" id="rmeready"></div></div>`+
+        `<div class="rs-vs">vs</div>`+
+        `<div class="rseat fr" id="rfrseat"><div class="rbub" id="rfrbub"></div><div class="rs-n" id="rfrname"></div><div class="rs-s" id="rfrscore">0</div><div class="rs-r" id="rfrready"></div></div>`+
+      `</div>`+
+      `<div class="roomscore" id="rscore"></div>`+
+      `<div class="roomnote" id="rnote"></div>`+
+      `<div class="duel-actions" id="ractions"></div>`+
+      `<div class="talk" id="rtalk"></div>`+
+      `<div class="roomfoot">`+
+        `<label class="rname">Your name <input id="rname" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Your name"></label>`+
+        `<label class="rquiet"><input type="checkbox" id="rquiet"> Quiet: hide their emotes and calls</label>`+
+      `</div>`+
+      `<button class="leave" id="rleave">Leave the room</button>`+
+    `</div>`;
+    $("rcode").textContent=room.code;
+    $("rshare").onclick=shareRoom;
+    const rn=$("rname"); rn.value=savedName(); rn.oninput=()=>{ saveNetName(rn.value); const me=$("rmename"); if(me) me.textContent=room?room.view().me.name:""; };
+    const q=$("rquiet"); q.checked=roomQuiet; q.onchange=()=>{ roomQuiet=!!q.checked; try{localStorage.setItem("sixfold_quiet",roomQuiet?"1":"0");}catch(e){} };
+    $("rleave").onclick=leaveRoom;
+    buildTalk($("rtalk"));
+    updateRoom(true);
+  }
+  function updateRoom(force){
+    if(!room) return;
+    const o=$("duelscreen"); if(!o || !$("rnote")) return;
+    const v=room.view(), fname=v.friend?v.friend.name:null;
+    $("rmename").textContent=v.me.name;
+    $("rfrname").textContent=fname||"Nobody yet";
+    $("rfrseat").classList.toggle("empty",!fname);
+    $("rmescore").textContent=v.score.me; $("rfrscore").textContent=fname?v.score.friend:"-";
+    $("rmeready").textContent=(v.myReady&&fname)?"Ready":"";
+    $("rfrready").textContent=v.friendReady?"Ready":"";
+    $("rscore").textContent=fname?`You ${v.score.me}, ${fname} ${v.score.friend}`:"";
+    // the note: countdown, then a result or who left, then what is happening now
+    let note="";
+    if(roomCount){ note=`<div class="rn-count" id="rcount">${roomCount.n}</div><div class="rn-sub">The duel starts</div>`; }
+    else{
+      note=roomNote||"";
+      if(roomInDuel) note+=`<div class="rn-sub">Your duel is on.</div>`;
+      else if(!fname && !roomGone) note+=`<div class="rn-wait"><span class="spinner"></span><span>Waiting for your friend. Send them the code or the link.</span></div>`;
+      else if(fname && v.myReady && !v.friendReady) note+=`<div class="rn-sub">Waiting for ${fname} to tap Ready.</div>`;
+      else if(fname && !v.myReady && v.friendReady) note+=`<div><b>${fname} is ready.</b></div>`;
+      else if(fname && !v.myReady && !roomNote) note+=`<div class="rn-sub">Both tap Ready to start a duel.</div>`;
+    }
+    setIfChanged($("rnote"),note);
+    // the buttons
+    let acts, sig;
+    if(roomCount){ sig="count"; acts=``; }
+    else if(roomInDuel && !over){ sig="induel"; acts=`<button class="primary" id="rback">Back to the duel</button>`; }
+    else if(roomGone && !fname){ sig="gone"; acts=`<button class="primary" id="rwait">Wait here</button>`; }
+    else{ sig="ready"+(v.myReady?1:0)+(fname?1:0); acts=`<button class="primary" id="rready"${fname?"":" disabled"}>${v.myReady?"Not ready":"Ready"}</button>`; }
+    const box=$("ractions");
+    if(force || box._sig!==sig){
+      box._sig=sig; box.innerHTML=acts;
+      const b=(id,fn)=>{ const e=$(id); if(e) e.onclick=fn; };
+      b("rback",()=>{ closeDuel(); });
+      b("rwait",()=>{ roomGone=null; roomNote=""; updateRoom(true); });
+      b("rready",()=>{ if(!room) return; const now=room.view(); if(!now.friend) return; roomNote=""; room.setReady(!now.myReady); });
+    }
+    const tk=$("rtalk"); if(tk) tk.style.display=(fname && !roomInDuel)?"":"none";
+  }
+  function setIfChanged(el,html){ if(el && el._html!==html){ el._html=html; el.innerHTML=html; } }
+  function shareRoom(){
+    if(!room) return;
+    const url=roomLink(room.code), msg=$("rlinkmsg");
+    const shown=()=>{ if(msg) msg.textContent=url; };
+    try{
+      if(navigator.share){ navigator.share({title:"Sixfold duel", text:"Duel me in Sixfold. Room "+room.code, url}).catch(()=>{}); shown(); return; }
+    }catch(e){}
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(url).then(()=>{ if(msg) msg.textContent="Link copied: "+url; },shown); return;
+      }
+    }catch(e){}
+    shown();
+  }
+  function startRoomCountdown(d){
+    cancelRoomCountdown();
+    roomNote=""; roomGone=null;
+    roomCount={n:3, d};
+    if($("duelscreen").classList.contains("show")===false) openDuel();
+    updateRoom(true);
+    Sfx.play("tap");
+    const step=()=>{
+      if(!room || !roomCount) return;
+      roomCount.n--;
+      if(roomCount.n<=0){ roomCount=null; beginRoomDuel(d); return; }
+      const c=$("rcount"); if(c) c.textContent=roomCount.n; else updateRoom(true);
+      Sfx.play("tap");
+      roomCount.t=setTimeout(step,850);
+    };
+    roomCount.t=setTimeout(step,850);
+  }
+  function cancelRoomCountdown(){ if(roomCount){ clearTimeout(roomCount.t); roomCount=null; } }
+  function beginRoomDuel(d){
+    if(!room) return;
+    const v=room.view();
+    if(!v.friend){ updateRoom(true); return; }      // they left during the count
+    const sess=room.session(d);
+    roomInDuel=d.n; roomNote="";
+    startPvpMatch(sess.meta, sess);
+    syncTalk();
+  }
+  // a room duel that cannot finish (a drop, a quit, a Ready taken back): no score,
+  // nobody wins, both are back in the room
+  function roomCallOff(note){
+    if(!roomInDuel) return;
+    const n=roomInDuel; roomInDuel=0;
+    if(isPvP && pvpOpp && pvpOpp.room && pvpOpp.duelN===n && !pvpResolved){
+      pvpResolved=true; over=true; busy=true;
+      if(pvpSession){ try{pvpSession.close();}catch(e){} }
+      $("roundlbl").textContent="Called off"; $("verdict").textContent="—"; $("sub").textContent="no result";
+    }
+    syncTalk();
+    roomNote=`<div>${note}</div><div class="rn-sub">No score for that one.</div>`;
+    hideResult(); openDuel();
+  }
+  function roomAfterDuel(win,summary,n){
+    roomInDuel=0; syncTalk();
+    const fname=friendLabel();
+    roomNote=`<div class="rn-res ${win?"w":"l"}">${win?"You won":fname+" won"}</div><div class="rn-sub">Duel ${n}, ${summary.rounds} rounds. Tap Ready for a rematch.</div>`;
+    if(room) openDuel();
+  }
+  // explicit leave: the only way out of a room. You land on the home screen.
+  function leaveRoom(){
+    cancelRoomCountdown();
+    const r=room; room=null;
+    if(r){
+      if(roomInDuel && isPvP && !over){ r.endDuel(roomInDuel,"quit"); pvpResolved=true; }
+      r.leave();
+    }
+    roomInDuel=0; roomNote=""; roomGone=null;
+    clearRoomParam(); syncTalk();
+    if(isPvP) leavePvp();
+    closeDuel(); openTitle();
+  }
+  /* ---- talk: six emotes with words, and the call. Only talk: nothing here goes
+     near the round's commit or reveal, and a call is never checked. ---- */
+  function buildTalk(box){
+    if(!box) return;
+    const E=FirebaseNet.EMOTES;
+    box.innerHTML=`<div class="tk-h">Say something</div>`+
+      `<div class="tk-row">`+E.map(e=>`<button class="emo" data-emo="${e.id}" aria-label="${e.w}"><span class="ee">${e.e}</span><span class="ew">${e.w}</span></button>`).join("")+`</div>`+
+      `<button class="callbtn">I am going...</button>`+
+      `<div class="tk-row tk-calls">`+STANCES.map((s,i)=>`<button class="stc" data-call="${i}" aria-label="Call ${s.n}"><span class="sg">${s.g}</span><span class="sw">${s.n}</span></button>`).join("")+`</div>`;
+    box.querySelectorAll("button.emo").forEach(b=>{ b.onclick=()=>sendTalk("emote",b.getAttribute("data-emo")); });
+    box.querySelectorAll("button.stc").forEach(b=>{ b.onclick=()=>{ sendTalk("call",parseInt(b.getAttribute("data-call"),10)); box.classList.remove("calling"); }; });
+    const cb=box.querySelector(".callbtn"); if(cb) cb.onclick=()=>box.classList.toggle("calling");
+  }
+  function talkText(kind,value,name){
+    if(kind==="emote"){ const e=FirebaseNet.EMOTES.filter(x=>x.id===value)[0]; return e?(e.e+" "+e.w):""; }
+    return (name?name+" says: ":"I am going ")+STANCES[value].n;
+  }
+  function sendTalk(kind,value){
+    if(!room) return;
+    if(!room.say(kind,value)){ showToast("One at a time. Wait a moment."); return; }
+    Sfx.play("tap");
+    bubble(roomInDuel?$("pbub"):$("rmebub"), talkText(kind,value,null));
+    const dock=$("talkdock"); if(dock && roomInDuel){ dock.classList.remove("open"); $("talkbtn").setAttribute("aria-expanded","false"); }
+  }
+  function onRoomSay(s){
+    if(roomQuiet) return;
+    bubble(roomInDuel?$("abub"):$("rfrbub"), talkText(s.kind,s.value,s.kind==="call"?s.name:null));
+  }
+  function bubble(el,txt){
+    if(!el || !txt) return;
+    el.textContent=txt; el.classList.add("show");
+    clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("show"),3000);
+  }
+  // the Talk button shows only in a room duel, while a round is being chosen
+  function syncTalk(){
+    const dock=$("talkdock"); if(!dock) return;
+    // on from the start of a round until its reveal (also while waiting on the
+    // friend's pick: the bluff works best then); off during the reveal and the bind
+    const on=!!(room && roomInDuel && isPvP && pvpOpp && pvpOpp.room && !over && !revealing && !introPlaying);
+    const db=$("duelbtn"); if(db) db.textContent=room?"⚔ Friend room":"⚔ Ranked Duel";
+    dock.classList.toggle("on",on);
+    if(!on){ dock.classList.remove("open"); const b=$("talkbtn"); if(b) b.setAttribute("aria-expanded","false"); }
+  }
+  { const tb=$("talkbtn"); if(tb) tb.onclick=()=>{ const d=$("talkdock"); const open=!d.classList.contains("open"); d.classList.toggle("open",open); tb.setAttribute("aria-expanded",open?"true":"false"); if(open && !$("talkpop").firstChild) buildTalk($("talkpop")); }; }
   function onSearchState(s){
     if(s.state==="searching"){
       const widen = s.half===Infinity ? "anyone online" : ("±"+s.half+" rating");
@@ -4990,6 +5347,8 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     const arenas=[...unlockedArenaSet()]; setArena(arenas.length?rid(arenas):"dojo",true);
     closeDuel(); hideResult();
     newGame();
+    // first friend duel ever: the three line card says how the reveal reads
+    if(opponent.friend && showFriendCardOnce()) return;
     // teach the pillar ONCE, proudly: ranked is pure — only your own reads help.
     let taughtPillar=false; try{ taughtPillar=!!localStorage.getItem("sixfold_rankedpillar"); }catch(e){}
     if(!taughtPillar){
@@ -5005,12 +5364,31 @@ body.reduce .fighter-art .sprite { animation: none !important; }
         : "⚔ Rival found: "+opponent.name), reduced()?0:500);
     }
   }
+  function showFriendCardOnce(){
+    let seen=false; try{ seen=!!localStorage.getItem("sixfold_friendcard"); }catch(e){}
+    const o=$("friendcard"); if(seen || !o) return false;
+    try{ localStorage.setItem("sixfold_friendcard","1"); }catch(e){}
+    o.innerHTML=`<div class="hero fcard"><div class="fc-l">Pick in secret.</div><div class="fc-l">Both reveal together.</div>`+
+      `<div class="fc-l"><span class="fc-g">Gold is yours</span>, <span class="fc-r">red is theirs</span>.</div><button id="fcok">Got it</button></div>`;
+    o.classList.add("show"); o.setAttribute("aria-hidden","false");
+    o.onclick=()=>{ o.classList.remove("show"); o.setAttribute("aria-hidden","true"); };
+    return true;
+  }
   // Abandoning a LIVE, in-progress ranked duel counts as a loss — no free dodge.
   // (Closes the "navigate away while losing -> eat no rating" exploit.)
   function abandonPvp(){
     if(pvpResolved)return; pvpResolved=true;
     if(pvpOpp && pvpOpp.friend){   // a friendly duel is unranked: leaving costs no rating
       if(pvpSession){ try{pvpSession.close();}catch(e){} }
+      // walking away from a room duel to play something else leaves the room too,
+      // and tells the friend at once instead of leaving them waiting on a pick
+      if(pvpOpp.room && room){
+        cancelRoomCountdown();
+        const r=room; room=null; r.endDuel(pvpOpp.duelN,"quit"); r.leave();
+        roomInDuel=0; roomNote=""; roomGone=null; clearRoomParam(); syncTalk();
+        showToast("You left the friend room");
+        return;
+      }
       showToast("Friendly duel left");
       return;
     }
@@ -5036,8 +5414,11 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       // FRIENDLY duel: unranked. No rating change, no ranked sunbeams, no Lucid
       // Winds mint (two friends must not be able to farm each other).
       if(pvpSession){ try{pvpSession.close();}catch(e){} }
+      const n=pvpOpp.duelN, inRoom=!!(pvpOpp.room && room);
+      if(inRoom) room.reportResult(n, win);
+      syncTalk();
       setTimeout(()=>{ Sfx.play(win?"victory":"defeat"); buzz(win?[0,45,45,45]:130); }, reduced()?0:950);
-      setTimeout(()=>{ showFriendResult(win,summary); }, reduced()?0:2000);
+      setTimeout(()=>{ if(room) roomAfterDuel(win,summary,n); else { leavePvp(); openTitle(); } }, reduced()?0:2000);
       return;
     }
     const opp = pvpOpp || {rating:ladder.rating, kind:"live", id:null};
@@ -5092,27 +5473,15 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     on("pvpNext",()=>{ hideResult(); openDuel(); startSearch(); });
     on("pvpDone",()=>{ hideResult(); leavePvp(); });
   }
-  function showFriendResult(win,summary){
-    const name=pvpOpp?pvpOpp.name:"Friend", code=friendCode;
-    $("resultscreen").innerHTML=
-      `<div class="hero result ${win?"win":"lose"}">`+
-        `<div class="result-word">${win?"VICTORY":"DEFEAT"}</div>`+
-        `<div class="result-flavor">vs ${name} · friendly duel, unranked</div>`+
-        `<div class="stat-chips">`+
-          `<div class="chip"><b>${summary.rounds}</b><span>rounds</span></div>`+
-          `<div class="chip"><b>${summary.unpredictabilityPct}%</b><span>unpred</span></div>`+
-        `</div>`+
-        `<div class="result-actions">`+(code?`<button class="primary" id="pvpAgain">Play again · ${code}</button>`:"")+`<button id="pvpDone">Done</button></div>`+
-      `</div>`;
-    const rs=$("resultscreen"); rs.setAttribute("aria-hidden","false"); if(rs.offsetWidth!==undefined) void rs.offsetWidth; rs.classList.add("show");
-    if(win)victoryBurst();
-    const on=(id,fn)=>{const el=$(id); if(el) el.onclick=fn;};
-    // both friends tap Play again: they meet again in the same private lobby
-    on("pvpAgain",()=>{ hideResult(); openDuel(); setDuelControls("friend"); hostFriend(code); });
-    on("pvpDone",()=>{ hideResult(); leavePvp(); });
-  }
   function handlePvpDisconnect(){
     if(over||pvpResolved||!isPvP)return;
+    // a room duel: the friend's phone has been gone past the grace. Call it off
+    // (no winner, no score), tell their phone, and go back to the room.
+    if(pvpOpp && pvpOpp.room && room){
+      room.endDuel(pvpOpp.duelN,"lost");
+      roomCallOff(friendLabel()+" lost the connection, so the duel was called off.");
+      return;
+    }
     showToast("⚠ Rival disconnected: duel awarded to you");
     over=true; busy=true; matchWinner="P";
     $("roundlbl").textContent="Match over"; $("verdict").textContent="VICTORY"; $("verdict").style.color=getCss("--gold"); $("sub").textContent="rival fled the duel";
@@ -5334,7 +5703,12 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   // Front door: first-run shows the how-to guide, then the title; returning
   // players land straight on the title hub. (The duel board is built behind it.)
   let firstRun=false; try{ firstRun=!localStorage.getItem("sixfold_seen"); }catch(e){}
-  if(firstRun){ titlePending=true; openHowto(); } else { openTitle(); }
+  // A room link (?room=CODE) goes straight into that room, even on a first visit:
+  // no guide, no title. The first friend duel shows its own three line card.
+  let bootRoom=null;
+  try{ const m=/[?&]room=([^&#]*)/.exec((typeof location!=="undefined"&&location.search)||""); if(m && typeof FirebaseNet!=="undefined") bootRoom=FirebaseNet.normalizeCode(decodeURIComponent(m[1])); }catch(e){}
+  if(bootRoom){ try{ localStorage.setItem("sixfold_seen","1"); }catch(e){} renderFriendPanel(); const o=$("duelscreen"); o.classList.add("show"); o.setAttribute("aria-hidden","false"); enterRoom(bootRoom); }
+  else if(firstRun){ titlePending=true; openHowto(); } else { openTitle(); }
 
   initLucid();   // wire the Lucid Winds Sunbeam economy if the SDK is already present
 
@@ -5346,6 +5720,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   // match. The title's own fade + menu-music handle the rest.
   if(typeof document!=="undefined" && document.addEventListener) document.addEventListener("visibilitychange",()=>{
     if(document.visibilityState!=="visible") return;
+    if(room) return;   // a friend room stays put while you step away
     const titleUp=$("title")&&$("title").classList.contains("show");
     const anyOverlay=["resultscreen","bindstage","ascent","collection","profile","dailyscreen","duelscreen","howto"]
       .some(id=>{const e=$(id);return e&&e.classList.contains("show");});

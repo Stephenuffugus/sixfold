@@ -451,10 +451,12 @@
       if (!a || !b) return;
       var d = { n: nNext, id: "r" + nNext + "_" + now().toString(36) + "_" + Math.floor(rand() * 1e6).toString(36),
         a: a, b: b, aName: cleanName(st.here[a].name), bName: cleanName(st.here[b].name), ts: now() };
-      quiet(db.ref(base + "/duel").transaction(function (cur) {
-        if (cur && (Number(cur.n) || 0) >= nNext) return;   // the other phone wrote it first
-        return d;
-      }));
+      // ONE writer: the first seat. (A transaction from both phones looked safe, but
+      // the live SDK shows each phone its own optimistic duel before the server
+      // picks one, so the two phones started two different duels and waited on
+      // each other forever. Found by the two phone smoke run, 13 Nov.)
+      if (a !== uid) return;
+      quiet(db.ref(base + "/duel").set(d));
     }
     function onSnap(snap) {
       if (gone) return;

@@ -46,6 +46,7 @@ function makeEl(tag) {
       if (typeof on === "function") on({ target: el });
     },
     scrollIntoView() {},
+    remove: () => { if (el.parentNode) el.parentNode.children = el.parentNode.children.filter((c) => c !== el); },
     querySelector: (sel) => el.querySelectorAll(sel)[0] || null,
     querySelectorAll: (sel) => {
       // we only need ".bindbtn-lg" (parsed from innerHTML) and ".fighter-art"/".bar-fill"/".bar-num"/".rpips"
