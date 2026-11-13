@@ -223,10 +223,20 @@ try {
   const bMode = await text(B, '#modetag');
   say('B tapped Wait here: "' + bNote + '"');
   if (!/Waiting for your friend/.test(bNote || '')) throw new Error('B is not waiting in the room');
-  const ladders = await Promise.all([A, B].map((p) => p.evaluate(() => localStorage.getItem('sixfold_pvp'))));
-  const errs = A._errs.concat(B._errs);
+  // the same code takes a new friend, this time by TYPING the code (the Join path)
+  await A.close();
+  const C = await phone('C', { name: 'Jo' });
+  await openDuelScreen(C);
+  await click(C, '#friendbtn'); await firstOf(C, ['#fcode'], 3000);
+  await C.type('#fcode', code.toLowerCase()); await click(C, '#fjoin');
+  await waitText(C, '#rfrname', /Jessie/, 30000, 'C (typed the code) never saw Jessie');
+  const bNew = await waitText(B, '#rfrname', /Jo/, 30000, 'B never saw the newcomer');
+  const bScore = await text(B, '#rscore');
+  say('C joined by typing the code; B now sees "' + bNew + '", score "' + bScore + '"');
+  const ladders = await Promise.all([B, C].map((p) => p.evaluate(() => localStorage.getItem('sixfold_pvp'))));
+  const errs = A._errs.concat(B._errs, C._errs);
   if (errs.length) throw new Error(errs.join(' | '));
-  await done('PASS room ' + code + ': link join, ready, emote and call seen across, duel 1 to a result in the room (' + sca + '), rematch, duel 2 started, A left mid duel and landed home, B stayed in the room waiting; ladder untouched: ' + (ladders.every((l) => l == null || l === '{}' || /"wins":0,"losses":0/.test(l))));
+  await done('PASS room ' + code + ': link join, ready, emote and call seen across, duel 1 to a result in the room (' + sca + '), rematch, duel 2 started, A left mid duel and landed home, B stayed in the room waiting, C joined by typing the code and met B; ladder untouched: ' + (ladders.every((l) => l == null || l === '{}' || /"wins":0,"losses":0/.test(l))));
 } catch (e) {
   await done('FAIL ' + (e && e.message || e));
 }

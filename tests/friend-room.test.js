@@ -190,6 +190,19 @@ function fakeNow(start) { let t = start || 1000; const f = () => t; f.add = (ms)
     ok("without a grace (the public lobby) a drop fires at once, as before", d0 === 1);
   }
 
+  // ---- regression (live smoke, 13 Nov): only ONE phone writes the duel ----
+  {
+    const db3 = treeDb(), writes = [];
+    const spy = (who) => ({ ref: (p) => { const r = db3.ref(p); if (/\/room\/duel$/.test(p)) { const s = r.set, tr = r.transaction; r.set = (v) => { writes.push(who); return s(v); }; r.transaction = (f) => { writes.push(who + "-tx"); return tr(f); }; } return r; } });
+    const P = await FN.openRoom(spy("P"), "ZZ42", { uid: "uP", name: "P", now: () => 10 });
+    const Q = await FN.openRoom(spy("Q"), "ZZ42", { uid: "uQ", name: "Q", now: () => 20 });
+    const ep = collect(P), eq = collect(Q);
+    await Q.setReady(true); await P.setReady(true); await tick(5);
+    ok("both ready: exactly one duel write, from the first seat only", writes.join() === "P", writes.join());
+    ok("and both phones start that same duel", ep.duel.length === 1 && eq.duel.length === 1 && ep.duel[0].id === eq.duel[0].id);
+    P.leave(); Q.leave();
+  }
+
   ok("the emote list is six, each with a word", FN.EMOTES.length === 6 && FN.EMOTES.every((e) => e.id && e.w && e.e));
   B.leave();
   console.log("\n  friend-room.test.js: " + passed + " checks passed");

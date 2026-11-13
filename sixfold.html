@@ -635,7 +635,7 @@
   .talkdock .talkbtn{font-family:var(--ui);font-weight:800;font-size:13px;min-height:48px;min-width:64px;padding:8px 14px;border-radius:24px;cursor:pointer;
     color:var(--gold);background:#13182aee;border:1px solid var(--gold);box-shadow:0 3px 14px #0008}
   .talkdock .talkpop{display:none;background:#13182af2;border:1px solid #ffffff2a;border-radius:14px;padding:9px;width:min(360px,calc(100vw - 20px));box-sizing:border-box}
-  .talkdock.open .talkpop{display:block}
+  .talkdock.open .talkpop{display:flex}
   .fighter{position:relative}
   /* PvP result extras (rendered inside #resultscreen) */
   .pvp-rank{display:flex;flex-direction:column;align-items:center;gap:7px;margin:6px 0;width:100%;max-width:320px}
@@ -4120,7 +4120,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     if(o.kind==="clash") return "Both "+STANCES[p].n+": blades lock";
     if(o.kind==="whiff") return mine+" and "+theirs+" pass";
     const v=VERB[o.kind]||"cuts";
-    return o.winner==="P" ? (mine+" "+v+" "+theirs) : (theirs+" "+v+" "+mine.toLowerCase());
+    return o.winner==="P" ? (mine+" "+v+" "+theirs) : (theirs+" "+v+" your "+STANCES[p].n);
   }
 
   function wireEvents(g){
