@@ -10,14 +10,14 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="SIXFOLD: stance duel">
 <meta property="og:description" content="A six-stance power-wheel duel. Read your foe, break the bind, win in under a minute.">
-<meta property="og:url" content="https://stephenuffugus.github.io/sixfold/">
-<meta property="og:image" content="https://stephenuffugus.github.io/sixfold/og.png">
+<meta property="og:url" content="https://lucidwinds.com/satellites/sixfold/">
+<meta property="og:image" content="https://lucidwinds.com/satellites/sixfold/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="SIXFOLD: stance duel">
 <meta name="twitter:description" content="Read your foe. Break the bind. Win in under a minute.">
-<meta name="twitter:image" content="https://stephenuffugus.github.io/sixfold/og.png">
+<meta name="twitter:image" content="https://lucidwinds.com/satellites/sixfold/og.png">
 <!-- PWA: installable + offline (degrades gracefully when opened as a local file) -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
@@ -914,7 +914,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       <div class="stage" id="pstage"></div>
       <div class="hp" id="php"></div>
       <div class="ribbon" id="pribbon"></div>
-      <div class="barwrap"><span class="barlbl" id="pbarlbl">unpred</span>
+      <div class="barwrap"><span class="barlbl" id="pbarlbl">unreadable</span>
         <div class="bar" id="pbar"><div class="bar-fill"></div><span class="bar-num">—</span></div></div>
     </div>
     <div class="fighter" id="af">
@@ -923,7 +923,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       <div class="stage" id="astage"></div>
       <div class="hp" id="ahp"></div>
       <div class="ribbon" id="aribbon"></div>
-      <div class="barwrap"><span class="barlbl">unpred</span>
+      <div class="barwrap"><span class="barlbl">unreadable</span>
         <div class="bar" id="abar"><div class="bar-fill"></div><span class="bar-num">—</span></div></div>
     </div>
   </div>
@@ -4708,7 +4708,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
         rewardBanner+
         `<div class="stat-chips">`+
           `<div class="chip"><b>${summary.rounds}</b><span>rounds</span></div>`+
-          `<div class="chip"><b>${summary.unpredictabilityPct}%</b><span>unpred</span></div>`+
+          `<div class="chip"><b>${summary.unpredictabilityPct}%</b><span>unreadable</span></div>`+
           readsChip+
           comboChip+
           streakChip+
@@ -4811,7 +4811,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     }
   }
   // the bar turns red when you are readable: say so in three words
-  function setReadableLabel(on){ const l=$("pbarlbl"); if(!l)return; l.textContent=on?"they read you":"unpred"; l.classList.toggle("danger",!!on); }
+  function setReadableLabel(on){ const l=$("pbarlbl"); if(!l)return; l.textContent=on?"they read you":"unreadable"; l.classList.toggle("danger",!!on); }
   function clearForesight(){
     if(foresightNode!=null){nodeEls[foresightNode]&&nodeEls[foresightNode].classList.remove("foresight");foresightNode=null;}
     if(foresightStrike!=null){nodeEls[foresightStrike]&&nodeEls[foresightStrike].classList.remove("calledshot");foresightStrike=null;}
@@ -4905,11 +4905,12 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     mt.classList.remove("ranked");
     // Ascent: name the specific CHARACTER you're climbing to beat. Casual: show the
     // archetype you selected (the style) — the character's own name still floats over them.
-    $("foename").textContent = (ascentRun>=0 && ai && ai.name) ? ai.name : a.name;
+    // one foe, one name: the character it wears (the label over the fighter), then its style
+    $("foename").textContent = (ai && ai.name && ai.name!==a.name) ? ai.name+", the "+a.name : a.name;
     $("foestars").textContent="★".repeat(a.stars)+"☆".repeat(5-a.stars);
     $("foetell").textContent=a.tell;
     const mode=Engine.MODES[modeId];
-    mt.textContent=mode.id[0].toUpperCase()+mode.id.slice(1);
+    mt.textContent= ascentRun>=0 ? "Ascent" : mode.id[0].toUpperCase()+mode.id.slice(1);
     mt.classList.toggle("comp",!mode.honorsAssists);
     $("compbanner").classList.toggle("show",!mode.honorsAssists && !!Assists.current());
   }
@@ -5344,11 +5345,9 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   // home-screen Daily nudge — the return hook, surfaced instead of buried
   function refreshDailyPrompt(){
     const el=$("dailyprompt"); if(!el)return;
-    if(dailyState.date===utcKey(0)){ el.style.display="none"; return; }   // already played today
-    const c=dailyChallenge(), a=Personalities.ARCHES[c.foe];
-    el.style.display="flex";
-    el.innerHTML=`🗓 <span>Daily — <b>${a.name}</b>${dailyState.streak?` · ${dailyState.streak}🔥`:""}</span><span class="go">Play ▸</span>`;
-    el.onclick=openDaily;
+    // the Daily has its own button on the title; on the duel board the strip only got
+    // between the foe card and the fighters, so it stays hidden there
+    el.style.display="none";
   }
 
   /* ---- RANKED DUEL (PvP): live head-to-head + Tier ladder ----
@@ -5982,7 +5981,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
         `</div>`+
         `<div class="stat-chips">`+
           `<div class="chip"><b>${summary.rounds}</b><span>rounds</span></div>`+
-          `<div class="chip"><b>${summary.unpredictabilityPct}%</b><span>unpred</span></div>`+
+          `<div class="chip"><b>${summary.unpredictabilityPct}%</b><span>unreadable</span></div>`+
           `<div class="chip"><b>${ladder.wins}–${ladder.losses}</b><span>record</span></div>`+
           `<div class="chip streak"><b>×${ladder.streak}</b><span>streak</span></div>`+
         `</div>`+beamLine+
@@ -6158,7 +6157,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
         `<div class="thero">${heroHTML}</div>`+
         `<div class="tmenu">`+
           ((firstVisit && !room)
-            ? `<button class="tbtn primary" id="tFirst">▶ Your first duel</button>`+
+            ? `<button class="tbtn primary" id="tFirst">▶ First duel: an easy foe</button>`+
               `<button class="tbtn gold" id="tDuel">⚔ Ranked Duel</button>`
             : `<button class="tbtn primary" id="tDuel">${room?"⚔ Friend room":"⚔ Ranked Duel"}</button>`+
               `<button class="tbtn gold" id="tFree">▶ Free Duel</button>`)+
