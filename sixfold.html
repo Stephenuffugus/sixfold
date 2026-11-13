@@ -604,6 +604,8 @@
     background:#f3ead7;color:#1a1d2b;font-weight:800;font-size:13px;padding:5px 11px;border-radius:14px;box-shadow:0 3px 12px #0007;
     transition:opacity .2s,transform .2s;z-index:9;max-width:220px;overflow:hidden;text-overflow:ellipsis}
   .rbub.show,.duelbub.show{opacity:1;transform:translate(-50%,0)}
+  /* in a duel the bubble sits just under the fighter's name, so the name stays readable */
+  .duelbub{top:24px}
   .roomscore{font-size:13px;font-weight:700;color:var(--washi)}
   .roomnote{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;font-size:13px;color:var(--washi);min-height:20px;max-width:340px}
   .roomnote .rn-res{font-family:var(--disp);font-weight:800;font-size:20px;letter-spacing:.06em}
@@ -636,8 +638,11 @@
   .talkdock.on{display:flex}
   .talkdock .talkbtn{font-family:var(--ui);font-weight:800;font-size:13px;min-height:48px;min-width:64px;padding:8px 14px;border-radius:24px;cursor:pointer;
     color:var(--gold);background:#13182aee;border:1px solid var(--gold);box-shadow:0 3px 14px #0008}
-  .talkdock .talkpop{display:none;background:#13182af2;border:1px solid #ffffff2a;border-radius:14px;padding:9px;width:min(360px,calc(100vw - 20px));box-sizing:border-box}
-  .talkdock.open .talkpop{display:flex}
+  .talkdock.open .talkbtn{display:none}
+  .talkstrip{display:none;background:#13182af2;border:1px solid #ffffff2a;border-radius:14px;padding:8px 9px 9px;width:min(380px,calc(100vw - 24px));box-sizing:border-box;margin:2px 0 4px;gap:6px}
+  .talkstrip.open{display:flex}
+  .talkstrip .tk-top{display:flex;align-items:center;justify-content:space-between;width:100%}
+  .talkstrip .tk-close{min-height:44px;padding:4px 14px;font-size:12px;font-weight:700;color:var(--washi-dim)}
   .fighter{position:relative}
   /* PvP result extras (rendered inside #resultscreen) */
   .pvp-rank{display:flex;flex-direction:column;align-items:center;gap:7px;margin:6px 0;width:100%;max-width:320px}
@@ -899,6 +904,9 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     </div>
   </div>
 
+  <!-- Talk in a friend room duel: opens here, under the wheel, so every stance stays tappable -->
+  <div class="talkstrip talk" id="talkpop" role="region" aria-label="Say something"></div>
+
   <div class="meter">
     <div class="resolve" id="presolve" title="Resolve — buys information, never force">資 <span class="rpips"></span></div>
     <button class="spendbtn" id="insightbtn">Insight <span class="c">1</span></button>
@@ -930,7 +938,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   <div class="compbanner" id="compbanner">Assists off. Competitive.</div>
 
   <!-- Talk in a friend room duel: emotes and the call (only talk, never a pick) -->
-  <div class="talkdock" id="talkdock"><div class="talkpop talk" id="talkpop"></div><button class="talkbtn" id="talkbtn" aria-expanded="false">Talk</button></div>
+  <div class="talkdock" id="talkdock"><button class="talkbtn" id="talkbtn" aria-expanded="false" aria-controls="talkpop">Talk</button></div>
 
   <!-- Foe select -->
   <div class="drawer" id="foedrawer">
@@ -5461,16 +5469,26 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   }
   /* ---- talk: six emotes with words, and the call. Only talk: nothing here goes
      near the round's commit or reveal, and a call is never checked. ---- */
-  function buildTalk(box){
+  function buildTalk(box,withClose){
     if(!box) return;
     const E=FirebaseNet.EMOTES;
-    box.innerHTML=`<div class="tk-h">Say something</div>`+
+    box.innerHTML=(withClose?`<div class="tk-top"><span class="tk-h">Say something</span><button class="tk-close">Close</button></div>`:`<div class="tk-h">Say something</div>`)+
       `<div class="tk-row">`+E.map(e=>`<button class="emo" data-emo="${e.id}" aria-label="${e.w}"><span class="ee">${e.e}</span><span class="ew">${e.w}</span></button>`).join("")+`</div>`+
       `<button class="callbtn">I am going...</button>`+
       `<div class="tk-row tk-calls">`+STANCES.map((s,i)=>`<button class="stc" data-call="${i}" aria-label="Call ${s.n}"><span class="sg">${s.g}</span><span class="sw">${s.n}</span></button>`).join("")+`</div>`;
     box.querySelectorAll("button.emo").forEach(b=>{ b.onclick=()=>sendTalk("emote",b.getAttribute("data-emo")); });
     box.querySelectorAll("button.stc").forEach(b=>{ b.onclick=()=>{ sendTalk("call",parseInt(b.getAttribute("data-call"),10)); box.classList.remove("calling"); }; });
     const cb=box.querySelector(".callbtn"); if(cb) cb.onclick=()=>box.classList.toggle("calling");
+    const cl=box.querySelector(".tk-close"); if(cl) cl.onclick=()=>setTalkOpen(false);
+  }
+  // open or close the duel's Talk strip (under the wheel; the Talk button hides meanwhile)
+  function setTalkOpen(open){
+    const d=$("talkdock"), pop=$("talkpop"), b=$("talkbtn"); if(!d||!pop) return;
+    if(open && !pop.firstChild) buildTalk(pop,true);
+    d.classList.toggle("open",!!open); pop.classList.toggle("open",!!open);
+    if(!open) pop.classList.remove("calling");
+    if(b) b.setAttribute("aria-expanded",open?"true":"false");
+    if(open){ try{ pop.scrollIntoView({block:"nearest"}); }catch(e){} }
   }
   function talkText(kind,value,name){
     if(kind==="emote"){ const e=FirebaseNet.EMOTES.filter(x=>x.id===value)[0]; return e?(e.e+" "+e.w):""; }
@@ -5481,7 +5499,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     if(!room.say(kind,value)){ showToast("One at a time. Wait a moment."); return; }
     Sfx.play("tap");
     bubble(roomInDuel?$("pbub"):$("rmebub"), talkText(kind,value,null));
-    const dock=$("talkdock"); if(dock && roomInDuel){ dock.classList.remove("open"); $("talkbtn").setAttribute("aria-expanded","false"); }
+    if(roomInDuel) setTalkOpen(false);
   }
   function onRoomSay(s){
     if(roomQuiet) return;
@@ -5500,9 +5518,9 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     const on=!!(room && roomInDuel && isPvP && pvpOpp && pvpOpp.room && !over && !revealing && !introPlaying);
     const db=$("duelbtn"); if(db) db.textContent=room?"⚔ Friend room":"⚔ Ranked Duel";
     dock.classList.toggle("on",on);
-    if(!on){ dock.classList.remove("open"); const b=$("talkbtn"); if(b) b.setAttribute("aria-expanded","false"); }
+    if(!on) setTalkOpen(false);
   }
-  { const tb=$("talkbtn"); if(tb) tb.onclick=()=>{ const d=$("talkdock"); const open=!d.classList.contains("open"); d.classList.toggle("open",open); tb.setAttribute("aria-expanded",open?"true":"false"); if(open && !$("talkpop").firstChild) buildTalk($("talkpop")); }; }
+  { const tb=$("talkbtn"); if(tb) tb.onclick=()=>setTalkOpen(!$("talkdock").classList.contains("open")); }
   function onSearchState(s){
     if(s.state==="searching"){
       const widen = s.half===Infinity ? "anyone online" : ("±"+s.half+" rating");
