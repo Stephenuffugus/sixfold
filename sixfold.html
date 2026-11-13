@@ -384,6 +384,10 @@
   .plink{display:inline-flex;align-items:center;min-height:48px;padding:0 4px;color:var(--gold);font-weight:700;text-decoration:underline;text-underline-offset:3px}
   .pnote{font-size:12px;color:var(--washi-dim);line-height:1.4;margin:2px 0 0;text-align:center}
   .howto{text-align:center}
+  /* a first visit sees only the first two rules; the rest come as one time hints in play */
+  #howto.short .howto li.more{display:none}
+  .howto .howsoon{display:none;margin:12px 0 0;font-size:13px;line-height:1.45;color:var(--washi-dim)}
+  #howto.short .howto .howsoon{display:block}
   .howto h2{font-family:var(--disp);font-weight:800;font-size:24px;letter-spacing:.14em;margin:0 0 4px;color:var(--washi)}
   .howto ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px;text-align:left;font-size:13px;line-height:1.4}
   .howto li{display:flex;gap:10px;align-items:flex-start}
@@ -1056,13 +1060,14 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     <div class="hero howto">
       <h2>HOW TO DUEL</h2>
       <ol>
-        <li><span class="ic">👆</span><span>Tap a stance on the wheel each round. You both reveal at once.</span></li>
+        <li><span class="ic">👆</span><span>Tap a stance on the wheel, then tap it again to strike. You both reveal at once.</span></li>
         <li><span class="ic">↻</span><span>You beat the <span class="k">2 stances clockwise</span> of yours: <span class="c-clean">CLEAN −2</span>, then <span class="c-glance">GLANCE −1</span>.</span></li>
-        <li><span class="ic">⇄</span><span>Directly <span class="c-steel">across = WHIFF</span>. Blades pass, no damage.</span></li>
-        <li><span class="ic">⚔</span><span><span class="k">Same stance = CLASH</span> → break the bind: <span class="c-gold">Drive ▸ Slip ▸ Trap ▸ Drive</span>.</span></li>
-        <li><span class="ic">資</span><span>Dead rounds build <span class="c-gold">Resolve</span>. Spend it to read the foe, never to hit harder. <span class="c-gold">Foresight</span> names their likely next stance, so you read the wheel and strike to land a <span class="c-gold">READ 🎯</span>.</span></li>
-        <li><span class="ic">🏆</span><span>Drop the foe's <span class="k">4 HP</span> first. Stay unpredictable, because they're reading you too.</span></li>
+        <li class="more"><span class="ic">⇄</span><span>Directly <span class="c-steel">across = WHIFF</span>. Blades pass, no damage.</span></li>
+        <li class="more"><span class="ic">⚔</span><span><span class="k">Same stance = CLASH</span> → break the bind: <span class="c-gold">Drive ▸ Slip ▸ Trap ▸ Drive</span>.</span></li>
+        <li class="more"><span class="ic">資</span><span>Dead rounds build <span class="c-gold">Resolve</span>. Spend it to read the foe, never to hit harder. <span class="c-gold">Foresight</span> names their likely next stance, so you read the wheel and strike to land a <span class="c-gold">READ 🎯</span>.</span></li>
+        <li class="more"><span class="ic">🏆</span><span>Drop the foe's <span class="k">4 HP</span> first. Stay unpredictable, because they're reading you too.</span></li>
       </ol>
+      <p class="howsoon">Drop the foe's <span class="k">4 HP</span> first. The other rules come up as you duel.</p>
       <button class="gotit" id="howtoclose">Got it</button>
     </div>
   </div>
@@ -4576,6 +4581,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
       else if(outcome.winner&&outcome.kind==="glance")hub.classList.add("flash-glance");
       else if(outcome.kind==="whiff")hub.classList.add("flash-whiff");
       if(read){ matchReads++; addLifetimeReads(1); onReadLanded(); }
+      if(outcome.kind==="whiff" && !outcome.bind) hintWhiffOnce();
       if(outcome.bind && outcome.winner==="P") matchBindWon=true;   // for Trials
       setTimeout(()=>outcomeJuice(outcome,read), reduced()?0:330); // sync cue to the strike
       if(outcome.winner && (outcome.dmg||0)>0)                      // floating −N over the struck fighter
@@ -4731,6 +4737,11 @@ body.reduce .fighter-art .sprite { animation: none !important; }
     $("insightbtn").classList.toggle("ready",ins);
     $("foresightbtn").classList.toggle("ready",fore);
     if(ins&&!busy&&!over) hintResolveOnce();
+  }
+  // the first whiff ever: say why (the short first card leaves this rule to play)
+  function hintWhiffOnce(){
+    try{ if(localStorage.getItem("sixfold_whiffhint"))return; localStorage.setItem("sixfold_whiffhint","1"); }catch(e){}
+    showToast("⇄ Directly across the wheel is a whiff: blades pass, no damage");
   }
   function hintResolveOnce(){
     try{ if(localStorage.getItem("sixfold_resolvehint"))return; localStorage.setItem("sixfold_resolvehint","1"); }catch(e){}
@@ -6096,6 +6107,9 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   const MENU_MUSIC="lastbreath1";
   function menuMusic(){ return "music/"+MENU_MUSIC+".mp3"; }
   let titlePending=false;
+  // a first visit: the title's main button starts the Ascent's first rung (Stone, the
+  // gentlest foe) with Ranked Duel below it, until the player starts any duel
+  let firstVisit=false;
   function renderTitle(){
     const t=ladder.tier();
     // hero = the player's current fighter, idle frame, rendered large + breathing
@@ -6114,8 +6128,11 @@ body.reduce .fighter-art .sprite { animation: none !important; }
         `<div class="ttag">read · strike · ascend</div>`+
         `<div class="thero">${heroHTML}</div>`+
         `<div class="tmenu">`+
-          `<button class="tbtn primary" id="tDuel">${room?"⚔ Friend room":"⚔ Ranked Duel"}</button>`+
-          `<button class="tbtn gold" id="tFree">▶ Free Duel</button>`+
+          ((firstVisit && !room)
+            ? `<button class="tbtn primary" id="tFirst">▶ Your first duel</button>`+
+              `<button class="tbtn gold" id="tDuel">⚔ Ranked Duel</button>`
+            : `<button class="tbtn primary" id="tDuel">${room?"⚔ Friend room":"⚔ Ranked Duel"}</button>`+
+              `<button class="tbtn gold" id="tFree">▶ Free Duel</button>`)+
         `</div>`+
         `<div class="tgrid">`+
           `<button class="tchip" id="tDaily">🗓 Daily</button>`+
@@ -6126,10 +6143,11 @@ body.reduce .fighter-art .sprite { animation: none !important; }
         `<div class="tfoot"><button id="tSettings">⚙ Settings</button><button id="tHow">How to play</button>${window.SWS_IN_TWA?"":`<button id="tExit">← All Sky Wolf games</button>`}</div>`+
       `</div>`;
     const on=(id,fn)=>{const el=$(id); if(el) el.onclick=fn;};
-    on("tDuel",()=>{ closeTitle(); openDuel(); });
+    on("tFirst",()=>{ firstVisit=false; closeTitle(); startAscentRung(0); });
+    on("tDuel",()=>{ firstVisit=false; closeTitle(); openDuel(); });
     on("tFree",quickDuel);
-    on("tDaily",()=>{ closeTitle(); openDaily(); });
-    on("tAscent",()=>{ closeTitle(); openAscent(); });
+    on("tDaily",()=>{ firstVisit=false; closeTitle(); openDaily(); });
+    on("tAscent",()=>{ firstVisit=false; closeTitle(); openAscent(); });
     on("tRoster",()=>{ closeTitle(); openCollection(); });
     on("tProfile",()=>{ closeTitle(); openProfile(); });
     on("tSettings",()=>{ closeTitle(); $("setdrawer").classList.add("open");
@@ -6163,7 +6181,8 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   $("custdh").onclick=()=>toggleDrawer("custdrawer");
   $("foebtn").onclick=()=>{$("foedrawer").classList.add("open");$("foedrawer").scrollIntoView({behavior:"smooth",block:"nearest"});};
   $("rematch").onclick=()=>newGame();
-  function openHowto(){$("howto").classList.add("show");$("howto").setAttribute("aria-hidden","false");}
+  // short: the first visit's card (two rules and one button); any other open shows every rule
+  function openHowto(short){$("howto").classList.toggle("short",short===true);$("howto").classList.add("show");$("howto").setAttribute("aria-hidden","false");}
   function closeHowto(){$("howto").classList.remove("show");$("howto").setAttribute("aria-hidden","true");
     try{localStorage.setItem("sixfold_seen","1");}catch(e){}
     if(titlePending){ titlePending=false; openTitle(); }   // first-run: guide -> title
@@ -6194,7 +6213,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   let bootRoom=null;
   try{ const m=/[?&]room=([^&#]*)/.exec((typeof location!=="undefined"&&location.search)||""); if(m && typeof FirebaseNet!=="undefined") bootRoom=FirebaseNet.normalizeCode(decodeURIComponent(m[1])); }catch(e){}
   if(bootRoom){ try{ localStorage.setItem("sixfold_seen","1"); }catch(e){} renderFriendPanel(); const o=$("duelscreen"); o.classList.add("show"); o.setAttribute("aria-hidden","false"); enterRoom(bootRoom); }
-  else if(firstRun){ titlePending=true; openHowto(); } else { openTitle(); }
+  else if(firstRun){ firstVisit=true; titlePending=true; openHowto(true); } else { openTitle(); }
 
   initLucid();   // wire the Lucid Winds Sunbeam economy if the SDK is already present
 
