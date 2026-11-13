@@ -86,6 +86,10 @@
     var HUMAN_GRACE = opts.humanGraceMs == null ? 8000 : opts.humanGraceMs;
     var FRIEND_WAIT = opts.friendWaitMs || 10 * 60 * 1000;  // host waits up to 10 min
     var JOIN_WAIT = opts.joinWaitMs || 8000;                // joiner gives up on an empty code
+    // a finished duel's record (both names, ratings, every pick) is removed this long
+    // after the duel closes, the same tidy the friend rooms use; the delay lets the
+    // slower phone read the last reveal. The player's own busy lobby entry goes too.
+    var TIDY_MS = opts.tidyMs == null ? 8000 : opts.tidyMs;
 
     /* presence: <root>/lobby/$uid = {name,rating,ts,status}; auto-removed on disconnect */
     function announce(uid, info) {
@@ -252,7 +256,7 @@
     function normalize(c) { return { id: c.id, name: c.name || "Rival", kind: "human", rating: c.rating || 1000, tierName: c.tierName, friend: FRIEND }; }
 
     /* open a duel I CREATED (I am side 'a') */
-    function openCreatedDuel(duelId, myUid, opponent) { return makeRtdbSession(db, duelId, myUid, "a", opponent, P); }
+    function openCreatedDuel(duelId, myUid, opponent) { return makeRtdbSession(db, duelId, myUid, "a", opponent, P, { tidyMs: TIDY_MS }); }
     /* open a duel I was pointed at; the duel node says which side I am (normally
        'b', the claimed one; 'a' if this is our own claim echoing back) */
     function openClaimedDuel(duelId, myUid) {
@@ -263,7 +267,7 @@
         var opp = mine === "a"
           ? { id: d.b, name: cleanName(d.bName), kind: "human", rating: cleanRating(d.bRating), friend: FRIEND }
           : { id: d.a, name: cleanName(d.aName), kind: "human", rating: cleanRating(d.aRating), friend: FRIEND };
-        return makeRtdbSession(db, duelId, myUid, mine, opp, P);
+        return makeRtdbSession(db, duelId, myUid, mine, opp, P, { tidyMs: TIDY_MS });
       });
     }
 
@@ -295,6 +299,27 @@
     var base = P.duels + "/" + duelId;
     var dead = false, discSubs = [];
     var lastIndependent = false;
+    // sopts.tidyMs (the public duels): close() removes this duel's record and this
+    // player's own lobby entry tidyMs later, and the server removes the record at once
+    // if this phone drops (a public duel ends on a drop anyway). Room duels leave
+    // their tidy to the room.
+    var TIDY = (sopts && sopts.tidyMs != null && sopts.tidyMs >= 0) ? sopts.tidyMs : -1;
+    var tidied = false;
+    if (TIDY >= 0) { try { db.ref(base).onDisconnect().remove(); } catch (e) {} }
+    function tidy() {
+      if (TIDY < 0 || tidied) return;
+      tidied = true;
+      root.setTimeout(function () {
+        quietP(db.ref(base).remove());
+        // my lobby entry, only while it still points at THIS duel: the same tab may
+        // already be searching again under the same id
+        quietP(db.ref(P.lobby + "/" + myUid).transaction(function (cur) {
+          if (!cur) return null;   // not known locally yet: a no-op the server retries with the real value
+          if (cur.matchedDuel !== duelId) return;
+          return null;
+        }, undefined, false));
+      }, TIDY);
+    }
 
     // generic commit-reveal exchange over a path (rounds/$n or binds/$n)
     function exchange(kind, n, myPick) {
@@ -517,7 +542,7 @@
       // two missed rounds in a row by one side (no hit for the second): cb({side, mine, n})
       onIdle: function (cb) { if (typeof cb === "function") idleSubs.push(cb); },
       roundMs: ROUND_MS,
-      close: function () { dead = true; stopClock(); if (graceTimer) { root.clearTimeout(graceTimer); graceTimer = null; } try { oppPresenceRef.off("value", onPres); } catch (e) {} },
+      close: function () { dead = true; stopClock(); if (graceTimer) { root.clearTimeout(graceTimer); graceTimer = null; } try { oppPresenceRef.off("value", onPres); } catch (e) {} tidy(); },
       simulateDisconnect: function (r) { fireDisconnect(r || "left"); },
       _decidedIndependently: function () { return lastIndependent; },
     };
