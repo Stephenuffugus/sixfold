@@ -306,8 +306,10 @@
   /* drawers */
   .drawer{width:100%;max-width:460px;background:#1a213af2;
     border:1px solid #ffffff1a;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px #0004;
-    transition:max-height .3s ease;max-height:46px}
-  .drawer.open{max-height:520px}
+    transition:max-height .3s ease;max-height:46px;flex-shrink:0}
+  /* flex-shrink 0: in the body's column a full page squashed every drawer to its border,
+     so Settings opened to nothing. The open height fits the longest drawer (the customizer). */
+  .drawer.open{max-height:1600px}
   .drawer .dh{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;font-weight:700;font-size:13px;letter-spacing:.04em}
   .drawer .dh .chev{transition:transform .3s} .drawer.open .dh .chev{transform:rotate(180deg)}
   .dbody{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
@@ -378,6 +380,9 @@
   @keyframes bindcount{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 
   /* ===== HOW TO DUEL — first-run guide (reuses .overlay) ===== */
+  /* a plain link to the privacy page, a full touch target */
+  .plink{display:inline-flex;align-items:center;min-height:48px;padding:0 4px;color:var(--gold);font-weight:700;text-decoration:underline;text-underline-offset:3px}
+  .pnote{font-size:12px;color:var(--washi-dim);line-height:1.4;margin:2px 0 0;text-align:center}
   .howto{text-align:center}
   .howto h2{font-family:var(--disp);font-weight:800;font-size:24px;letter-spacing:.14em;margin:0 0 4px;color:var(--washi)}
   .howto ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px;text-align:left;font-size:13px;line-height:1.4}
@@ -897,6 +902,10 @@
       <div class="row"><label>Assist charm, casual and practice only</label>
         <div class="opts" id="charms"></div>
         <div class="hint" id="charmhint">Charms go inert the moment a match is ranked, seeded, or PvP.</div>
+      </div>
+      <div class="row"><label>Privacy</label>
+        <div class="hint">Only Find a rival and Play a friend send anything: your name and picks, to the other player.</div>
+        <a class="plink" id="privlink" href="privacy.html">Privacy policy</a>
       </div>
     </div>
   </div>
@@ -2177,6 +2186,7 @@
       `<div class="duel-actions" id="duelactions"></div>`+
       `<div class="ladderlist"><div class="ll-h">Your standing</div>${standingRows()}`+
         `<div class="ll-note">A global leaderboard comes later. No fake opponents here.</div></div>`+
+      `<div class="pnote">Find a rival sends your name and picks to the other player only. <a class="plink" href="privacy.html">Privacy</a></div>`+
       `<button class="close" id="duelclose">Close</button></div>`;
     $("duelclose").onclick=closeDuel;
     setDuelControls("idle");
@@ -2245,6 +2255,7 @@
       `<label class="rname">Your name <input id="fname" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Your name"></label>`+
       `<div class="duelstatus" id="duelstatus"></div>`+
       `<div class="duel-actions" id="duelactions"></div>`+
+      `<div class="pnote">Your name and picks go to the other player only. <a class="plink" href="privacy.html">Privacy</a></div>`+
       `<button class="close" id="duelclose">Back</button></div>`;
     const fn=$("fname"); if(fn){ fn.value=savedName(); fn.oninput=()=>saveNetName(fn.value); }
     $("duelclose").onclick=()=>{ onlineGen++; renderDuel(); };
@@ -2920,7 +2931,9 @@
     on("tAscent",()=>{ closeTitle(); openAscent(); });
     on("tRoster",()=>{ closeTitle(); openCollection(); });
     on("tProfile",()=>{ closeTitle(); openProfile(); });
-    on("tSettings",()=>{ closeTitle(); $("setdrawer").classList.add("open"); $("setdrawer").scrollIntoView({behavior:"smooth",block:"nearest"}); });
+    on("tSettings",()=>{ closeTitle(); $("setdrawer").classList.add("open");
+      // scroll once the drawer has grown (its transition is .3 s), so the whole drawer shows, not its header
+      setTimeout(()=>{ $("setdrawer").scrollIntoView({behavior:"smooth",block:"start"}); },340); });
     on("tHow",()=>{ closeTitle(); openHowto(); });
     // Sky Wolf embed protocol: the ONLY control that leaves the game.
     // Inside the Play app (inTWA) there is no exit button and SWS_EXIT refuses.
