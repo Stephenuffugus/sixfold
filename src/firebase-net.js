@@ -428,7 +428,7 @@
   }
   function friendlyError(e) {
     var r = (e && e.reason) || (isPermissionError(e) ? "permission-denied" : "db-unreachable");
-    if (r === "permission-denied") return "The online server said no (permission denied). Online play is not switched on yet. Duel a Sentinel for now.";
+    if (r === "permission-denied") return "The online server said no (permission denied). Online play is not switched on yet.";
     if (r === "not-configured") return "Online play is not set up in this build.";
     if (r === "sdk-unreachable") return "Could not load online play. Check your connection and try again.";
     return "Could not reach the online server. Check your connection and try again.";

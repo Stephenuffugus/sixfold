@@ -194,3 +194,11 @@ registries are the foundation for that.
 See the session's audit report for the prioritized improvement list.
 
 (continued below as work lands…)
+
+## 2026-11-13 — multiplayer-live: Firebase switched on, Play a friend
+
+- Transport is live against the studio project `focus-grove-fffa8` (RTDB `focus-grove-fffa8-default-rtdb`). The page carries only the public config; `FirebaseNet.connect()` fetches the 9.23.0 compat SDK on the first online tap, probes `sixfold/lobby`, and rejects with a reason (`sdk-unreachable`, `db-unreachable`, `permission-denied`, `not-configured`) that `friendlyError` turns into plain words. Offline boot is unchanged.
+- Every path is under `sixfold/`: `sixfold/lobby`, `sixfold/duels`, and private lobbies `sixfold/friends/<CODE>/{lobby,duels}` (code: 4 of A-Z 2-9 without I O 0 1). The rules live in the lucid-winds repo (`database.rules.json`, `sixfold` branch beside `party`); Stephen deploys them.
+- Friend duels reuse the same presence + claim + commit-reveal; they are unranked in the glue (`pvpOpp.friend`): no `applyResult`, no sunbeams, no Lucid Winds mint, leaving costs nothing.
+- Fixed while wiring: (1) the claim now takes the claimer's OWN lock first, so two searchers who claim each other on the same tick no longer build two duels that never meet; (2) a claimer's own `matchedDuel` write echoes into its listener, so the side is read off the duel node instead of assumed `b`; (3) past the 13 s timeout the public band goes to any rating (plus an 8 s grace while another human is searching), so two lone humans far apart in rating meet instead of both getting Sentinels; (4) names/ratings/reveals off the wire are sanitised and range checked; (5) `Rank.createLadder` gives EVERY fresh install the same `playerId` (`p_g7bayja5`, seeded counter), so the wire uses a random per page load id instead. Worth fixing in rank.js before a global leaderboard.
+- Still open: a player who closes the tab mid-duel is caught by presence, but one who taps away to another app keeps presence and the other side waits on a commit that never comes (no per-round timeout). Duel nodes are never deleted.

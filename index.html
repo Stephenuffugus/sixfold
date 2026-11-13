@@ -542,6 +542,8 @@
   .ll-row .ll-r{color:var(--washi-dim);font-variant-numeric:tabular-nums}
   .ll-note{font-size:10px;color:var(--washi-dim);text-align:center;margin-top:6px;font-style:italic}
   .modetag.ranked{background:linear-gradient(180deg,#b98a2e,#8a6420);color:#fff;border-color:#0003}
+  .duel .close{margin-top:10px;font-family:var(--ui);font-weight:700;font-size:13px;padding:11px 26px;min-height:48px;border-radius:11px;
+    border:1px solid #ffffff28;cursor:pointer;color:var(--washi);background:#ffffff12}
   /* Play a friend */
   .friendbox{display:flex;flex-direction:column;align-items:stretch;gap:9px;width:100%}
   .friendbox .fb-t{font-weight:800;font-size:14px;color:var(--washi);text-align:center}
@@ -2672,7 +2674,7 @@ body.reduce .fighter-art .sprite { animation: none !important; }
   }
   function friendlyError(e) {
     var r = (e && e.reason) || (isPermissionError(e) ? "permission-denied" : "db-unreachable");
-    if (r === "permission-denied") return "The online server said no (permission denied). Online play is not switched on yet. Duel a Sentinel for now.";
+    if (r === "permission-denied") return "The online server said no (permission denied). Online play is not switched on yet.";
     if (r === "not-configured") return "Online play is not set up in this build.";
     if (r === "sdk-unreachable") return "Could not load online play. Check your connection and try again.";
     return "Could not reach the online server. Check your connection and try again.";
