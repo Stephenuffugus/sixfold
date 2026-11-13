@@ -276,8 +276,13 @@
   }
 
   /* ---------------- RTDB-backed duel session (commit-reveal relay) ---------------- */
-  function makeRtdbSession(db, duelId, myUid, mySide, opponent, paths) {
+  // sopts.graceMs: how long the rival's presence may be gone before the duel counts
+  // them as dropped (0 = at once, the public lobby's rule). A friend room uses a
+  // grace so a phone that blinks offline for a few seconds does not end the duel.
+  function makeRtdbSession(db, duelId, myUid, mySide, opponent, paths, sopts) {
     var P = paths || pathsFor(ROOT);
+    var GRACE = (sopts && sopts.graceMs > 0) ? sopts.graceMs : 0;
+    var graceTimer = null;
     var oppSide = mySide === "a" ? "b" : "a";
     var base = P.duels + "/" + duelId;
     var dead = false, discSubs = [];
@@ -324,20 +329,245 @@
     // is a real drop — an initial null (presence not yet/ever seen) must NOT count.
     var oppPresenceRef = db.ref(P.lobby + "/" + opponent.id);
     var sawPresence = false;
-    var onPres = function (snap) { var v = snap && snap.val && snap.val(); if (v) { sawPresence = true; } else if (sawPresence && !dead) { fireDisconnect("left"); } };
+    var onPres = function (snap) {
+      var v = snap && snap.val && snap.val();
+      if (v) { sawPresence = true; if (graceTimer) { root.clearTimeout(graceTimer); graceTimer = null; } return; }
+      if (!sawPresence || dead) return;
+      if (!GRACE) return fireDisconnect("left");
+      if (!graceTimer) graceTimer = root.setTimeout(function () { graceTimer = null; fireDisconnect("left"); }, GRACE);
+    };
     try { oppPresenceRef.on("value", onPres); } catch (e) {}
 
-    function fireDisconnect(reason) { if (dead) return; dead = true; try { oppPresenceRef.off("value", onPres); } catch (e) {} discSubs.forEach(function (f) { try { f({ reason: reason }); } catch (e) {} }); }
+    function fireDisconnect(reason) { if (dead) return; dead = true; if (graceTimer) { root.clearTimeout(graceTimer); graceTimer = null; } try { oppPresenceRef.off("value", onPres); } catch (e) {} discSubs.forEach(function (f) { try { f({ reason: reason }); } catch (e) {} }); }
 
     return {
       meta: opponent,
       exchangeStance: function (n, myPick) { return exchange("rounds", n, myPick); },
       exchangeBind: function (n, myBind) { return exchange("binds", n, myBind); },
       onDisconnect: function (cb) { if (typeof cb === "function") discSubs.push(cb); },
-      close: function () { dead = true; try { oppPresenceRef.off("value", onPres); } catch (e) {} },
+      close: function () { dead = true; if (graceTimer) { root.clearTimeout(graceTimer); graceTimer = null; } try { oppPresenceRef.off("value", onPres); } catch (e) {} },
       simulateDisconnect: function (r) { fireDisconnect(r || "left"); },
       _decidedIndependently: function () { return lastIndependent; },
     };
+  }
+
+
+  /* ---------------- the friend ROOM (outlives a duel) ----------------
+   * sixfold/friends/<CODE>/room holds everything two friends share between duels:
+   *   here/<uid>  = {name, at}      presence (removed on disconnect, re-sent on reconnect)
+   *   left/<uid>  = ts              set by an explicit "Leave the room"
+   *   ready/<uid> = n               ready for duel number n (the rematch vote)
+   *   duel        = {n,id,a,b,...}  the current duel; written once per n by a transaction
+   *   won/<n>     = {w,l}           who won duel n (the session score)
+   *   ended/<n>   = {why,by}        duel n was called off (a drop or a quit)
+   *   say/<uid>   = {k,v,t,id}      the last emote ("e") or call ("c") from that player
+   * The duel itself runs the SAME commit-reveal relay under .../friends/<CODE>/duels.
+   * "say" is a separate small write: it never touches the rounds/binds paths, so an
+   * emote or a call cannot carry, reveal or change a committed pick, and a flood of
+   * them cannot hold up a round. A call is only talk and is never checked. */
+  var EMOTES = [
+    { id: "smirk", e: "😏", w: "Smirk" },
+    { id: "eyes", e: "👀", w: "Eyes" },
+    { id: "gasp", e: "😮", w: "Gasp" },
+    { id: "respect", e: "🙇", w: "Respect" },
+    { id: "fire", e: "🔥", w: "Fire" },
+    { id: "yawn", e: "🥱", w: "Yawn" },
+  ];
+  var SAY_GAP_MS = 2000;
+  function emoteById(id) { for (var i = 0; i < EMOTES.length; i++) if (EMOTES[i].id === id) return EMOTES[i]; return null; }
+  // a said thing off the wire is untrusted: only a known emote id or a whole stance 0..5
+  function cleanSay(v) {
+    if (!v || typeof v !== "object") return null;
+    var id = (typeof v.id === "string" && v.id) ? v.id.slice(0, 32) : null;
+    if (!id) return null;
+    if (v.k === "e" && typeof v.v === "string" && emoteById(v.v)) return { kind: "emote", value: v.v, id: id };
+    if (v.k === "c" && typeof v.v === "number" && v.v >= 0 && v.v < 6 && Math.floor(v.v) === v.v) return { kind: "call", value: v.v, id: id };
+    return null;
+  }
+  function obj(v) { return (v && typeof v === "object") ? v : {}; }
+  function safeKey(k) { return typeof k === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(k); }
+
+  // openRoom(db, code, {uid, name, graceMs, now}) -> Promise<room>; rejects with
+  // .reason "room-full" when two other players are already in it.
+  function openRoom(db, code, o) {
+    o = o || {};
+    if (!CODE_RE.test(String(code || ""))) return Promise.reject(fail("bad-code"));
+    var uid = String(o.uid || ("anon_" + Math.floor(rand() * 1e9)));
+    var base = friendRoot(code) + "/room";
+    return db.ref(base + "/here").get().then(function (snap) {
+      var here = obj(snap && snap.val && snap.val());
+      var others = Object.keys(here).filter(function (k) { return k !== uid && here[k]; });
+      if (others.length >= 2) throw fail("room-full");
+      var room = makeRoom(db, code, uid, o);
+      return room._enter().then(function () { return room; });
+    });
+  }
+
+  function makeRoom(db, code, uid, o) {
+    var now = o.now || nowMs;
+    var base = friendRoot(code) + "/room";
+    var name = cleanName(o.name);
+    var joinedAt = now();
+    var st = { here: {}, ready: {}, duel: null, won: {}, ended: {}, say: {}, left: {} };
+    var subs = { change: [], duel: [], say: [], ended: [], gone: [], back: [] };
+    var seenSay = {}, endedSeen = {}, startedN = 0, creating = 0, first = true;
+    var lastFriend = null, friendHere = false, lastSayAt = -Infinity, gone = false;
+    var roomRef = db.ref(base), infoRef = null;
+    function emit(k, x) { (subs[k] || []).forEach(function (f) { try { f(x); } catch (e) {} }); }
+    function quiet(w) { if (w && w.catch) w.catch(function () {}); return w; }
+
+    function players() {
+      return Object.keys(st.here).filter(function (k) { return safeKey(k) && st.here[k] && typeof st.here[k] === "object"; })
+        .sort(function (x, y) { var ax = Number(st.here[x].at) || 0, ay = Number(st.here[y].at) || 0; return ax - ay || (x < y ? -1 : x > y ? 1 : 0); });
+    }
+    function wins(w, l) {
+      var n = 0; Object.keys(st.won).forEach(function (k) { var r = st.won[k]; if (r && r.w === w && r.l === l) n++; }); return n;
+    }
+    function view() {
+      var ps = players(), me = ps.indexOf(uid);
+      var full = me >= 2;
+      var seats = ps.slice(0, 2), f = null;
+      if (!full) for (var i = 0; i < seats.length; i++) if (seats[i] !== uid) f = seats[i];
+      var nextN = ((st.duel && Number(st.duel.n)) || 0) + 1;
+      return {
+        code: code,
+        me: { uid: uid, name: name },
+        friend: f ? { uid: f, name: cleanName(st.here[f].name) } : null,
+        full: full,
+        nextN: nextN,
+        myReady: st.ready[uid] === nextN,
+        friendReady: !!(f && st.ready[f] === nextN),
+        duelN: (st.duel && Number(st.duel.n)) || 0,
+        score: f ? { me: wins(uid, f), friend: wins(f, uid) } : { me: 0, friend: 0 },
+      };
+    }
+    function cleanDuel(d) {
+      return { n: Number(d.n) || 0, id: String(d.id), a: String(d.a), b: String(d.b), aName: cleanName(d.aName), bName: cleanName(d.bName) };
+    }
+    function createDuel(v) {
+      if (creating >= v.nextN) return;
+      creating = v.nextN;
+      var ps = players(), a = ps[0], b = ps[1], nNext = v.nextN;
+      if (!a || !b) return;
+      var d = { n: nNext, id: "r" + nNext + "_" + now().toString(36) + "_" + Math.floor(rand() * 1e6).toString(36),
+        a: a, b: b, aName: cleanName(st.here[a].name), bName: cleanName(st.here[b].name), ts: now() };
+      quiet(db.ref(base + "/duel").transaction(function (cur) {
+        if (cur && (Number(cur.n) || 0) >= nNext) return;   // the other phone wrote it first
+        return d;
+      }));
+    }
+    function onSnap(snap) {
+      if (gone) return;
+      var v = obj(snap && snap.val && snap.val());
+      st = { here: obj(v.here), ready: obj(v.ready), duel: (v.duel && typeof v.duel === "object" && v.duel.id && v.duel.a && v.duel.b) ? v.duel : null,
+        won: obj(v.won), ended: obj(v.ended), say: obj(v.say), left: obj(v.left) };
+      var vw = view();
+      // emotes and calls: only the friend's, only new ones, only known values
+      Object.keys(st.say).forEach(function (u) {
+        if (u === uid) return;
+        var s = cleanSay(st.say[u]);
+        if (!s || seenSay[u] === s.id) return;
+        seenSay[u] = s.id;
+        if (!first && vw.friend && u === vw.friend.uid) emit("say", { from: u, name: vw.friend.name, kind: s.kind, value: s.value });
+      });
+      // the friend arriving, leaving, or dropping
+      if (vw.friend) {
+        if (!friendHere && !first) emit("back", vw.friend);
+        friendHere = true; lastFriend = vw.friend;
+      } else if (friendHere && lastFriend) {
+        friendHere = false;
+        emit("gone", { uid: lastFriend.uid, name: lastFriend.name, why: st.left[lastFriend.uid] ? "left" : "lost" });
+      }
+      // duels called off
+      Object.keys(st.ended).forEach(function (n) {
+        if (endedSeen[n]) return; endedSeen[n] = 1;
+        var e = obj(st.ended[n]);
+        if (!first) emit("ended", { n: Number(n) || 0, why: (e.why === "quit" || e.why === "unready") ? e.why : "lost", by: String(e.by || "") });
+      });
+      // both ready for the same next duel: write it (once, whoever gets there first)
+      if (vw.friend && !vw.full && vw.myReady && vw.friendReady) createDuel(vw);
+      // a duel I am in and readied for has been written: start it, once
+      var d = st.duel;
+      if (d && (Number(d.n) || 0) > startedN && (d.a === uid || d.b === uid)) {
+        startedN = Number(d.n) || 0;
+        if (st.ready[uid] === startedN) emit("duel", cleanDuel(d));
+        // written in the instant I took my Ready back: call it off so my friend is
+        // not left alone in a duel nobody will play
+        else if (!first) room.endDuel(startedN, "unready");
+      }
+      first = false;
+      emit("change", vw);
+    }
+    function announce() {
+      if (gone) return Promise.resolve();
+      try { db.ref(base + "/here/" + uid).onDisconnect().remove(); } catch (e) {}
+      try { db.ref(base + "/ready/" + uid).onDisconnect().remove(); } catch (e) {}
+      return Promise.all([quiet(db.ref(base + "/left/" + uid).remove()), db.ref(base + "/here/" + uid).set({ name: name, at: joinedAt })]);
+    }
+    var onInfo = function (s) { if (s && s.val && s.val() === true) quiet(announce()); };
+
+    var room = {
+      code: code, uid: uid,
+      on: function (k, cb) { if (subs[k] && typeof cb === "function") subs[k].push(cb); return room; },
+      view: view,
+      setReady: function (on) {
+        if (gone) return null;
+        var r = db.ref(base + "/ready/" + uid);
+        return quiet(on ? r.set(view().nextN) : r.remove());
+      },
+      setName: function (nm) {
+        name = cleanName(nm);
+        if (!gone) quiet(db.ref(base + "/here/" + uid).update({ name: name }));
+        return name;
+      },
+      // send an emote id or a call (stance 0..5). At most one every 2 s; false if refused.
+      say: function (kind, value) {
+        if (gone) return false;
+        var k = kind === "call" ? "c" : kind === "emote" ? "e" : null;
+        if (!k || !cleanSay({ k: k, v: value, id: "x" })) return false;
+        var t = now();
+        if (t - lastSayAt < SAY_GAP_MS) return false;
+        lastSayAt = t;
+        quiet(db.ref(base + "/say/" + uid).set({ k: k, v: value, t: t, id: salt() }));
+        return true;
+      },
+      reportResult: function (n, iWon) {
+        var v = view(); if (!v.friend || !n) return null;
+        var rec = iWon ? { w: uid, l: v.friend.uid } : { w: v.friend.uid, l: uid };
+        return quiet(db.ref(base + "/won/" + n).transaction(function (cur) { if (cur) return; return rec; }));
+      },
+      endDuel: function (n, why) {
+        if (!n) return null;
+        endedSeen[n] = 1;
+        return quiet(db.ref(base + "/ended/" + n).transaction(function (cur) { if (cur) return; return { why: (why === "quit" || why === "unready") ? why : "lost", by: uid }; }));
+      },
+      // the duel session for a duel this room started (the relay under .../duels)
+      session: function (d) {
+        var side = d.a === uid ? "a" : "b", oppId = side === "a" ? d.b : d.a;
+        var opp = { id: oppId, name: side === "a" ? d.bName : d.aName, kind: "human", rating: 1000, friend: true, room: true, duelN: d.n };
+        return makeRtdbSession(db, d.id, uid, side, opp,
+          { root: friendRoot(code), lobby: base + "/here", duels: friendRoot(code) + "/duels" },
+          { graceMs: o.graceMs == null ? 12000 : o.graceMs });
+      },
+      leave: function () {
+        if (gone) return Promise.resolve();
+        gone = true;
+        try { roomRef.off("value", onSnap); } catch (e) {}
+        try { if (infoRef) infoRef.off("value", onInfo); } catch (e) {}
+        return Promise.all([
+          quiet(db.ref(base + "/left/" + uid).set(now())),
+          quiet(db.ref(base + "/ready/" + uid).remove()),
+          quiet(db.ref(base + "/say/" + uid).remove()),
+        ]).then(function () { return quiet(db.ref(base + "/here/" + uid).remove()); });
+      },
+      _enter: function () {
+        return announce().then(function () {
+          roomRef.on("value", onSnap);
+          try { infoRef = db.ref(".info/connected"); infoRef.on("value", onInfo); } catch (e) { infoRef = null; }
+        });
+      },
+    };
+    return room;
   }
 
   /* ---------------- activation bootstrap (INERT without config) ---------------- */
@@ -457,7 +687,8 @@
   var api = { FirebaseBackend: FirebaseBackend, makeRtdbSession: makeRtdbSession, tryActivate: tryActivate, _hash: hash,
     ROOT: ROOT, CODE_ALPHABET: CODE_ALPHABET, CODE_RE: CODE_RE, newFriendCode: newFriendCode, normalizeCode: normalizeCode,
     friendRoot: friendRoot, pathsFor: pathsFor, friendBackend: friendBackend,
-    connect: connect, friendlyError: friendlyError, isPermissionError: isPermissionError, SDK_URLS: SDK_URLS };
+    connect: connect, friendlyError: friendlyError, isPermissionError: isPermissionError, SDK_URLS: SDK_URLS,
+    openRoom: openRoom, EMOTES: EMOTES, SAY_GAP_MS: SAY_GAP_MS, cleanSay: cleanSay, liveDb: function () { return liveDb; } };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else { root.FirebaseNet = api; try { tryActivate(); } catch (e) {} }
 })(typeof globalThis !== "undefined" ? globalThis : this);
