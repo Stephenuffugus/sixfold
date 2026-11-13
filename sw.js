@@ -5,7 +5,8 @@
  *    fall back to cache when offline.
  *  - everything else (incl. character sheets): cache-first, then network, and
  *    cache same-origin GETs as they're used (LAZY-CACHE).
- * We precache only the app shell + the default fighter, so first load stays fast
+ * We precache only the app shell, the default fighter, the title's first arena
+ * (dojo) and the two type faces (fonts/), so first load stays fast
  * no matter how big the roster grows; each skin is cached the first time it's
  * shown and then available offline. Bump CACHE on every deploy.
  */
@@ -13,7 +14,8 @@ const CACHE = "sixfold-v63";
 /* Only ever delete caches that belong to THIS app. `caches` is shared by the
    whole origin, so an unfiltered sweep deletes every sibling app's cache too. */
 const OWNED = /^sixfold\-/;
-const ASSETS = ["./", "./index.html", "./sixfold.html", "./manifest.webmanifest", "./privacy.html", "./icon.svg", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./skins/ronin.png"];
+const ASSETS = ["./", "./index.html", "./sixfold.html", "./manifest.webmanifest", "./privacy.html", "./icon.svg", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./skins/ronin.png", "./backgrounds/dojo.jpg",
+  "./fonts/shippori-mincho-600.woff2", "./fonts/shippori-mincho-800.woff2", "./fonts/zen-maru-gothic-500.woff2", "./fonts/zen-maru-gothic-700.woff2"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(

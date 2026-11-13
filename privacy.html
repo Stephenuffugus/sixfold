@@ -6,10 +6,14 @@
 <meta name="description" content="What Sixfold sends, when, where it goes and how long it is kept. No account, no ads, no analytics.">
 <meta name="theme-color" content="#171d30">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
 <style>
+  /* the two type faces, kept in the game folder (fonts/, SIL Open Font License, the licences
+     beside them) and cached by the service worker, so the lettering is the same offline.
+     Subsets cover the characters the game uses; anything else falls back per glyph. */
+  @font-face{font-family:"Shippori Mincho";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/shippori-mincho-600.woff2) format("woff2")}
+  @font-face{font-family:"Shippori Mincho";font-style:normal;font-weight:800;font-display:swap;src:url(fonts/shippori-mincho-800.woff2) format("woff2")}
+  @font-face{font-family:"Zen Maru Gothic";font-style:normal;font-weight:500;font-display:swap;src:url(fonts/zen-maru-gothic-500.woff2) format("woff2")}
+  @font-face{font-family:"Zen Maru Gothic";font-style:normal;font-weight:700;font-display:swap;src:url(fonts/zen-maru-gothic-700.woff2) format("woff2")}
  :root{--ink:#13120f;--indigo:#171d30;--indigo2:#222b46;--line:#39425f;--washi:#efe7d6;--washi-dim:#cabfa6;
        --seal:#cf4130;--gold:#cda64f;--disp:"Shippori Mincho",Georgia,serif;--ui:"Zen Maru Gothic",system-ui,sans-serif}
  *{margin:0;padding:0;box-sizing:border-box}
@@ -75,9 +79,8 @@ you typed is kept there too, and is sent only as described above. Clearing the a
 is no copy anywhere else.</p>
 
 <h2>Other requests the game makes</h2>
-<p>The game's own files come from <code>lucidwinds.com</code>, and its two type faces from Google Fonts
-(<code>fonts.googleapis.com</code>, <code>fonts.gstatic.com</code>). These are ordinary file requests; nothing you
-made is in them. After the first visit the game keeps its own copies, so it plays offline.</p>
+<p>The game's own files, its type faces among them, come from <code>lucidwinds.com</code>. These are ordinary file
+requests; nothing you made is in them. After the first visit the game keeps its own copies, so it plays offline.</p>
 <p>On the website only (never in the Play app), the page also loads the Lucid Winds Sunbeam script. If you are signed
 in to Lucid Winds on lucidwinds.com in the same browser, a win also adds to that account's Sunbeams.</p>
 

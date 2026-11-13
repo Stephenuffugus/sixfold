@@ -27,10 +27,14 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SIXFOLD">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
 <style>
+  /* the two type faces, kept in the game folder (fonts/, SIL Open Font License, the licences
+     beside them) and cached by the service worker, so the lettering is the same offline.
+     Subsets cover the characters the game uses; anything else falls back per glyph. */
+  @font-face{font-family:"Shippori Mincho";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/shippori-mincho-600.woff2) format("woff2")}
+  @font-face{font-family:"Shippori Mincho";font-style:normal;font-weight:800;font-display:swap;src:url(fonts/shippori-mincho-800.woff2) format("woff2")}
+  @font-face{font-family:"Zen Maru Gothic";font-style:normal;font-weight:500;font-display:swap;src:url(fonts/zen-maru-gothic-500.woff2) format("woff2")}
+  @font-face{font-family:"Zen Maru Gothic";font-style:normal;font-weight:700;font-display:swap;src:url(fonts/zen-maru-gothic-700.woff2) format("woff2")}
   :root{
     --ink:#13120f; --indigo:#171d30; --indigo2:#222b46; --line:#39425f;
     --washi:#efe7d6; --washi-dim:#cabfa6;
