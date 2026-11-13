@@ -26,7 +26,8 @@
     </g>
     <!-- centre seal -->
     <circle r="50" fill="#cf4130" stroke="#13120f" stroke-width="5"/>
-    <text x="0" y="22" font-family="Georgia, 'Shippori Mincho', serif" font-size="64" font-weight="800"
-          text-anchor="middle" fill="#efe7d6">六</text>
+    <!-- the 六 drawn as an outline (Shippori Mincho ExtraBold, SIL Open Font License), so the
+         seal never depends on a font being installed on the phone -->
+    <path transform="translate(-31.6 25.4) scale(0.064 -0.064)" fill="#efe7d6" d="M785 642Q789 648 799.0 660.5Q809 673 815.0 679.5Q821 686 825 686Q831 686 860.5 663.5Q890 641 916.5 616.5Q943 592 943 585Q939 569 916 569H233Q162 568 83 555L57 606Q112 600 190 598H440V631Q440 757 427 836Q515 818 548.5 807.5Q582 797 582 790Q582 787 574 781L557 770V598H753ZM392 418Q458 394 458 383Q458 378 447 375L427 370Q363 223 270.0 123.0Q177 23 54 -41L44 -30Q98 23 149.0 93.5Q200 164 240 246Q262 290 281.5 354.0Q301 418 305 459ZM597 433Q715 379 790.0 313.0Q865 247 898.0 183.0Q931 119 931 66Q931 27 914.0 3.5Q897 -20 871 -20Q844 -20 816 4Q797 107 732.0 222.5Q667 338 586 426Z"/>
   </g>
 </svg>

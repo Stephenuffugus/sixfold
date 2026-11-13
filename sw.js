@@ -9,11 +9,11 @@
  * no matter how big the roster grows; each skin is cached the first time it's
  * shown and then available offline. Bump CACHE on every deploy.
  */
-const CACHE = "sixfold-v62";
+const CACHE = "sixfold-v63";
 /* Only ever delete caches that belong to THIS app. `caches` is shared by the
    whole origin, so an unfiltered sweep deletes every sibling app's cache too. */
 const OWNED = /^sixfold\-/;
-const ASSETS = ["./", "./index.html", "./sixfold.html", "./manifest.webmanifest", "./icon.svg", "./skins/ronin.png"];
+const ASSETS = ["./", "./index.html", "./sixfold.html", "./manifest.webmanifest", "./icon.svg", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./skins/ronin.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
