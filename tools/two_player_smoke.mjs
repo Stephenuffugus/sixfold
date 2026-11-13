@@ -249,7 +249,10 @@ try {
   await click(A, '#duelbtn'); await sleep(500);
   await shot(A, 'room-during-duel');
   if (!(await click(A, '#rleave'))) throw new Error('no Leave the room button');
-  const gone = await waitText(B, '#rnote', /Stephen left/, 20000, 'B was not told Stephen left');
+  // whichever of the room's gone and the duel's ended lands first, B ends at the empty
+  // seat: "<Name> left the room." with Wait here and Leave the room
+  const gone = await waitText(B, '#rnote', /Stephen left the room/, 20000, 'B was not told Stephen left the room');
+  await B.waitForFunction(() => !!document.getElementById('rwait') && !!document.getElementById('rleave'), { timeout: 20000 }).catch(() => {});
   const bOpen = await B.evaluate(() => document.getElementById('duelscreen').classList.contains('show'));
   const bWait = await text(B, '#ractions');
   say('B sees "' + gone + '", room open ' + bOpen + ', buttons "' + bWait + '"');

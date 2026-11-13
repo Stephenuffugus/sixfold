@@ -647,12 +647,16 @@
     var seenSay = {}, endedSeen = {}, startedN = 0, creating = 0, first = true, tidied = {}, tidyTimers = [], staleN = 0;
     var TIDY_MS = o.tidyMs == null ? 8000 : o.tidyMs;
     var lastFriend = null, friendHere = false, lastSayAt = -Infinity, gone = false;
+    // a friend who quit a duel (ended why "quit" by them) has left the room, even before
+    // their left/here writes arrive (or if those never do): departed[uid] is "here" while
+    // their presence is still listed, "absent" once it is gone; seen again = they came back
+    var departed = {}, quitSeen = {}, goneWhy = null;
     var roomRef = db.ref(base), infoRef = null;
     function emit(k, x) { (subs[k] || []).forEach(function (f) { try { f(x); } catch (e) {} }); }
     function quiet(w) { if (w && w.catch) w.catch(function () {}); return w; }
 
     function players() {
-      return Object.keys(st.here).filter(function (k) { return safeKey(k) && st.here[k] && typeof st.here[k] === "object"; })
+      return Object.keys(st.here).filter(function (k) { return safeKey(k) && st.here[k] && typeof st.here[k] === "object" && (k === uid || (!st.left[k] && !departed[k])); })
         .sort(function (x, y) { var ax = Number(st.here[x].at) || 0, ay = Number(st.here[y].at) || 0; return ax - ay || (x < y ? -1 : x > y ? 1 : 0); });
     }
     function wins(w, l) {
@@ -709,6 +713,16 @@
         var aw = announce(); var done = function () { announcing = false; };
         if (aw && aw.then) aw.then(done, done); else done();
       }
+      Object.keys(st.ended).forEach(function (n) {
+        var e = obj(st.ended[n]), by = String(e.by || "");
+        if (quitSeen[n]) return; quitSeen[n] = 1;
+        if (first || e.why !== "quit" || !by || by === uid || !safeKey(by)) return;
+        departed[by] = st.here[by] ? "here" : "absent";
+      });
+      Object.keys(departed).forEach(function (k) {
+        if (!st.here[k]) departed[k] = "absent";
+        else if (departed[k] === "absent") delete departed[k];
+      });
       var vw = view();
       // emotes and calls: only the friend's, only new ones, only known values
       Object.keys(st.say).forEach(function (u) {
@@ -721,10 +735,16 @@
       // the friend arriving, leaving, or dropping
       if (vw.friend) {
         if (!friendHere && !first) emit("back", vw.friend);
-        friendHere = true; lastFriend = vw.friend;
+        friendHere = true; lastFriend = vw.friend; goneWhy = null;
       } else if (friendHere && lastFriend) {
         friendHere = false;
-        emit("gone", { uid: lastFriend.uid, name: lastFriend.name, why: st.left[lastFriend.uid] ? "left" : "lost" });
+        goneWhy = (st.left[lastFriend.uid] || departed[lastFriend.uid]) ? "left" : "lost";
+        emit("gone", { uid: lastFriend.uid, name: lastFriend.name, why: goneWhy });
+      } else if (lastFriend && goneWhy === "lost" && (st.left[lastFriend.uid] || departed[lastFriend.uid])) {
+        // their presence vanished first (it looked like a drop), then their leave or
+        // quit landed: they left the room after all
+        goneWhy = "left";
+        emit("gone", { uid: lastFriend.uid, name: lastFriend.name, why: "left" });
       }
       // duels called off
       Object.keys(st.ended).forEach(function (n) {

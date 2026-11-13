@@ -2348,9 +2348,14 @@
     r.on("gone",(g)=>{
       if(room!==r) return;
       cancelRoomCountdown();
+      // the friend LEFT in the middle of a duel: call it off now (whichever of this and
+      // the duel's "ended" arrives first, or if "ended" never does). A dropped
+      // connection keeps the duel's grace instead: they may be back in a moment.
+      let calledOff=false;
+      if(g.why==="left" && roomInDuel){ r.endDuel(roomInDuel,"lost"); roomCallOff(`${g.name} left the room.`); calledOff=true; }
       roomGone=g;
       if(r.view().myReady) r.setReady(false);   // a Ready with nobody to duel means nothing
-      roomNote= g.why==="left" ? `<div>${g.name} left the room.</div>`
+      roomNote= g.why==="left" ? `<div>${g.name} left the room.</div>`+(calledOff?`<div class="rn-sub">No score for that one.</div>`:"")
         : `<div>${g.name} lost the connection.</div><div class="rn-sub">They can come back with the same code.</div>`;
       updateRoom(true);
     });
