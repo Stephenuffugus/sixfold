@@ -249,6 +249,8 @@
   .hub .round{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#7a6a48}
   .hub .verdict{font-family:var(--disp);font-weight:800;font-size:20px;line-height:1.05;margin-top:2px}
   .hub .sub{font-size:10px;color:#6c5d3f;margin-top:3px;max-width:98px;line-height:1.25}
+  .hub .rclock{font-size:10.5px;font-weight:800;color:#7a3a2c;margin-top:2px;max-width:100px;line-height:1.2}
+  .hub .rclock:empty{display:none}
   .hub.flash-clean{animation:flashc .5s} .hub.flash-glance{animation:flashg .5s}
   .hub.flash-read{animation:flashr .6s}
   @keyframes flashc{0%{box-shadow:inset 0 0 0 3px var(--seal),0 0 40px #cf4130cc}100%{}}
@@ -794,6 +796,7 @@
       <div class="round" id="roundlbl">Round 1</div>
       <div class="verdict" id="verdict">Choose</div>
       <div class="sub" id="sub">tap a stance</div>
+      <div class="rclock" id="rclock" aria-live="off"></div>
     </div>
   </div>
 
@@ -1240,9 +1243,16 @@
   function pvpCommit(p){
     if(!pvpSession){ busy=false; return; }
     const round=game.state().round, oppCtx=game.opponentCtx();
-    pvpSession.exchangeStance(round,p,oppCtx).then(({oppPick})=>{
+    pvpSession.exchangeStance(round,p,oppCtx).then((res)=>{
       if(over||!isPvP)return;
-      game.commitRound(p,oppPick);   // emits stance-selected + (clash-bind | round-revealed)
+      // a round the clock settled: the side that did not pick in time takes a
+      // clean hit, and its stance is the one the other pick cuts (same on both phones)
+      const mine=(res.myPick!=null)?res.myPick:p;
+      if(mine!==p){ nodeEls[p].classList.remove("ppick"); nodeEls[p].classList.add("dim"); nodeEls[mine].classList.remove("dim"); nodeEls[mine].classList.add("ppick"); }
+      if(res.missed==="opp") showToast(rivalName()+" did not pick in time: a clean hit for you");
+      else if(res.missed==="me") showToast("Out of time: you took a clean hit");
+      showRoundClock(null);
+      game.commitRound(mine,res.oppPick);   // emits stance-selected + (clash-bind | round-revealed)
     }).catch(()=>handlePvpDisconnect());
   }
 
@@ -1286,9 +1296,12 @@
         Stage.bindPrompt().then(pBind=>{
           if(over||!isPvP)return;
           const round=game.state().round, oppCtx=game.opponentCtx();
-          pvpSession.exchangeBind(round,pBind,oppCtx).then(({oppBind})=>{
+          pvpSession.exchangeBind(round,pBind,oppCtx).then((res)=>{
             if(over||!isPvP)return;
-            game.commitBind(pBind,oppBind);
+            if(res.missed==="opp") showToast(rivalName()+" did not break the bind in time");
+            else if(res.missed==="me") showToast("Out of time: the bind goes to "+rivalName());
+            showRoundClock(null);
+            game.commitBind(res.myBind!=null?res.myBind:pBind,res.oppBind);
           }).catch(()=>handlePvpDisconnect());
         });
       }else{
@@ -2270,7 +2283,10 @@
     r.on("ended",(e)=>{
       if(room!==r || !roomInDuel || e.n!==roomInDuel) return;
       const who=friendLabel();
-      roomCallOff(e.why==="quit" ? `${who} left the duel.` : e.why==="unready" ? `${who} took back Ready. The duel was called off.` : `The connection dropped, so the duel was called off.`);
+      roomCallOff(e.why==="quit" ? `${who} left the duel.` : e.why==="unready" ? `${who} took back Ready. The duel was called off.`
+        : e.why==="idle" ? `Three rounds in a row went unpicked, so the duel was called off.`
+        : e.why==="reload" ? `${who} reloaded the page, so the duel was called off.`
+        : `The connection dropped, so the duel was called off.`);
     });
   }
   // the room screen: built once, then only its parts change (so typing a name or a
@@ -2390,6 +2406,7 @@
   function roomCallOff(note){
     if(!roomInDuel) return;
     const n=roomInDuel; roomInDuel=0;
+    showRoundClock(null);
     if(isPvP && pvpOpp && pvpOpp.room && pvpOpp.duelN===n && !pvpResolved){
       pvpResolved=true; over=true; busy=true;
       if(pvpSession){ try{pvpSession.close();}catch(e){} }
@@ -2492,6 +2509,17 @@
   function startPvpMatch(opponent, session){
     pvpOpp=opponent; pvpSession=session; pvpResolved=false;
     if(session && session.onDisconnect) session.onDisconnect(()=>handlePvpDisconnect());
+    showRoundClock(null);
+    // the per round clock of a friend room duel (see firebase-net.js)
+    if(session && session.onClock){
+      session.onClock((c)=>{ if(pvpSession===session) showRoundClock(c); });
+      session.onMissed((m)=>{ if(pvpSession===session) onPvpMissed(m); });
+      session.onIdle((x)=>{
+        if(pvpSession!==session || over || pvpResolved || !(pvpOpp && pvpOpp.room && room)) return;
+        room.endDuel(pvpOpp.duelN,"idle");
+        roomCallOff(x.mine ? "You missed three rounds in a row, so the duel was called off." : friendLabel()+" missed three rounds in a row, so the duel was called off.");
+      });
+    }
     ascentRun=-1; modeId="pvp"; foeId=opponent.archetype||"ghost"; difficulty=opponent.difficulty==null?0.5:opponent.difficulty;
     const arenas=[...unlockedArenaSet()]; setArena(arenas.length?rid(arenas):"dojo",true);
     closeDuel(); hideResult();
@@ -2511,6 +2539,38 @@
         : opponent.kind==="sentinel"
         ? "👻 Sentinel engaged: "+opponent.name+" · reduced stakes"
         : "⚔ Rival found: "+opponent.name), reduced()?0:500);
+    }
+  }
+  // a quiet countdown in the hub for the last 10 s of a round's clock
+  function showRoundClock(c){
+    const el=$("rclock"); if(!el) return;
+    let txt="";
+    if(c && isPvP && !over && c.remainingMs<=10000){
+      const s=Math.ceil(c.remainingMs/1000);
+      txt = c.waitingOn==="opp" ? (s>0 ? rivalName()+" has "+s+" s" : rivalName()+" ran out of time") : (s>0 ? s+" s to pick" : "Out of time");
+    }
+    if(el.textContent!==txt) el.textContent=txt;
+  }
+  // the clock settled a round I had not picked in: play it as the rule fixed it
+  function onPvpMissed(m){
+    if(m.kind==="rounds"){
+      const tries={n:0};
+      const go=()=>{
+        if(!isPvP||over||!game||!pvpSession) return;
+        if(game.state().round!==m.n){ if(game.state().round<m.n && tries.n++<60) setTimeout(go,300); return; }
+        if(busy){ if(tries.n++<60) setTimeout(go,300); return; }
+        aimed=null; commit(m.myPick);
+      };
+      go();
+    }else{
+      let k=0;
+      const goB=()=>{
+        if(!isPvP||over) return;
+        const b=document.querySelector('.bindbtn-lg[data-b="'+m.myBind+'"]');
+        if(b){ b.click(); return; }
+        if(k++<40) setTimeout(goB,250);
+      };
+      goB();
     }
   }
   function showFriendCardOnce(){
@@ -2548,6 +2608,7 @@
     showToast("Ranked duel abandoned: counted as a loss");
   }
   function leavePvp(){
+    showRoundClock(null);
     if(pvpSession){ try{pvpSession.close();}catch(e){} }
     pvpSession=null; pvpOpp=null; isPvP=false;
     ascentRun=-1; modeId="casual"; foeId=rid(Personalities.ids()); difficulty=0.5;
@@ -2556,6 +2617,7 @@
   }
   function pvpMatchOver(win,summary,opts){
     if(pvpResolved)return; pvpResolved=true;
+    showRoundClock(null);
     opts=opts||{};
     $("rematch").style.display="none";
     recordMatchStats(win,summary);                 // ranked duels count toward lifetime stats too

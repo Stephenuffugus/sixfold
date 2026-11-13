@@ -279,9 +279,17 @@
   // sopts.graceMs: how long the rival's presence may be gone before the duel counts
   // them as dropped (0 = at once, the public lobby's rule). A friend room uses a
   // grace so a phone that blinks offline for a few seconds does not end the duel.
+  // sopts.roundMs: the per round clock (friend room duels). Once one side has
+  // committed, the other has roundMs to commit too; past it, EITHER phone may
+  // mark the round missed (a transaction that loses to a late commit), and the
+  // missed side takes a clean hit. The clock reads a timestamp written beside the
+  // round (rounds/$n/t, server time), never one phone's private timer alone.
   function makeRtdbSession(db, duelId, myUid, mySide, opponent, paths, sopts) {
     var P = paths || pathsFor(ROOT);
     var GRACE = (sopts && sopts.graceMs > 0) ? sopts.graceMs : 0;
+    var ROUND_MS = (sopts && sopts.roundMs > 0) ? sopts.roundMs : 0;
+    var TICK_MS = (sopts && sopts.tickMs > 0) ? sopts.tickMs : 250;
+    var serverNow = (sopts && typeof sopts.now === "function") ? sopts.now : (typeof db.serverNow === "function" ? function () { return db.serverNow(); } : nowMs);
     var graceTimer = null;
     var oppSide = mySide === "a" ? "b" : "a";
     var base = P.duels + "/" + duelId;
@@ -338,14 +346,171 @@
     };
     try { oppPresenceRef.on("value", onPres); } catch (e) {}
 
-    function fireDisconnect(reason) { if (dead) return; dead = true; if (graceTimer) { root.clearTimeout(graceTimer); graceTimer = null; } try { oppPresenceRef.off("value", onPres); } catch (e) {} discSubs.forEach(function (f) { try { f({ reason: reason }); } catch (e) {} }); }
+    function fireDisconnect(reason) { if (dead) return; dead = true; if (typeof stopClock === "function") stopClock(); if (graceTimer) { root.clearTimeout(graceTimer); graceTimer = null; } try { oppPresenceRef.off("value", onPres); } catch (e) {} discSubs.forEach(function (f) { try { f({ reason: reason }); } catch (e) {} }); }
+
+    /* ---- the round clock (only when ROUND_MS is set) ----
+     * rounds/$n (and binds/$n) = { a:{commit,reveal,salt}, b:{...}, t, miss }
+     *   t     server time of the FIRST commit (written by that commit's transaction)
+     *   miss  "a" or "b": that side did not commit within ROUND_MS of t
+     * A commit and a miss are both transactions on the same node, so exactly one
+     * wins: a late commit after the miss is refused, a miss after the commit is
+     * refused. The missed side's pick is then fixed by the rule (it takes a clean
+     * hit: its stance is the one the present pick cuts, its bind the one the
+     * present bind beats), so both phones settle the round the same way. The
+     * present side still reveals its committed pick (checked against its commit);
+     * nothing is revealed before the round is settled. */
+    var duelRef = db.ref(base), duelData = {}, pending = {}, missTried = {}, missFired = {}, idleFired = false;
+    var clockSubs = [], missSubs = [], idleSubs = [], ticker = null, lastClockKey = null;
+    function o2(v) { return (v && typeof v === "object") ? v : {}; }
+    function topOf(kind) { return kind === "rounds" ? 6 : 3; }
+    function validPick(v, top) { return typeof v === "number" && v >= 0 && v < top && Math.floor(v) === v; }
+    function oppRevealOk(kind, n, ov) {
+      return ov.commit != null && ov.reveal != null && hash(n + ":" + ov.reveal + ":" + ov.salt) === ov.commit && validPick(ov.reveal, topOf(kind));
+    }
+    function shape(kind, oppV, myV, missed) {
+      var r = kind === "rounds" ? { oppPick: oppV, myPick: myV } : { oppBind: oppV, myBind: myV };
+      if (missed) r.missed = missed;
+      return r;
+    }
+    function clockedExchange(kind, n, myPick) {
+      return new Promise(function (resolve, reject) {
+        if (dead) return reject(new Error("disconnected"));
+        var key = kind + ":" + n, s = salt();
+        var p = { kind: kind, n: n, myPick: myPick, salt: s, commit: hash(n + ":" + myPick + ":" + s), resolve: resolve, reject: reject, revealed: false, mine: false };
+        pending[key] = p;
+        db.ref(base + "/" + kind + "/" + n).transaction(function (cur) {
+          var c = cur && typeof cur === "object" ? JSON.parse(JSON.stringify(cur)) : {};
+          if (c.miss) return;                                   // settled without me
+          if (c[mySide] && c[mySide].commit != null) return;    // already committed
+          c[mySide] = { commit: p.commit };
+          if (!c.t) c.t = serverNow();
+          return c;
+        }, undefined, false).then(function (res) {
+          if (res && res.committed) p.mine = true;
+          lastIndependent = true; // my reveal is gated on the opponent's commit (or a miss), never their pick
+          evaluate();
+        }, function (e) { delete pending[key]; reject(e); });
+      });
+    }
+    function settle(key, val) { var p = pending[key]; if (!p) return; delete pending[key]; p.resolve(val); }
+    function evaluate() {
+      if (dead) return;
+      Object.keys(pending).forEach(function (key) {
+        var p = pending[key];
+        var r = o2(o2(duelData[p.kind])[p.n]), mine = o2(r[mySide]), ov = o2(r[oppSide]), top = topOf(p.kind);
+        if (r.miss === mySide) {
+          // the clock ran out on me: the round is settled by the rule once the
+          // other side's committed pick is revealed (and checked)
+          if (oppRevealOk(p.kind, p.n, ov)) settle(key, shape(p.kind, ov.reveal, (ov.reveal + 1) % top, "me"));
+          return;
+        }
+        if (!p.mine || mine.commit !== p.commit) return;       // my commit has not landed yet
+        if (!p.revealed && (ov.commit != null || r.miss === oppSide)) {
+          p.revealed = true;
+          db.ref(base + "/" + p.kind + "/" + p.n + "/" + mySide).update({ reveal: p.myPick, salt: p.salt });
+        }
+        if (r.miss === oppSide) return settle(key, shape(p.kind, (p.myPick + 1) % top, p.myPick, "opp"));
+        if (ov.reveal != null && ov.commit != null) {
+          if (hash(p.n + ":" + ov.reveal + ":" + ov.salt) !== ov.commit) { delete pending[key]; return p.reject(new Error("commit-reveal mismatch (cheat?)")); }
+          if (!validPick(ov.reveal, top)) { delete pending[key]; return p.reject(new Error("reveal out of range")); }
+          settle(key, shape(p.kind, ov.reveal, p.myPick));
+        }
+      });
+      // a round the clock ran out on me while I had not picked at all: tell the page
+      ["rounds", "binds"].forEach(function (kind) {
+        var all = o2(duelData[kind]);
+        Object.keys(all).forEach(function (n) {
+          var key = kind + ":" + n, r = o2(all[n]);
+          if (r.miss !== mySide || pending[key] || missFired[key]) return;
+          var ov = o2(r[oppSide]);
+          if (!oppRevealOk(kind, n, ov)) return;
+          missFired[key] = 1;
+          var mv = (ov.reveal + 1) % topOf(kind), ev = { kind: kind, n: Number(n) };
+          if (kind === "rounds") { ev.oppPick = ov.reveal; ev.myPick = mv; } else { ev.oppBind = ov.reveal; ev.myBind = mv; }
+          missSubs.forEach(function (f) { try { f(ev); } catch (e) {} });
+        });
+      });
+      // three missed rounds in a row by the same side: the duel is called off
+      if (!idleFired) {
+        var rs = o2(duelData.rounds), ns = Object.keys(rs).map(Number).filter(function (x) { return x > 0; }).sort(function (x, y) { return y - x; });
+        ["a", "b"].forEach(function (side) {
+          if (idleFired) return;
+          var streak = 0, want = null;
+          for (var i = 0; i < ns.length; i++) {
+            var rr = o2(rs[ns[i]]);
+            if (i === 0 && rr.miss == null && !(o2(rr.a).commit != null && o2(rr.b).commit != null)) continue; // the round being chosen now
+            if (rr.miss !== side || (want != null && ns[i] !== want)) break;
+            streak++; want = ns[i] - 1;
+          }
+          if (streak >= 3) { idleFired = true; var ev = { side: side, mine: side === mySide, rounds: streak }; idleSubs.forEach(function (f) { try { f(ev); } catch (e) {} }); }
+        });
+      }
+      runClock();
+    }
+    // the open clock: the newest round (a bind first) where exactly one side committed
+    function openClock() {
+      var kinds = ["binds", "rounds"];
+      for (var k = 0; k < kinds.length; k++) {
+        var all = o2(duelData[kinds[k]]), ns = Object.keys(all).map(Number).filter(function (x) { return x > 0; });
+        if (!ns.length) continue;
+        var n = Math.max.apply(null, ns), r = o2(all[n]);
+        var ca = o2(r.a).commit != null, cb = o2(r.b).commit != null;
+        if (r.miss || ca === cb || !(Number(r.t) > 0)) continue;
+        return { kind: kinds[k], n: n, t: Number(r.t), waitingOn: o2(r[mySide]).commit != null ? "opp" : "me" };
+      }
+      return null;
+    }
+    function emitClock(c) { clockSubs.forEach(function (f) { try { f(c); } catch (e) {} }); }
+    function runClock() {
+      if (!ROUND_MS || dead) return;
+      var c = openClock();
+      if (!c) {
+        if (ticker) { root.clearInterval(ticker); ticker = null; }
+        if (lastClockKey !== null) { lastClockKey = null; emitClock(null); }
+        return;
+      }
+      lastClockKey = c.kind + ":" + c.n;
+      var rem = c.t + ROUND_MS - serverNow();
+      emitClock({ kind: c.kind, n: c.n, waitingOn: c.waitingOn, remainingMs: Math.max(0, rem) });
+      if (rem <= 0) tryMiss(c);
+      if (!ticker) ticker = root.setInterval(runClock, TICK_MS);
+    }
+    function tryMiss(c) {
+      var key = c.kind + ":" + c.n, t = serverNow();
+      if (missTried[key] && t - missTried[key] < 1000) return;
+      missTried[key] = t;
+      quietP(db.ref(base + "/" + c.kind + "/" + c.n).transaction(function (cur) {
+        var x = cur && typeof cur === "object" ? JSON.parse(JSON.stringify(cur)) : null;
+        if (!x || x.miss) return;
+        var ca = o2(x.a).commit != null, cb = o2(x.b).commit != null;
+        if (ca === cb || !(Number(x.t) > 0) || serverNow() < Number(x.t) + ROUND_MS) return;
+        x.miss = ca ? "b" : "a";
+        return x;
+      }, undefined, false));
+    }
+    function quietP(w) { if (w && w.catch) w.catch(function () {}); return w; }
+    var onDuel = function (snap) { duelData = o2(snap && snap.val && snap.val()); evaluate(); };
+    if (ROUND_MS) { try { duelRef.on("value", onDuel); } catch (e) {} }
+    function stopClock() {
+      if (ticker) { root.clearInterval(ticker); ticker = null; }
+      if (ROUND_MS) { try { duelRef.off("value", onDuel); } catch (e) {} }
+      Object.keys(pending).forEach(function (k) { var p = pending[k]; delete pending[k]; try { p.reject(new Error("disconnected")); } catch (e) {} });
+    }
 
     return {
       meta: opponent,
-      exchangeStance: function (n, myPick) { return exchange("rounds", n, myPick); },
-      exchangeBind: function (n, myBind) { return exchange("binds", n, myBind); },
+      exchangeStance: function (n, myPick) { return ROUND_MS ? clockedExchange("rounds", n, myPick) : exchange("rounds", n, myPick); },
+      exchangeBind: function (n, myBind) { return ROUND_MS ? clockedExchange("binds", n, myBind) : exchange("binds", n, myBind); },
       onDisconnect: function (cb) { if (typeof cb === "function") discSubs.push(cb); },
-      close: function () { dead = true; if (graceTimer) { root.clearTimeout(graceTimer); graceTimer = null; } try { oppPresenceRef.off("value", onPres); } catch (e) {} },
+      // the round clock: cb({kind, n, waitingOn:"me"|"opp", remainingMs}) while a
+      // round waits on one side, cb(null) when none does
+      onClock: function (cb) { if (typeof cb === "function") clockSubs.push(cb); },
+      // a round the clock settled while I had not picked: cb({kind, n, myPick|myBind, oppPick|oppBind})
+      onMissed: function (cb) { if (typeof cb === "function") missSubs.push(cb); },
+      // three missed rounds in a row by one side: cb({side, mine})
+      onIdle: function (cb) { if (typeof cb === "function") idleSubs.push(cb); },
+      roundMs: ROUND_MS,
+      close: function () { dead = true; stopClock(); if (graceTimer) { root.clearTimeout(graceTimer); graceTimer = null; } try { oppPresenceRef.off("value", onPres); } catch (e) {} },
       simulateDisconnect: function (r) { fireDisconnect(r || "left"); },
       _decidedIndependently: function () { return lastIndependent; },
     };
@@ -374,6 +539,7 @@
     { id: "yawn", e: "🥱", w: "Yawn" },
   ];
   var SAY_GAP_MS = 2000;
+  var ROUND_MS_DEFAULT = 30000;   // a friend has 30 s to pick once the other has
   function emoteById(id) { for (var i = 0; i < EMOTES.length; i++) if (EMOTES[i].id === id) return EMOTES[i]; return null; }
   // a said thing off the wire is untrusted: only a known emote id or a whole stance 0..5
   function cleanSay(v) {
@@ -384,6 +550,9 @@
     if (v.k === "c" && typeof v.v === "number" && v.v >= 0 && v.v < 6 && Math.floor(v.v) === v.v) return { kind: "call", value: v.v, id: id };
     return null;
   }
+  // why a room duel was called off: lost (a drop), quit, unready, idle (three
+  // missed rounds), reload (a phone reloaded the page mid duel)
+  function endWhy(w) { return (w === "quit" || w === "unready" || w === "idle" || w === "reload") ? w : "lost"; }
   function obj(v) { return (v && typeof v === "object") ? v : {}; }
   function safeKey(k) { return typeof k === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(k); }
 
@@ -484,7 +653,7 @@
       Object.keys(st.ended).forEach(function (n) {
         if (endedSeen[n]) return; endedSeen[n] = 1;
         var e = obj(st.ended[n]);
-        if (!first) emit("ended", { n: Number(n) || 0, why: (e.why === "quit" || e.why === "unready") ? e.why : "lost", by: String(e.by || "") });
+        if (!first) emit("ended", { n: Number(n) || 0, why: endWhy(e.why), by: String(e.by || "") });
       });
       // both ready for the same next duel: write it (once, whoever gets there first)
       if (vw.friend && !vw.full && vw.myReady && vw.friendReady) createDuel(vw);
@@ -541,7 +710,7 @@
       endDuel: function (n, why) {
         if (!n) return null;
         endedSeen[n] = 1;
-        return quiet(db.ref(base + "/ended/" + n).transaction(function (cur) { if (cur) return; return { why: (why === "quit" || why === "unready") ? why : "lost", by: uid }; }));
+        return quiet(db.ref(base + "/ended/" + n).transaction(function (cur) { if (cur) return; return { why: endWhy(why), by: uid }; }));
       },
       // the duel session for a duel this room started (the relay under .../duels)
       session: function (d) {
@@ -549,7 +718,7 @@
         var opp = { id: oppId, name: side === "a" ? d.bName : d.aName, kind: "human", rating: 1000, friend: true, room: true, duelN: d.n };
         return makeRtdbSession(db, d.id, uid, side, opp,
           { root: friendRoot(code), lobby: base + "/here", duels: friendRoot(code) + "/duels" },
-          { graceMs: o.graceMs == null ? 12000 : o.graceMs });
+          { graceMs: o.graceMs == null ? 12000 : o.graceMs, roundMs: o.roundMs == null ? ROUND_MS_DEFAULT : o.roundMs, tickMs: o.tickMs, now: o.serverNow });
       },
       leave: function () {
         if (gone) return Promise.resolve();
@@ -677,20 +846,24 @@
         get: function () { return ref.get(); },
         on: function (ev, cb) { return ref.on(ev, cb); },
         off: function (ev, cb) { return ref.off(ev, cb); },
-        transaction: function (fn) { return ref.transaction(fn); },
+        transaction: function (fn, onComplete, applyLocally) { return applyLocally === false ? ref.transaction(fn, onComplete, false) : ref.transaction(fn); },
         onDisconnect: function () { return ref.onDisconnect(); },
         push: function () { return ref.push(); },
         child: function (p) { return wrapRef(ref.child(p)); },
       };
     }
-    return { ref: function (p) { return wrapRef(database.ref(p)); } };
+    // server time: the local clock corrected by the server's offset, so a round
+    // clock reads the same on both phones
+    var offset = 0;
+    try { database.ref(".info/serverTimeOffset").on("value", function (s) { offset = Number(s && s.val && s.val()) || 0; }); } catch (e) {}
+    return { ref: function (p) { return wrapRef(database.ref(p)); }, serverNow: function () { return nowMs() + offset; } };
   }
 
   var api = { FirebaseBackend: FirebaseBackend, makeRtdbSession: makeRtdbSession, tryActivate: tryActivate, _hash: hash,
     ROOT: ROOT, CODE_ALPHABET: CODE_ALPHABET, CODE_RE: CODE_RE, newFriendCode: newFriendCode, normalizeCode: normalizeCode,
     friendRoot: friendRoot, pathsFor: pathsFor, friendBackend: friendBackend,
     connect: connect, friendlyError: friendlyError, isPermissionError: isPermissionError, SDK_URLS: SDK_URLS,
-    openRoom: openRoom, EMOTES: EMOTES, SAY_GAP_MS: SAY_GAP_MS, cleanSay: cleanSay, liveDb: function () { return liveDb; } };
+    openRoom: openRoom, EMOTES: EMOTES, SAY_GAP_MS: SAY_GAP_MS, ROUND_MS: ROUND_MS_DEFAULT, cleanSay: cleanSay, liveDb: function () { return liveDb; } };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else { root.FirebaseNet = api; try { tryActivate(); } catch (e) {} }
 })(typeof globalThis !== "undefined" ? globalThis : this);
