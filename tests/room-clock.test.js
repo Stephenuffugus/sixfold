@@ -3,7 +3,7 @@
  * The per round clock of a friend room duel, against the in-memory database:
  * a round where one friend never picks settles after the clock, the SAME way on
  * both phones (the absent one takes a clean hit); a late pick is refused; a pick
- * in time cancels the clock; nothing committed is revealed early; three misses in
+ * in time cancels the clock; nothing committed is revealed early; two misses in
  * a row call the duel off; a flood of talk during the clock changes nothing. */
 const assert = require("assert");
 const FN = require("../src/firebase-net.js");
@@ -62,7 +62,7 @@ const verdict = (mine, theirs) => Engine.resolve(mine, theirs);
     const node = db._get("r/duels/d1/rounds/1");
     ok("B's late tap was refused: no commit from B in the round", node.miss === "b" && !(node.b && node.b.commit));
     ok("the clock is closed on both phones", ev.aClock[ev.aClock.length - 1] === null && ev.bClock[ev.bClock.length - 1] === null);
-    ok("one missed round is not three", ev.aIdle.length === 0 && ev.bIdle.length === 0);
+    ok("one missed round does not call the duel off", ev.aIdle.length === 0 && ev.bIdle.length === 0);
     a.close(); b.close();
   }
 
@@ -101,23 +101,41 @@ const verdict = (mine, theirs) => Engine.resolve(mine, theirs);
     a.close(); b.close();
   }
 
-  // ---- three missed rounds in a row call the duel off ----
+  // ---- miss, pick, miss: the count resets, the duel goes on ----
   {
     const db = treeDb(); const { a, b, ev } = pair(db, "d5");
-    for (let n = 1; n <= 3; n++) { await a.exchangeStance(n, n % 6); await tick(TK * 3); await b.exchangeStance(n, 0); }
+    const r1 = await a.exchangeStance(1, 1); await tick(TK * 3); await b.exchangeStance(1, 0);
+    await Promise.all([a.exchangeStance(2, 2), b.exchangeStance(2, 5)]);
+    const r3 = await a.exchangeStance(3, 4); await tick(TK * 3); await b.exchangeStance(3, 0);
     await tick(TK * 3);
-    ok("three misses by B: both phones call the duel off", ev.aIdle.length === 1 && ev.bIdle.length === 1 && ev.aIdle[0].side === "b" && !ev.aIdle[0].mine && ev.bIdle[0].mine);
+    ok("miss, pick, miss: not two in a row, the duel goes on", ev.aIdle.length === 0 && ev.bIdle.length === 0);
+    ok("and each lone miss was a clean hit as before", r1.missed === "opp" && r3.missed === "opp" && ev.bMiss.length === 2);
     a.close(); b.close();
   }
+
+  // ---- miss, miss: the duel is called off, the second miss applies no hit ----
   {
-    const db = treeDb(); const { a, b, ev } = pair(db, "d6");
-    await a.exchangeStance(1, 1); await tick(TK * 3); await b.exchangeStance(1, 0);
-    await a.exchangeStance(2, 1); await tick(TK * 3); await b.exchangeStance(2, 0);
-    await Promise.all([a.exchangeStance(3, 2), b.exchangeStance(3, 5)]);
-    await a.exchangeStance(4, 1); await tick(TK * 3); await b.exchangeStance(4, 0);
-    await tick(TK * 3);
-    ok("two misses, a round played, one miss: not three in a row, the duel goes on", ev.aIdle.length === 0 && ev.bIdle.length === 0);
-    a.close(); b.close();
+    const db = treeDb();
+    const A = await FN.openRoom(db, "QD2L", { uid: "uA", name: "Stephen", roundMs: MS, tickMs: TK });
+    const B = await FN.openRoom(db, "QD2L", { uid: "uB", name: "Jessie", roundMs: MS, tickMs: TK });
+    const da = [], dbb = []; A.on("duel", (d) => da.push(d)); B.on("duel", (d) => dbb.push(d));
+    await A.setReady(true); await B.setReady(true); await tick(5);
+    const sA = A.session(da[0]), sB = B.session(dbb[0]);
+    const aIdle = [], bIdle = [], bMiss = []; sA.onIdle((x) => aIdle.push(x)); sB.onIdle((x) => bIdle.push(x)); sB.onMissed((m) => bMiss.push(m));
+    // round 1: B misses, a clean hit
+    const r1 = await sA.exchangeStance(1, 3); await tick(TK * 3); await sB.exchangeStance(1, 0);
+    ok("miss 1 is a clean hit", r1.missed === "opp" && bMiss.length === 1 && aIdle.length === 0);
+    // round 2: B misses again
+    let settled2 = null; sA.exchangeStance(2, 1).then((r) => { settled2 = r; }, () => { settled2 = "closed"; });
+    await tick(MS + TK * 6);
+    ok("miss 2 in a row: both phones call the duel off", aIdle.length === 1 && bIdle.length === 1 && aIdle[0].side === "b" && !aIdle[0].mine && bIdle[0].mine && aIdle[0].n === 2);
+    ok("the second miss applies no hit on either phone", settled2 === null && bMiss.length === 1);
+    // what the page does with it: end the duel as idle, no result
+    A.endDuel(1, "idle"); await tick(5);
+    sA.close(); sB.close(); await tick(5);
+    ok("called off as idle, no knockout recorded", (db._get("sixfold/friends/QD2L/room/ended/1") || {}).why === "idle" && db._get("sixfold/friends/QD2L/room/won") == null);
+    ok("score unchanged on both sides", A.view().score.me === 0 && A.view().score.friend === 0 && B.view().score.me === 0 && B.view().score.friend === 0);
+    await A.leave(); await B.leave();
   }
 
   // ---- a flood of talk during the clock changes nothing ----

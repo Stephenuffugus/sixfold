@@ -393,8 +393,29 @@
       });
     }
     function settle(key, val) { var p = pending[key]; if (!p) return; delete pending[key]; p.resolve(val); }
+    // how many stance rounds in a row, ending at round n, the same side missed
+    function streakAt(n) {
+      var rs = o2(duelData.rounds), side = o2(rs[n]).miss, k = 0;
+      if (!side) return 0;
+      while (o2(rs[n - k]).miss === side) k++;
+      return k;
+    }
     function evaluate() {
-      if (dead) return;
+      if (dead || idleFired) return;
+      // TWO missed rounds in a row by the same side: that player has stopped
+      // picking. The second miss applies no hit: the duel is called off (a cheap
+      // knockout of an absent friend is not a win). A pick in between resets it.
+      var rsAll = o2(duelData.rounds);
+      Object.keys(rsAll).forEach(function (n) {
+        if (idleFired || !(Number(n) > 0)) return;
+        if (streakAt(Number(n)) >= 2) {
+          idleFired = true;
+          if (ticker) { root.clearInterval(ticker); ticker = null; }
+          var side = o2(rsAll[n]).miss, ev = { side: side, mine: side === mySide, n: Number(n) };
+          idleSubs.forEach(function (f) { try { f(ev); } catch (e) {} });
+        }
+      });
+      if (idleFired) { emitClock(null); return; }
       Object.keys(pending).forEach(function (key) {
         var p = pending[key];
         var r = o2(o2(duelData[p.kind])[p.n]), mine = o2(r[mySide]), ov = o2(r[oppSide]), top = topOf(p.kind);
@@ -430,21 +451,6 @@
           missSubs.forEach(function (f) { try { f(ev); } catch (e) {} });
         });
       });
-      // three missed rounds in a row by the same side: the duel is called off
-      if (!idleFired) {
-        var rs = o2(duelData.rounds), ns = Object.keys(rs).map(Number).filter(function (x) { return x > 0; }).sort(function (x, y) { return y - x; });
-        ["a", "b"].forEach(function (side) {
-          if (idleFired) return;
-          var streak = 0, want = null;
-          for (var i = 0; i < ns.length; i++) {
-            var rr = o2(rs[ns[i]]);
-            if (i === 0 && rr.miss == null && !(o2(rr.a).commit != null && o2(rr.b).commit != null)) continue; // the round being chosen now
-            if (rr.miss !== side || (want != null && ns[i] !== want)) break;
-            streak++; want = ns[i] - 1;
-          }
-          if (streak >= 3) { idleFired = true; var ev = { side: side, mine: side === mySide, rounds: streak }; idleSubs.forEach(function (f) { try { f(ev); } catch (e) {} }); }
-        });
-      }
       runClock();
     }
     // the open clock: the newest round (a bind first) where exactly one side committed
@@ -508,7 +514,7 @@
       onClock: function (cb) { if (typeof cb === "function") clockSubs.push(cb); },
       // a round the clock settled while I had not picked: cb({kind, n, myPick|myBind, oppPick|oppBind})
       onMissed: function (cb) { if (typeof cb === "function") missSubs.push(cb); },
-      // three missed rounds in a row by one side: cb({side, mine})
+      // two missed rounds in a row by one side (no hit for the second): cb({side, mine, n})
       onIdle: function (cb) { if (typeof cb === "function") idleSubs.push(cb); },
       roundMs: ROUND_MS,
       close: function () { dead = true; stopClock(); if (graceTimer) { root.clearTimeout(graceTimer); graceTimer = null; } try { oppPresenceRef.off("value", onPres); } catch (e) {} },
