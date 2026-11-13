@@ -2262,7 +2262,9 @@
     setDuelControls("friend");
   }
   function saveNetName(v){
-    const s=String(v||"").replace(/[<>&"'`\\]/g,"").replace(/\s+/g," ").trim().slice(0,14);
+    let s=String(v||"").replace(/[<>&"'`\\]/g,"").replace(/\s+/g," ").trim().slice(0,14);
+    // a rude name is never saved or sent: it is kept as no name, which shows as "Player"
+    if(s && typeof Names!=="undefined" && Names.isRude(s)) s="";
     try{ localStorage.setItem("sixfold_netname",s); }catch(e){}
     if(room) room.setName(s||"Player");
     return s;

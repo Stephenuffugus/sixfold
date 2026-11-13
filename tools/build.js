@@ -13,8 +13,8 @@ const root = path.join(__dirname, "..");
 
 // dependency order: audio (standalone) -> predictor -> resolve -> readout -> personalities
 //   -> rank -> matchmaker (needs personalities+rank) -> net (needs personalities+matchmaker)
-//   -> skins -> stage -> assists -> engine
-const ORDER = ["audio", "music", "predictor", "resolve", "readout", "personalities", "rank", "matchmaker", "net", "firebase-net", "skins", "stage", "assists", "engine"];
+//   -> names (the display name check, before firebase-net) -> skins -> stage -> assists -> engine
+const ORDER = ["audio", "music", "predictor", "resolve", "readout", "personalities", "rank", "matchmaker", "net", "names", "firebase-net", "skins", "stage", "assists", "engine"];
 
 const modules = ORDER.map((n) => {
   const code = fs.readFileSync(path.join(root, "src", n + ".js"), "utf8");

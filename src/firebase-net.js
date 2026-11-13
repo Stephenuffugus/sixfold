@@ -38,6 +38,7 @@
   "use strict";
   var req = (typeof require !== "undefined");
   var Matchmaker = req ? require("./matchmaker.js") : root.Matchmaker;
+  var Names = req ? require("./names.js") : root.Names;
 
   // djb2 — same commit hash as net.js LocalMock so behavior matches exactly
   function hash(s) { var h = 5381; s = String(s); for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0; return h.toString(36); }
@@ -46,7 +47,12 @@
   function salt() { return (rand().toString(36).slice(2) + nowMs().toString(36)); }
   // anything read off the wire is untrusted: names land in the page, so keep them
   // short and free of markup; ratings are clamped numbers.
-  function cleanName(n, fallback) { var s = String(n == null ? "" : n).replace(/[<>&"'`\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 20); return s || fallback || "Rival"; }
+  // a rude name (src/names.js) shows as "Player", both before it is sent and when it is read
+  function cleanName(n, fallback) {
+    var s = String(n == null ? "" : n).replace(/[<>&"'`\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 20);
+    if (s && Names && Names.isRude(s)) return "Player";
+    return s || fallback || "Rival";
+  }
   function cleanRating(r) { r = Number(r); return (r >= 0 && r <= 5000) ? Math.round(r) : 1000; }
 
   /* ---------------- namespacing + friend codes ---------------- */
@@ -159,7 +165,7 @@
       o = o || {};
       var clock = o.clock || { setTimeout: function (f, ms) { return root.setTimeout(f, ms); }, clearTimeout: function (id) { root.clearTimeout(id); } };
       var uid = o.selfId || ("anon_" + Math.floor(rand() * 1e9));
-      var me = { name: o.name || "Rival", rating: o.rating || 1000 };
+      var me = { name: cleanName(o.name, "Rival"), rating: o.rating || 1000 };
       var role = o.role === "join" ? "join" : "host";   // friend lobby only
       var elapsed = 0, cancelled = false, settled = false, matched = false, nameIdx = 0;
       var subs = [];
@@ -959,7 +965,7 @@
     return { ref: function (p) { return wrapRef(database.ref(p)); }, serverNow: function () { return nowMs() + offset; } };
   }
 
-  var api = { FirebaseBackend: FirebaseBackend, makeRtdbSession: makeRtdbSession, tryActivate: tryActivate, _hash: hash,
+  var api = { FirebaseBackend: FirebaseBackend, makeRtdbSession: makeRtdbSession, tryActivate: tryActivate, _hash: hash, _cleanName: cleanName,
     ROOT: ROOT, CODE_ALPHABET: CODE_ALPHABET, CODE_RE: CODE_RE, newFriendCode: newFriendCode, normalizeCode: normalizeCode,
     friendRoot: friendRoot, pathsFor: pathsFor, friendBackend: friendBackend,
     connect: connect, friendlyError: friendlyError, isPermissionError: isPermissionError, SDK_URLS: SDK_URLS,

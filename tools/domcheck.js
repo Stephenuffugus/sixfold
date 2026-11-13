@@ -133,7 +133,7 @@ const finished = () => byId("rematch").style.display === "block" || /VICTORY|DEF
     console.log("  ok  page script loaded without throwing");
     await drain();
 
-    ["Sfx", "Music", "Predictor", "Personalities", "Rank", "Matchmaker", "Net", "FirebaseNet", "Resolve", "Readout", "Skins", "Stage", "Assists", "Engine"].forEach((g) => {
+    ["Sfx", "Music", "Predictor", "Personalities", "Rank", "Matchmaker", "Net", "Names", "FirebaseNet", "Resolve", "Readout", "Skins", "Stage", "Assists", "Engine"].forEach((g) => {
       if (!sandbox[g]) { console.error("  FAIL missing global", g); failed = true; }
     });
     if (!failed) console.log("  ok  all 14 module globals present (Net still on " + sandbox.Net.backend().name + ")");
