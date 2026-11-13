@@ -1,10 +1,10 @@
-/* SIXFOLD — firebase-net.js  (PHASE 2 backend — ready, not active in Phase 1)
+/* SIXFOLD — firebase-net.js  (PHASE 2 backend, live: inlined and connected on demand)
  *
  * Implements the EXACT Net transport seam (see net.js) against a Firebase
  * Realtime Database, so going live is `Net.configure(FirebaseBackend(db))` and
- * nothing above the seam changes. This file is NOT inlined into the Phase-1 ship
- * (it's left out of tools/build.js ORDER on purpose) — Phase 1 stays lean and
- * 100% offline. Wire it per PHASE2_FIREBASE.md when you create a project.
+ * nothing above the seam changes. It is inlined by tools/build.js; the SDK itself
+ * is fetched only when a player opens online play (see connect() below), so the
+ * offline game still boots and plays with the network off.
  *
  * Why a DB and not WebRTC: a stance duel is lockstep + low-frequency (a handful
  * of tiny messages per round), so a realtime DB IS the channel — no signaling,
@@ -22,6 +22,17 @@
  *   db.ref(path) -> { set, update, remove, get, on, off, transaction,
  *                     onDisconnect()->{remove}, push()->{key}, child(p) }
  * In production pass `firebase.database()` (compat) — its API is a superset.
+ *
+ * NAMESPACE: every path lives under a root (default "sixfold"), so the studio's
+ * shared database keeps Sixfold in its own branch:
+ *   sixfold/lobby/$uid, sixfold/duels/$id            (public "Find a rival")
+ *   sixfold/friends/$CODE/lobby, .../duels           (private "Play a friend")
+ * A friend duel is the SAME protocol (presence, claim, commit-reveal) run inside
+ * a private root: pass opts.root = friendRoot(code) and opts.friend = true.
+ *
+ * LIVE: the SDK is NOT loaded with the page. connect() fetches it on demand when a
+ * player opens online play, probes the database, and rejects with plain words if
+ * anything is unreachable or refused, so the offline game never waits on the net.
  */
 (function (root) {
   "use strict";
@@ -34,47 +45,102 @@
   function rand() { try { return Math.random(); } catch (e) { return 0.5; } }
   function salt() { return (rand().toString(36).slice(2) + nowMs().toString(36)); }
 
+  /* ---------------- namespacing + friend codes ---------------- */
+  var ROOT = "sixfold";
+  // friend codes: 4 chars from A-Z + 2-9 without the look-alikes I, O, 0, 1.
+  // (The database rule checks the same set: /^[A-HJ-NP-Z2-9]{4}$/.)
+  var CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  var CODE_RE = /^[A-HJ-NP-Z2-9]{4}$/;
+  function newFriendCode(rng) {
+    var r = (typeof rng === "function") ? rng : rand, s = "";
+    for (var i = 0; i < 4; i++) s += CODE_ALPHABET.charAt(Math.floor(r() * CODE_ALPHABET.length) % CODE_ALPHABET.length);
+    return s;
+  }
+  // tidy what a player typed: upper case, drop spaces/dashes; null if not a code
+  function normalizeCode(str) {
+    var s = String(str == null ? "" : str).toUpperCase().replace(/[^A-Z0-9]/g, "");
+    return CODE_RE.test(s) ? s : null;
+  }
+  function friendRoot(code) { return ROOT + "/friends/" + code; }
+  function pathsFor(rootPath) {
+    var r = String(rootPath || ROOT).replace(/\/+$/, "");
+    return { root: r, lobby: r + "/lobby", duels: r + "/duels" };
+  }
+
   /* ---------------- the backend ---------------- */
-  // db: thin RTDB handle. opts.now/opts.timeoutMs optional.
+  // db: thin RTDB handle. opts.root (default "sixfold"), opts.friend (private
+  // lobby: no rating band, no Sentinel), opts.searchTimeoutMs/tickMs optional.
   function FirebaseBackend(db, opts) {
     opts = opts || {};
     if (!db) throw new Error("FirebaseBackend requires a database handle");
     var SEARCH_TIMEOUT = opts.searchTimeoutMs || (Matchmaker ? Matchmaker.SEARCH_TIMEOUT_MS : 13000);
     var TICK = opts.tickMs || 1000;
+    var P = pathsFor(opts.root);
+    var FRIEND = !!opts.friend;
+    // public: past the timeout, a human who is still searching gets a short grace
+    // (any rating) before the Sentinel offer, so two lone humans always meet.
+    var HUMAN_GRACE = opts.humanGraceMs == null ? 8000 : opts.humanGraceMs;
+    var FRIEND_WAIT = opts.friendWaitMs || 10 * 60 * 1000;  // host waits up to 10 min
+    var JOIN_WAIT = opts.joinWaitMs || 8000;                // joiner gives up on an empty code
 
-    /* presence: /lobby/$uid = {name,rating,ts,status}; auto-removed on disconnect */
+    /* presence: <root>/lobby/$uid = {name,rating,ts,status}; auto-removed on disconnect */
     function announce(uid, info) {
-      var ref = db.ref("lobby/" + uid);
-      ref.onDisconnect().remove();
-      return ref.set({ name: info.name || "Rival", rating: info.rating || 1000, ts: nowMs(), status: "searching" });
+      var ref = db.ref(P.lobby + "/" + uid);
+      try { ref.onDisconnect().remove(); } catch (e) {}
+      var w = ref.set({ name: info.name || "Rival", rating: info.rating || 1000, ts: nowMs(), status: "searching" });
+      if (w && w.catch) w.catch(function () {});
+      return w;
     }
-    function leaveLobby(uid) { try { return db.ref("lobby/" + uid).remove(); } catch (e) {} }
+    function leaveLobby(uid) { try { var w = db.ref(P.lobby + "/" + uid).remove(); if (w && w.catch) w.catch(function () {}); return w; } catch (e) {} }
 
     /* read the current lobby as a matchmaker pool */
     function readPool() {
-      return db.ref("lobby").get().then(function (snap) {
+      return db.ref(P.lobby).get().then(function (snap) {
         var v = (snap && snap.val && snap.val()) || {};
         return Object.keys(v).map(function (id) { return { id: id, name: v[id].name, rating: v[id].rating, online: true, status: v[id].status }; });
       });
     }
 
-    /* try to CLAIM an opponent atomically: transaction on their lobby/lock.
-       winner creates the duel and points both lobbies at it. returns duelId|null. */
-    function tryClaim(myUid, opp, me) {
-      var lockRef = db.ref("lobby/" + opp.id + "/lock");
-      return lockRef.transaction(function (cur) {
-        if (cur) return; // already claimed -> abort
+    /* try to CLAIM an opponent atomically. Two locks, mine first then theirs:
+       if both searchers claim each other at the same instant, each holds its OWN
+       lock, so neither can take the other's and both back off and retry (instead
+       of building two duels that never meet). A searcher already claimed by
+       someone else finds its own lock taken and stands down. The winner creates
+       the duel and points both lobbies at it. returns duelId|null. */
+    function takeLock(ref, myUid) {
+      return ref.transaction(function (cur) {
+        if (cur) return; // already held -> abort
         return myUid;
-      }).then(function (res) {
-        if (!res || !res.committed || res.snapshot.val() !== myUid) return null;
-        // we own the claim — create the duel node (a = claimer, b = claimed)
-        var duelId = "d_" + myUid + "_" + opp.id + "_" + nowMs();
-        var duel = { a: myUid, b: opp.id, aName: me.name, bName: opp.name, aRating: me.rating, bRating: opp.rating, ts: nowMs(), state: "live" };
-        return db.ref("duels/" + duelId).set(duel).then(function () {
-          return Promise.all([
-            db.ref("lobby/" + myUid).update({ status: "busy", matchedDuel: duelId }),
-            db.ref("lobby/" + opp.id).update({ status: "busy", matchedDuel: duelId }),
-          ]).then(function () { return duelId; });
+      }).then(function (res) { return !!(res && res.committed && res.snapshot && res.snapshot.val() === myUid); });
+    }
+    function dropLock(ref, myUid) {
+      return ref.transaction(function (cur) { if (cur === myUid) return null; return; })
+        .then(function () {}, function () {});
+    }
+    function tryClaim(myUid, opp, me) {
+      var myLock = db.ref(P.lobby + "/" + myUid + "/lock");
+      var oppLock = db.ref(P.lobby + "/" + opp.id + "/lock");
+      return takeLock(myLock, myUid).then(function (mine) {
+        if (!mine) return null;                     // someone claimed ME: their duel is on its way
+        return takeLock(oppLock, myUid).then(function (theirs) {
+          if (!theirs) return dropLock(myLock, myUid).then(function () { return null; });
+          // the rival must still be present (a transaction on a vanished node would
+          // recreate it as a ghost we then wait on forever)
+          return db.ref(P.lobby + "/" + opp.id).get().then(function (snap) {
+            var v = (snap && snap.val && snap.val()) || {};
+            if (!v.name) {
+              return Promise.all([dropLock(myLock, myUid), db.ref(P.lobby + "/" + opp.id).remove()]).then(function () { return null; });
+            }
+            // we own the claim — create the duel node (a = claimer, b = claimed)
+            var duelId = "d_" + myUid + "_" + opp.id + "_" + nowMs();
+            var duel = { a: myUid, b: opp.id, aName: me.name, bName: opp.name, aRating: me.rating, bRating: opp.rating, ts: nowMs(), state: "live" };
+            return db.ref(P.duels + "/" + duelId).set(duel).then(function () {
+              return Promise.all([
+                db.ref(P.lobby + "/" + myUid).update({ status: "busy", matchedDuel: duelId }),
+                db.ref(P.lobby + "/" + opp.id).update({ status: "busy", matchedDuel: duelId }),
+              ]).then(function () { return duelId; });
+            });
+          });
         });
       }).catch(function () { return null; });
     }
@@ -85,20 +151,24 @@
       o = o || {};
       var clock = o.clock || { setTimeout: function (f, ms) { return root.setTimeout(f, ms); }, clearTimeout: function (id) { root.clearTimeout(id); } };
       var uid = o.selfId || ("anon_" + Math.floor(rand() * 1e9));
-      var me = { name: o.name || "You", rating: o.rating || 1000 };
-      var elapsed = 0, cancelled = false, settled = false, nameIdx = 0;
+      var me = { name: o.name || "Rival", rating: o.rating || 1000 };
+      var role = o.role === "join" ? "join" : "host";   // friend lobby only
+      var elapsed = 0, cancelled = false, settled = false, matched = false, nameIdx = 0;
       var subs = [];
       var emit = function (s) { if (!cancelled) subs.forEach(function (f) { try { f(s); } catch (e) {} }); };
 
       // listen for being claimed BY someone else (we become side 'b')
-      var lobbyRef = db.ref("lobby/" + uid + "/matchedDuel");
+      // (Our OWN claim also writes this field, and a real database fires local
+      // writes at once, so openClaimedDuel reads the duel node to learn its side.)
+      var lobbyRef = db.ref(P.lobby + "/" + uid + "/matchedDuel");
       var onMatched = function (snap) {
         var duelId = snap && snap.val && snap.val();
-        if (!duelId || settled || cancelled) return;
-        settled = true; lobbyRef.off("value", onMatched);
+        // a human claim is honoured even while the Sentinel offer is showing
+        if (!duelId || matched || cancelled) return;
+        matched = settled = true; lobbyRef.off("value", onMatched);
         openClaimedDuel(duelId, uid).then(function (sess) {
           emit({ state: "matched", opponent: sess.meta, session: sess });
-        });
+        }, function () { emit({ state: "error", reason: "duel-unreadable" }); });
       };
       lobbyRef.on("value", onMatched);
 
@@ -109,33 +179,59 @@
         elapsed += TICK;
         readPool().then(function (pool) {
           if (cancelled || settled) return;
-          var cand = Matchmaker.pickOpponent(pool.filter(function (p) { return p.status === "searching"; }), me.rating, elapsed, { selfId: uid });
+          var searching = pool.filter(function (p) { return p.status === "searching"; });
+          // the rating band: a friend lobby has none (you came for that person);
+          // the public lobby widens to ANY rating once the timeout is reached, so
+          // two lone humans far apart in rating still meet instead of each being
+          // handed a Sentinel (the band schedule alone stops at +-500 before 13s).
+          var bandElapsed = (FRIEND || elapsed >= SEARCH_TIMEOUT) ? Infinity : elapsed;
+          var cand = Matchmaker.pickOpponent(searching, me.rating, bandElapsed, { selfId: uid });
           if (cand) {
             tryClaim(uid, cand, me).then(function (duelId) {
               if (cancelled || settled) return;
               if (duelId) {
-                settled = true; lobbyRef.off("value", onMatched);
+                matched = settled = true; lobbyRef.off("value", onMatched);
                 var sess = openCreatedDuel(duelId, uid, normalize(cand));
                 emit({ state: "matched", opponent: sess.meta, session: sess });
-              } else { schedule(); } // lost the race — keep trying
+              } else { schedule(true); } // lost the race — retry after a jittered beat
             });
             return;
           }
-          var anyone = Matchmaker.pickOpponent(pool, me.rating, Infinity, { selfId: uid });
+          // "is any other human waiting?" counts only SEARCHING entries: a finished
+          // duel leaves a busy entry behind until that tab closes.
+          var anyone = Matchmaker.pickOpponent(searching, me.rating, Infinity, { selfId: uid });
+          if (FRIEND) {
+            if (role === "join" && !anyone && elapsed >= JOIN_WAIT) return endFriend("friend-missing");
+            if (elapsed >= FRIEND_WAIT) return endFriend("friend-timeout");
+            emit({ state: "searching", elapsedMs: elapsed, half: Infinity, friend: true });
+            return schedule();
+          }
           if (!anyone && elapsed >= Math.min(SEARCH_TIMEOUT, 2600)) return offerSentinel();
-          if (elapsed >= SEARCH_TIMEOUT) return offerSentinel();
-          emit({ state: "searching", elapsedMs: elapsed, half: Matchmaker.bandFor(elapsed) });
+          if (elapsed >= SEARCH_TIMEOUT + (anyone ? HUMAN_GRACE : 0)) return offerSentinel();
+          emit({ state: "searching", elapsedMs: elapsed, half: elapsed >= SEARCH_TIMEOUT ? Infinity : Matchmaker.bandFor(elapsed) });
           schedule();
-        }).catch(function () { schedule(); });
+        }).catch(function (e) {
+          if (cancelled || settled) return;
+          if (isPermissionError(e)) { settled = true; return emit({ state: "error", reason: "permission-denied" }); }
+          schedule();
+        });
+      }
+      function endFriend(why) {
+        if (settled || cancelled) return;
+        settled = true; try { lobbyRef.off("value", onMatched); } catch (e) {}
+        leaveLobby(uid);
+        emit({ state: why });
       }
       function offerSentinel() { if (!settled && !cancelled) { settled = true; emit({ state: "sentinel-offer", opponent: Matchmaker.sentinelFor(me.rating, rand, nameIdx++) }); } }
-      function schedule() { clock.setTimeout(tick, TICK); }
+      function schedule(jitter) { clock.setTimeout(tick, jitter ? Math.round(TICK * (0.35 + rand())) : TICK); }
       clock.setTimeout(function () { emit({ state: "searching", elapsedMs: 0, half: Matchmaker.bandFor(0) }); tick(); }, 0);
 
       var handle = {
         onState: function (cb) { if (typeof cb === "function") subs.push(cb); return handle; },
         acceptSentinel: function () {
-          if (cancelled) return null;
+          if (cancelled || matched || FRIEND) return null;
+          matched = settled = true;
+          leaveLobby(uid); try { lobbyRef.off("value", onMatched); } catch (e) {}
           var opp = Matchmaker.sentinelFor(me.rating, rand, nameIdx++);
           // Sentinel runs LOCALLY (no peer) — reuse the same local AI session as
           // the mock so a fallback duel never needs the network at all.
@@ -143,32 +239,43 @@
           emit({ state: "matched", opponent: opp, session: sess });
           return sess;
         },
-        keepSearching: function () { if (!cancelled) { settled = false; schedule(); } return handle; },
+        keepSearching: function () { if (!cancelled && !matched) { settled = false; elapsed = 0; schedule(); } return handle; },
         cancel: function () { cancelled = true; try { lobbyRef.off("value", onMatched); } catch (e) {} leaveLobby(uid); },
       };
       return handle;
     }
 
-    function normalize(c) { return { id: c.id, name: c.name || "Rival", kind: "human", rating: c.rating || 1000, tierName: c.tierName }; }
+    function normalize(c) { return { id: c.id, name: c.name || "Rival", kind: "human", rating: c.rating || 1000, tierName: c.tierName, friend: FRIEND }; }
 
     /* open a duel I CREATED (I am side 'a') */
-    function openCreatedDuel(duelId, myUid, opponent) { return makeRtdbSession(db, duelId, myUid, "a", opponent); }
-    /* open a duel I was CLAIMED into (I am side 'b'); read opponent off the node */
+    function openCreatedDuel(duelId, myUid, opponent) { return makeRtdbSession(db, duelId, myUid, "a", opponent, P); }
+    /* open a duel I was pointed at; the duel node says which side I am (normally
+       'b', the claimed one; 'a' if this is our own claim echoing back) */
     function openClaimedDuel(duelId, myUid) {
-      return db.ref("duels/" + duelId).get().then(function (snap) {
+      return db.ref(P.duels + "/" + duelId).get().then(function (snap) {
         var d = (snap && snap.val && snap.val()) || {};
-        var opp = { id: d.a, name: d.aName || "Rival", kind: "human", rating: d.aRating || 1000 };
-        return makeRtdbSession(db, duelId, myUid, "b", opp);
+        if (!d.a || !d.b) throw new Error("duel node missing");
+        var mine = d.a === myUid ? "a" : "b";
+        var opp = mine === "a"
+          ? { id: d.b, name: d.bName || "Rival", kind: "human", rating: d.bRating || 1000, friend: FRIEND }
+          : { id: d.a, name: d.aName || "Rival", kind: "human", rating: d.aRating || 1000, friend: FRIEND };
+        return makeRtdbSession(db, duelId, myUid, mine, opp, P);
       });
     }
 
-    return { name: "firebase", findMatch: findMatch, _db: db };
+    return { name: FRIEND ? "firebase-friend" : "firebase", findMatch: findMatch, paths: P, friend: FRIEND, _db: db };
+  }
+
+  function isPermissionError(e) {
+    var s = e ? (String(e.code || "") + " " + String(e.message || e)) : "";
+    return /permission/i.test(s);
   }
 
   /* ---------------- RTDB-backed duel session (commit-reveal relay) ---------------- */
-  function makeRtdbSession(db, duelId, myUid, mySide, opponent) {
+  function makeRtdbSession(db, duelId, myUid, mySide, opponent, paths) {
+    var P = paths || pathsFor(ROOT);
     var oppSide = mySide === "a" ? "b" : "a";
-    var base = "duels/" + duelId;
+    var base = P.duels + "/" + duelId;
     var dead = false, discSubs = [];
     var lastIndependent = false;
 
@@ -208,7 +315,7 @@
     // watch for the opponent dropping (their lobby presence vanishing). on('value')
     // fires immediately with the current value, so only a TRANSITION present->absent
     // is a real drop — an initial null (presence not yet/ever seen) must NOT count.
-    var oppPresenceRef = db.ref("lobby/" + opponent.id);
+    var oppPresenceRef = db.ref(P.lobby + "/" + opponent.id);
     var sawPresence = false;
     var onPres = function (snap) { var v = snap && snap.val && snap.val(); if (v) { sawPresence = true; } else if (sawPresence && !dead) { fireDisconnect("left"); } };
     try { oppPresenceRef.on("value", onPres); } catch (e) {}
@@ -234,13 +341,93 @@
     try {
       var cfg = root.SIXFOLD_FIREBASE;
       var firebase = root.firebase;
-      if (!cfg || !firebase || !firebase.initializeApp || !root.Net) return false;
+      if (!cfg || !firebase || !firebase.initializeApp || !firebase.database || !root.Net) return false;
       if (!root.firebase.apps || !root.firebase.apps.length) firebase.initializeApp(cfg);
       var db = wrapCompat(firebase.database());
+      liveDb = db;
       root.Net.configure(FirebaseBackend(db));
       return true;
     } catch (e) { return false; }
   }
+
+  /* ---------------- on-demand connect (the live path) ---------------- */
+  // The page never loads the SDK at boot. connect() loads it the first time a
+  // player opens online play, initialises the app, then PROBES the database with
+  // one small read. Resolves with the db handle (and switches Net to Firebase) or
+  // rejects with an Error whose .reason is one of:
+  //   "not-configured" | "sdk-unreachable" | "db-unreachable" | "permission-denied"
+  // friendlyError(err) turns that into plain words for the player.
+  var SDK_VERSION = "9.23.0";
+  var SDK_URLS = [
+    "https://www.gstatic.com/firebasejs/" + SDK_VERSION + "/firebase-app-compat.js",
+    "https://www.gstatic.com/firebasejs/" + SDK_VERSION + "/firebase-database-compat.js",
+  ];
+  var liveDb = null, sdkLoading = null;
+  function fail(reason, cause) { var e = new Error(reason); e.reason = reason; e.cause = cause; return e; }
+  function withTimeout(p, ms, reason) {
+    return new Promise(function (resolve, reject) {
+      var done = false;
+      var t = root.setTimeout(function () { if (!done) { done = true; reject(fail(reason)); } }, ms);
+      p.then(function (v) { if (!done) { done = true; root.clearTimeout(t); resolve(v); } },
+        function (e) { if (!done) { done = true; root.clearTimeout(t); reject(e); } });
+    });
+  }
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var doc = root.document;
+      if (!doc || !doc.createElement) return reject(fail("sdk-unreachable"));
+      var s = doc.createElement("script");
+      s.src = src; s.async = true; s.crossOrigin = "anonymous";
+      s.onload = function () { resolve(); };
+      s.onerror = function () { reject(fail("sdk-unreachable")); };
+      (doc.head || doc.body || doc.documentElement).appendChild(s);
+    });
+  }
+  function loadSdk(ms) {
+    if (root.firebase && root.firebase.database) return Promise.resolve(root.firebase);
+    if (!sdkLoading) {
+      sdkLoading = loadScript(SDK_URLS[0]).then(function () { return loadScript(SDK_URLS[1]); })
+        .then(function () {
+          if (!root.firebase || !root.firebase.database) throw fail("sdk-unreachable");
+          return root.firebase;
+        });
+      sdkLoading.catch(function () { sdkLoading = null; });  // a later tap may retry
+    }
+    return withTimeout(sdkLoading, ms, "sdk-unreachable");
+  }
+  function connect(o) {
+    o = o || {};
+    if (liveDb && !o.reprobe) return Promise.resolve(liveDb);
+    var cfg = root.SIXFOLD_FIREBASE;
+    if (!cfg || !cfg.databaseURL) return Promise.reject(fail("not-configured"));
+    return loadSdk(o.sdkTimeoutMs || 12000).then(function (firebase) {
+      var app;
+      try { app = (firebase.apps && firebase.apps.length) ? firebase.app() : firebase.initializeApp(cfg); }
+      catch (e) { throw fail("sdk-unreachable", e); }
+      var database = app.database ? app.database() : firebase.database();
+      // the probe: one tiny read of the public lobby. Refused -> the rules are not
+      // open to us; silent -> the database cannot be reached from here.
+      var probe = database.ref(ROOT + "/lobby").limitToFirst(1).get();
+      return withTimeout(probe, o.dbTimeoutMs || 9000, "db-unreachable").then(function () {
+        liveDb = wrapCompat(database);
+        if (root.Net) root.Net.configure(FirebaseBackend(liveDb));
+        return liveDb;
+      }, function (e) {
+        if (e && e.reason) throw e;
+        if (isPermissionError(e)) throw fail("permission-denied", e);
+        throw fail("db-unreachable", e);
+      });
+    });
+  }
+  function friendlyError(e) {
+    var r = (e && e.reason) || (isPermissionError(e) ? "permission-denied" : "db-unreachable");
+    if (r === "permission-denied") return "The online server said no (permission denied). Online play is not switched on yet. Duel a Sentinel for now.";
+    if (r === "not-configured") return "Online play is not set up in this build.";
+    if (r === "sdk-unreachable") return "Could not load online play. Check your connection and try again.";
+    return "Could not reach the online server. Check your connection and try again.";
+  }
+  // a friend backend on the live db (connect() first)
+  function friendBackend(code, db) { return FirebaseBackend(db || liveDb, { root: friendRoot(code), friend: true }); }
   // adapt firebase compat Database to the thin handle the backend uses
   function wrapCompat(database) {
     function wrapRef(ref) {
@@ -260,7 +447,10 @@
     return { ref: function (p) { return wrapRef(database.ref(p)); } };
   }
 
-  var api = { FirebaseBackend: FirebaseBackend, makeRtdbSession: makeRtdbSession, tryActivate: tryActivate, _hash: hash };
+  var api = { FirebaseBackend: FirebaseBackend, makeRtdbSession: makeRtdbSession, tryActivate: tryActivate, _hash: hash,
+    ROOT: ROOT, CODE_ALPHABET: CODE_ALPHABET, CODE_RE: CODE_RE, newFriendCode: newFriendCode, normalizeCode: normalizeCode,
+    friendRoot: friendRoot, pathsFor: pathsFor, friendBackend: friendBackend,
+    connect: connect, friendlyError: friendlyError, isPermissionError: isPermissionError, SDK_URLS: SDK_URLS };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else { root.FirebaseNet = api; try { tryActivate(); } catch (e) {} }
 })(typeof globalThis !== "undefined" ? globalThis : this);
